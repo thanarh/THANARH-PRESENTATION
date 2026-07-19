@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useGetCurrentUser } from '@workspace/api-client-react';
-import { UserProfile } from '@workspace/api-client-react/src/generated/api.schemas';
+import { useGetCurrentUser, type UserProfile } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 
 interface AuthContextType {
@@ -16,11 +15,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [_, setLocation] = useLocation();
 
-  const { data: currentUser, isLoading } = useGetCurrentUser({
-    query: {
-      retry: false,
-    }
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: currentUser, isLoading } = useGetCurrentUser({ query: { retry: false } as any });
 
   useEffect(() => {
     if (currentUser) {

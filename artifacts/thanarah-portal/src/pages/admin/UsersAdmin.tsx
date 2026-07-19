@@ -7,14 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 export default function UsersAdmin() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const { data: result, isLoading } = useListUsers({
-    query: {
-      queryKey: ['users', roleFilter],
-    }
-  });
+  const { data: result, isLoading } = useListUsers();
 
   const users = result?.data || [];
-  const filteredUsers = roleFilter === 'all' ? users : users.filter(u => u.role === roleFilter);
+  const filteredUsers = roleFilter === 'all' ? users : users.filter((u: any) => u.role === roleFilter);
 
   return (
     <AdminShell>

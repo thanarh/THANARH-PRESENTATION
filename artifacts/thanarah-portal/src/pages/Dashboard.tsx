@@ -11,11 +11,8 @@ export default function Dashboard() {
   const { t, isRtl } = useLanguage();
 
   const { data: sections } = useListPresentationSections();
-  const { data: progress } = useGetPresentationProgress({
-    query: {
-      enabled: !!user
-    }
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: progress } = useGetPresentationProgress({ query: { enabled: !!user } as any });
 
   const sortedSections = [...(sections || [])].sort((a, b) => a.order - b.order);
   const accessibleSections = sortedSections.filter(s => !s.isLocked);

@@ -13,12 +13,8 @@ export default function PresentationViewer() {
   
   const { mutate: saveProgress } = useSavePresentationProgress();
 
-  const { data: sectionData, isLoading, isError, error } = useGetPresentationSection(slug || '', {
-    query: {
-      enabled: !!slug,
-      retry: false
-    }
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: sectionData, isLoading, isError, error } = useGetPresentationSection(slug || '', { query: { enabled: !!slug, retry: false } as any });
 
   // Track time spent and mark as viewed on unmount or slug change
   useEffect(() => {

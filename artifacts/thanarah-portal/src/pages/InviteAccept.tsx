@@ -30,12 +30,8 @@ export default function InviteAccept() {
   const { isRtl } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { data: validation, isLoading, isError } = useValidateInvitationToken(token || '', {
-    query: {
-      enabled: !!token,
-      retry: false,
-    }
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: validation, isLoading, isError } = useValidateInvitationToken(token || '', { query: { enabled: !!token, retry: false } as any });
 
   const form = useForm<z.infer<typeof acceptSchema>>({
     resolver: zodResolver(acceptSchema),
