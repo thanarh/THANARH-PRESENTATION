@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -30,3 +30,6 @@ SMTP_FROM_EMAIL = "noreply@thanarh.com"
 SMTP_FROM_NAME = "نظام ثناره الطبي"
 THANARAH_OWNER_EMAIL_1 = "youssefd.business@gmail.com"
 THANARAH_OWNER_EMAIL_2 = "faisal.m.alenzai@gmail.com"
+
+[nix]
+channel = "stable-25_05"
