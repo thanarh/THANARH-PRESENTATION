@@ -14,20 +14,17 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-async function start() {
-  // Connect to MongoDB before accepting requests
-  await connectDb();
+// Start HTTP server immediately — don't block on MongoDB.
+// Each route calls connectDb() which retries lazily.
+app.listen(port, (err) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
+  }
+  logger.info({ port }, "Thanarah API Server listening");
+});
 
-  app.listen(port, (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
-    logger.info({ port }, "Thanarah API Server listening");
-  });
-}
-
-start().catch((err) => {
-  logger.error({ err }, "Failed to start server");
-  process.exit(1);
+// Attempt initial DB connection in the background; log but don't crash.
+connectDb().catch((err) => {
+  logger.warn({ err }, "Initial MongoDB connection failed — will retry on first request");
 });

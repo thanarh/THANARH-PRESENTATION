@@ -2,9 +2,13 @@ import mongoose from "mongoose";
 import { logger } from "./logger";
 
 let isConnected = false;
+let connectionPromise: Promise<void> | null = null;
 
 export async function connectDb(): Promise<void> {
   if (isConnected) return;
+
+  // Prevent parallel connection attempts
+  if (connectionPromise) return connectionPromise;
 
   const uri = process.env.MONGODB_URI;
   const dbName = process.env.MONGODB_DATABASE_NAME || "thanarah_presentation";
@@ -14,14 +18,23 @@ export async function connectDb(): Promise<void> {
     throw new Error("MONGODB_URI environment variable is required");
   }
 
-  try {
-    await mongoose.connect(uri, { dbName });
-    isConnected = true;
-    logger.info({ dbName }, "Connected to MongoDB");
-  } catch (err) {
-    logger.error({ err }, "Failed to connect to MongoDB");
-    throw err;
-  }
+  connectionPromise = (async () => {
+    try {
+      await mongoose.connect(uri, {
+        dbName,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+      });
+      isConnected = true;
+      logger.info({ dbName }, "Connected to MongoDB");
+    } catch (err) {
+      connectionPromise = null; // allow retry
+      logger.error({ err }, "Failed to connect to MongoDB");
+      throw err;
+    }
+  })();
+
+  return connectionPromise;
 
   mongoose.connection.on("disconnected", () => {
     isConnected = false;
