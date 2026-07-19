@@ -2,21 +2,35 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: Thanarah Presentation Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: invitations
+    description: Invitation management
+  - name: users
+    description: User management
+  - name: sessions
+    description: Session management
+  - name: presentation
+    description: Presentation content
+  - name: admin
+    description: Admin operations
+  - name: visits
+    description: Visit requests
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +38,887 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify email with code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailInput"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/mfa/verify:
+    post:
+      operationId: verifyMfa
+      tags: [auth]
+      summary: Verify MFA token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaVerifyInput"
+      responses:
+        "200":
+          description: MFA verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordInput"
+      responses:
+        "200":
+          description: Reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /auth/setup:
+    post:
+      operationId: setupOwner
+      tags: [auth]
+      summary: Initial owner setup (disabled after first use)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupOwnerInput"
+      responses:
+        "201":
+          description: Owner created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /invitations:
+    get:
+      operationId: listInvitations
+      tags: [invitations]
+      summary: List all invitations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationListResult"
+    post:
+      operationId: createInvitation
+      tags: [invitations]
+      summary: Create a new invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationInput"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+
+  /invitations/stats:
+    get:
+      operationId: getInvitationStats
+      tags: [invitations]
+      summary: Get invitation statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationStats"
+
+  /invitations/{id}:
+    get:
+      operationId: getInvitation
+      tags: [invitations]
+      summary: Get invitation by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+    patch:
+      operationId: updateInvitation
+      tags: [invitations]
+      summary: Update invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationUpdate"
+      responses:
+        "200":
+          description: Updated invitation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+
+  /invitations/{id}/revoke:
+    post:
+      operationId: revokeInvitation
+      tags: [invitations]
+      summary: Revoke an invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeInput"
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /invitations/{id}/extend:
+    post:
+      operationId: extendInvitation
+      tags: [invitations]
+      summary: Extend invitation expiry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtendInvitationInput"
+      responses:
+        "200":
+          description: Extended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+
+  /invitations/{id}/resend:
+    post:
+      operationId: resendInvitation
+      tags: [invitations]
+      summary: Resend invitation email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /invitations/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [invitations]
+      summary: Accept invitation and set password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInvitationInput"
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /invitations/validate/{token}:
+    get:
+      operationId: validateInvitationToken
+      tags: [invitations]
+      summary: Validate invitation token and get details
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Valid invitation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationValidation"
+        "404":
+          description: Invalid or expired token
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: role
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResult"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create user directly
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/disable:
+    post:
+      operationId: disableUser
+      tags: [users]
+      summary: Disable a user account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /users/{id}/force-logout:
+    post:
+      operationId: forceLogoutUser
+      tags: [users]
+      summary: Force logout all user sessions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List all active sessions (admin) or own sessions (user)
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    delete:
+      operationId: revokeSession
+      tags: [sessions]
+      summary: Revoke a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /presentation/sections:
+    get:
+      operationId: listPresentationSections
+      tags: [presentation]
+      summary: List all accessible presentation sections
+      responses:
+        "200":
+          description: Sections list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PresentationSection"
+
+  /presentation/sections/{slug}:
+    get:
+      operationId: getPresentationSection
+      tags: [presentation]
+      summary: Get a presentation section by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Section content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresentationSectionDetail"
+
+  /presentation/progress:
+    get:
+      operationId: getPresentationProgress
+      tags: [presentation]
+      summary: Get user's viewing progress
+      responses:
+        "200":
+          description: Progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresentationProgress"
+    post:
+      operationId: savePresentationProgress
+      tags: [presentation]
+      summary: Save viewing progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressInput"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [admin]
+      summary: List audit logs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: actorId
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResult"
+
+  /admin/security-events:
+    get:
+      operationId: listSecurityEvents
+      tags: [admin]
+      summary: List security events
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: resolved
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Security events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityEventListResult"
+
+  /admin/security-events/{id}/resolve:
+    post:
+      operationId: resolveSecurityEvent
+      tags: [admin]
+      summary: Mark a security event as resolved
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/content:
+    get:
+      operationId: listContent
+      tags: [admin]
+      summary: List all content sections for admin management
+      responses:
+        "200":
+          description: Content list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentSection"
+    post:
+      operationId: createContent
+      tags: [admin]
+      summary: Create a new content section
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentSection"
+
+  /admin/content/{id}:
+    patch:
+      operationId: updateContent
+      tags: [admin]
+      summary: Update a content section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentSection"
+
+  /admin/content/publish:
+    post:
+      operationId: publishContent
+      tags: [admin]
+      summary: Publish current content as a new version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishInput"
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/versions/{id}/restore:
+    post:
+      operationId: restoreVersion
+      tags: [admin]
+      summary: Restore a previous version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/system-health:
+    get:
+      operationId: getSystemHealth
+      tags: [admin]
+      summary: Get system health status
+      responses:
+        "200":
+          description: System health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemHealth"
+
+  /admin/blocked-ips:
+    post:
+      operationId: blockIp
+      tags: [admin]
+      summary: Block an IP address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockIpInput"
+      responses:
+        "200":
+          description: Blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get admin dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /visits:
+    get:
+      operationId: listVisitRequests
+      tags: [visits]
+      summary: List visit requests (admin only)
+      responses:
+        "200":
+          description: Visit requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VisitRequest"
+    post:
+      operationId: createVisitRequest
+      tags: [visits]
+      summary: Submit a visit request (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitRequestInput"
+      responses:
+        "201":
+          description: Request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /visits/{id}/approve:
+    post:
+      operationId: approveVisitRequest
+      tags: [visits]
+      summary: Approve a visit request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /visits/{id}/reject:
+    post:
+      operationId: rejectVisitRequest
+      tags: [visits]
+      summary: Reject a visit request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectInput"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +929,896 @@ components:
       required:
         - status
 
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    LoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+
+        password:
+          type: string
+          minLength: 8
+      required:
+        - email
+        - password
+
+    AuthResult:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+        requiresMfa:
+          type: boolean
+        mfaSessionToken:
+          type: ["string", "null"]
+      required:
+        - user
+        - requiresMfa
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        allowedSections:
+          type: array
+          items:
+            type: string
+        preferredLanguage:
+          type: string
+        mfaEnabled:
+          type: boolean
+        lastLoginAt:
+          type: ["string", "null"]
+        sessionExpiresAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - fullName
+        - email
+        - role
+        - permissions
+        - allowedSections
+        - preferredLanguage
+        - mfaEnabled
+
+    VerifyEmailInput:
+      type: object
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+      required:
+        - email
+        - code
+
+    MfaVerifyInput:
+      type: object
+      properties:
+        mfaSessionToken:
+          type: string
+        code:
+          type: string
+      required:
+        - mfaSessionToken
+        - code
+
+    ForgotPasswordInput:
+      type: object
+      properties:
+        email:
+          type: string
+
+      required:
+        - email
+
+    ResetPasswordInput:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+      required:
+        - token
+        - password
+
+    SetupOwnerInput:
+      type: object
+      properties:
+        setupKey:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 12
+      required:
+        - setupKey
+        - fullName
+        - email
+        - password
+
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+        inviteeName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        allowedSections:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        startsAt:
+          type: ["string", "null"]
+        expiresAt:
+          type: string
+        maxLogins:
+          type: integer
+        maxDevices:
+          type: integer
+        usedCount:
+          type: integer
+        sessionDurationMinutes:
+          type: integer
+        allowComments:
+          type: boolean
+        allowFullScreen:
+          type: boolean
+        allowViewFinancials:
+          type: boolean
+        customMessage:
+          type: ["string", "null"]
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - inviteeName
+        - email
+        - role
+        - status
+        - allowedSections
+        - expiresAt
+        - usedCount
+        - createdBy
+        - createdAt
+        - updatedAt
+
+    InvitationInput:
+      type: object
+      properties:
+        inviteeName:
+          type: string
+        email:
+          type: string
+
+        role:
+          type: string
+        allowedSections:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        startsAt:
+          type: string
+        expiresAt:
+          type: string
+        maxLogins:
+          type: integer
+        maxDevices:
+          type: integer
+        sessionDurationMinutes:
+          type: integer
+        allowComments:
+          type: boolean
+        allowFullScreen:
+          type: boolean
+        allowViewFinancials:
+          type: boolean
+        customMessage:
+          type: string
+        reason:
+          type: string
+      required:
+        - inviteeName
+        - email
+        - role
+        - allowedSections
+        - expiresAt
+
+    InvitationUpdate:
+      type: object
+      properties:
+        allowedSections:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: string
+        maxLogins:
+          type: integer
+        maxDevices:
+          type: integer
+        allowComments:
+          type: boolean
+        allowViewFinancials:
+          type: boolean
+
+    InvitationListResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invitation"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - totalPages
+
+    InvitationStats:
+      type: object
+      properties:
+        active:
+          type: integer
+        expired:
+          type: integer
+        revoked:
+          type: integer
+        unopened:
+          type: integer
+        failedAttempts:
+          type: integer
+        total:
+          type: integer
+      required:
+        - active
+        - expired
+        - revoked
+        - unopened
+        - failedAttempts
+        - total
+
+    InvitationValidation:
+      type: object
+      properties:
+        inviteeName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        expiresAt:
+          type: string
+        allowedSections:
+          type: array
+          items:
+            type: string
+        requiresMfa:
+          type: boolean
+        inviterName:
+          type: string
+      required:
+        - inviteeName
+        - email
+        - role
+        - expiresAt
+        - allowedSections
+        - requiresMfa
+
+    RevokeInput:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+        - reason
+
+    ExtendInvitationInput:
+      type: object
+      properties:
+        newExpiresAt:
+          type: string
+        reason:
+          type: string
+      required:
+        - newExpiresAt
+        - reason
+
+    AcceptInvitationInput:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        acceptedTerms:
+          type: boolean
+      required:
+        - token
+        - password
+        - acceptedTerms
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        mfaEnabled:
+          type: boolean
+        preferredLanguage:
+          type: string
+        lastLoginAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        invitationId:
+          type: ["string", "null"]
+      required:
+        - id
+        - fullName
+        - email
+        - role
+        - status
+        - mfaEnabled
+        - preferredLanguage
+        - createdAt
+
+    UserInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+
+        role:
+          type: string
+        password:
+          type: string
+          minLength: 8
+      required:
+        - fullName
+        - email
+        - role
+        - password
+
+    UserUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        role:
+          type: string
+        preferredLanguage:
+          type: string
+
+    UserListResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - totalPages
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        ipAddress:
+          type: string
+        country:
+          type: ["string", "null"]
+        userAgent:
+          type: string
+        deviceType:
+          type: string
+        startedAt:
+          type: string
+        lastActivityAt:
+          type: string
+        expiresAt:
+          type: string
+        riskScore:
+          type: string
+        status:
+          type: string
+      required:
+        - id
+        - userId
+        - userName
+        - ipAddress
+        - userAgent
+        - deviceType
+        - startedAt
+        - lastActivityAt
+        - expiresAt
+        - riskScore
+        - status
+
+    PresentationSection:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        order:
+          type: integer
+        status:
+          type: string
+        requiredPermission:
+          type: ["string", "null"]
+        isLocked:
+          type: boolean
+        hasViewed:
+          type: boolean
+      required:
+        - id
+        - slug
+        - titleAr
+        - titleEn
+        - order
+        - status
+        - isLocked
+        - hasViewed
+
+    PresentationSectionDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: ["string", "null"]
+        descriptionEn:
+          type: ["string", "null"]
+        content:
+          type: object
+          additionalProperties: {}
+        order:
+          type: integer
+        status:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - slug
+        - titleAr
+        - titleEn
+        - content
+        - order
+        - status
+        - updatedAt
+
+    PresentationProgress:
+      type: object
+      properties:
+        visitedSections:
+          type: array
+          items:
+            type: string
+        lastSection:
+          type: ["string", "null"]
+        totalSections:
+          type: integer
+        completionPercent:
+          type: integer
+      required:
+        - visitedSections
+        - totalSections
+        - completionPercent
+
+    ProgressInput:
+      type: object
+      properties:
+        sectionSlug:
+          type: string
+        duration:
+          type: integer
+      required:
+        - sectionSlug
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+        actor:
+          type: string
+        actorId:
+          type: ["string", "null"]
+        action:
+          type: string
+        target:
+          type: ["string", "null"]
+        targetId:
+          type: ["string", "null"]
+        result:
+          type: string
+        riskScore:
+          type: string
+        ipAddress:
+          type: string
+        sessionId:
+          type: ["string", "null"]
+        metadata:
+          type: object
+          additionalProperties: {}
+        timestamp:
+          type: string
+      required:
+        - id
+        - actor
+        - action
+        - result
+        - riskScore
+        - ipAddress
+        - timestamp
+
+    AuditLogListResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+        - totalPages
+
+    SecurityEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        severity:
+          type: string
+        userId:
+          type: ["string", "null"]
+        userName:
+          type: ["string", "null"]
+        ipAddress:
+          type: string
+        description:
+          type: string
+        resolved:
+          type: boolean
+        resolvedBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - severity
+        - ipAddress
+        - description
+        - resolved
+        - createdAt
+
+    SecurityEventListResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecurityEvent"
+        total:
+          type: integer
+        page:
+          type: integer
+      required:
+        - data
+        - total
+        - page
+
+    ContentSection:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        status:
+          type: string
+        order:
+          type: integer
+        updatedAt:
+          type: string
+        updatedBy:
+          type: string
+      required:
+        - id
+        - slug
+        - titleAr
+        - titleEn
+        - status
+        - order
+        - updatedAt
+        - updatedBy
+
+    ContentInput:
+      type: object
+      properties:
+        slug:
+          type: string
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+        content:
+          type: object
+          additionalProperties: {}
+        order:
+          type: integer
+        requiredPermission:
+          type: string
+        audience:
+          type: array
+          items:
+            type: string
+      required:
+        - slug
+        - titleAr
+        - titleEn
+
+    ContentUpdate:
+      type: object
+      properties:
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+        content:
+          type: object
+          additionalProperties: {}
+        order:
+          type: integer
+        status:
+          type: string
+        requiredPermission:
+          type: string
+
+    PublishInput:
+      type: object
+      properties:
+        note:
+          type: string
+      required:
+        - note
+
+    SystemHealth:
+      type: object
+      properties:
+        api:
+          type: string
+        database:
+          type: string
+        email:
+          type: string
+        activeSessions:
+          type: integer
+        uptime:
+          type: integer
+        lastBackup:
+          type: ["string", "null"]
+      required:
+        - api
+        - database
+        - email
+        - activeSessions
+        - uptime
+
+    AdminDashboard:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeInvitations:
+          type: integer
+        activeSessions:
+          type: integer
+        pendingVisitRequests:
+          type: integer
+        recentSecurityEvents:
+          type: integer
+        totalAuditLogs:
+          type: integer
+        systemStatus:
+          type: string
+      required:
+        - totalUsers
+        - activeInvitations
+        - activeSessions
+        - pendingVisitRequests
+        - recentSecurityEvents
+        - totalAuditLogs
+        - systemStatus
+
+    BlockIpInput:
+      type: object
+      properties:
+        ipAddress:
+          type: string
+        reason:
+          type: string
+        expiresAt:
+          type: ["string", "null"]
+      required:
+        - ipAddress
+        - reason
+
+    VisitRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        reason:
+          type: string
+        visitorType:
+          type: string
+        status:
+          type: string
+        requestedAt:
+          type: string
+        scheduledAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - fullName
+        - phone
+        - email
+        - reason
+        - visitorType
+        - status
+        - requestedAt
+
+    VisitRequestInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+
+        reason:
+          type: string
+        visitorType:
+          type: string
+      required:
+        - fullName
+        - phone
+        - email
+        - reason
+        - visitorType
+
+    RejectInput:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+        - reason

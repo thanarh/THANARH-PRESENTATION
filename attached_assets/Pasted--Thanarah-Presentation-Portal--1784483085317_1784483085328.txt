@@ -1,0 +1,1588 @@
+تمام. سنبدأ بأول نظام داخلي لمشروع **ثناره**:
+
+# Thanarah Presentation Portal
+
+بوابة عرض شديدة الخصوصية لعرض رؤية المشروع، المعمارية، مراحل التنفيذ، نموذج الأعمال، الواجهات التخيلية والخطط المالية على المؤسسين والمستثمرين والشركاء، من خلال دعوات مؤقتة وصلاحيات دقيقة وتسجيل كامل لكل نشاط.
+
+هناك نقطة أمنية مهمة قبل البدء: **لا توجد تقنية ويب تستطيع منع تصوير الشاشة بكاميرا هاتف آخر أو جعل المحتوى واضحًا للعين ومشوّهًا للكاميرات بشكل مضمون**. يمكن إضافة تأثيرات بصرية مقاومة للتصوير، وعلامات مائية ديناميكية، وتتبع التسريب، لكن الادعاء بأن التصوير الخارجي سيصبح مستحيلًا سيكون غير صحيح. الحل الأقوى هو جعل كل نسخة ظاهرة مرتبطة بهوية صاحبها، حتى يمكن معرفة مصدر أي تسريب.
+
+انسخ النص التالي بالكامل إلى Replit:
+
+---
+
+```text
+أنت الآن المسؤول عن بناء النسخة الأولى من منصة Thanarah Presentation Portal.
+
+اسم المشروع:
+Thanarah Presentation Portal
+
+الدومين المستهدف:
+presentation.thanarah.com
+
+العلامة التجارية:
+ثناره | THANARAH
+
+نوع النظام:
+Secure Private Presentation Portal
+
+الغرض:
+إنشاء بوابة عرض داخلية شديدة الخصوصية لعرض فكرة مشروع ثناره بالتفصيل للمؤسسين والمستثمرين والشركاء والموظفين المخولين فقط، من خلال دعوات مؤقتة وصلاحيات دقيقة وتتبع كامل للجلسات والمشاهدات ومحاولات الوصول غير المصرح بها.
+
+مهم جدًا:
+لا تستخدم أي شعارات أو أسماء أو علامات مائية تخص Replit داخل واجهات المشروع أو رسائل البريد أو الملفات أو الـmetadata أو الـfooter أو التعليقات الظاهرة للمستخدم.
+
+جميع حقوق المشروع والكود والـmetadata والتعليقات المؤسسية تكون باسم:
+
+Thanarah Team
+فريق ثناره
+
+اكتب الكود بطريقة بشرية احترافية:
+- أسماء واضحة ومفهومة.
+- تقسيم منطقي للملفات.
+- تعليقات قليلة ومفيدة فقط.
+- لا تكتب تعليقات آلية كثيرة.
+- لا تستخدم أسماء عشوائية.
+- لا تنشئ كودًا مكررًا.
+- لا تضع نصوصًا توحي أن النظام مولد آليًا.
+- لا تضع Replit داخل أسماء الملفات أو النصوص أو الـfooter.
+- لا تضف أي Backdoor أو حساب افتراضي مخفي.
+- لا تحفظ كلمات المرور أو الرموز السرية داخل الكود.
+- لا تستخدم بيانات وهمية غير موضحة على أنها تجريبية.
+- أي بيانات مالية مستقبلية يجب أن يظهر بجانبها أنها تقديرية وليست نتائج مؤكدة.
+- اجعل جميع حقوق الكود والتعليقات المؤسسية باسم Thanarah Team.
+
+لغة النظام الأساسية:
+العربية RTL.
+
+اللغة الثانية:
+الإنجليزية LTR.
+
+التصميم:
+احترافي جدًا، إنساني، فاخر، طبي وتقني، وليس شكلًا نمطيًا مولدًا بالذكاء الاصطناعي.
+
+الهوية البصرية:
+
+اللون الأخضر الداكن:
+#0F3D33
+
+اللون الأخضر الأساسي:
+#1E6B4D
+
+اللون الأخضر المتوسط:
+#6FAE8A
+
+اللون الأخضر الهادئ:
+#A9CBB5
+
+الخلفية الأساسية أوف وايت:
+#F7F5F1
+
+الأبيض:
+#FFFFFF
+
+الأسود للنصوص:
+#1A1A1A
+
+الرمادي:
+#6B7280
+
+الخط العربي للعناوين:
+خط مميز بطابع مرسوم وإنساني مستوحى من هوية ثناره.
+
+خط واجهات النظام العربية:
+Cairo أو IBM Plex Sans Arabic.
+
+الخط الإنجليزي:
+General Sans أو خط حديث ملفت قريب منه.
+
+المظهر:
+- خلفيات أوف وايت.
+- مساحات بيضاء واسعة.
+- بطاقات ناعمة.
+- حدود رفيعة جدًا.
+- زوايا دائرية متناسقة.
+- ظلال خفيفة.
+- عناصر 3D بسيطة ومدروسة.
+- حركات انتقال ناعمة.
+- عدم الإفراط في المؤثرات.
+- وضوح عالي في القراءة.
+- تصميم Responsive للجوال والتابلت والكمبيوتر.
+- التصميم المكتبي مختلف ومدروس، وليس مجرد تكبير لواجهة الجوال.
+
+التقنيات المقترحة:
+
+Frontend:
+- Next.js
+- TypeScript
+- React
+- Tailwind CSS
+- Framer Motion
+- React Hook Form
+- Zod
+
+Backend:
+- Node.js
+- Next.js Server Actions أو API Routes في النسخة الأولى.
+- يفضّل فصل الخدمات بطريقة Modular.
+
+Database:
+- MongoDB.
+- استخدام Mongoose أو Prisma حسب الأنسب.
+- لا تستخدم Local Storage لحفظ البيانات الحساسة.
+
+Authentication:
+- بريد إلكتروني وكلمة مرور.
+- Magic Link اختياري.
+- Two-Factor Authentication.
+- رمز تحقق عبر البريد.
+- Authenticator App كمرحلة متقدمة.
+- Passkeys مستقبلًا.
+- Session Management آمن.
+
+Storage:
+- تخزين الصور والملفات في Object Storage.
+- لا تحفظ الملفات كـBase64 داخل قاعدة البيانات.
+- استخدم روابط موقعة Signed URLs قصيرة المدة.
+
+Email:
+- SMTP قابل للتغيير.
+- تصميم رسائل HTML بهوية ثناره.
+- رسائل الدعوة، رمز التحقق، تنبيه تسجيل الدخول، تغيير كلمة المرور، وإلغاء الجلسة.
+
+معمارية النظام:
+
+1. Presentation Frontend.
+2. Authentication Service.
+3. Invitation Service.
+4. Access Control Service.
+5. Presentation Content Service.
+6. Session Tracking Service.
+7. Audit Logging Service.
+8. Security Event Service.
+9. Watermark Service.
+10. Email Notification Service.
+11. Admin Management Service.
+12. Media Protection Service.
+13. Analytics Service.
+14. Export and Reporting Service.
+15. Monitoring and Error Logging.
+
+أنواع المستخدمين:
+
+1. Owner
+صاحب النظام الأعلى.
+
+صلاحياته:
+- التحكم الكامل.
+- رؤية جميع المستخدمين.
+- إضافة وحذف الـAdmins.
+- تعديل كل الصلاحيات.
+- إنشاء الدعوات.
+- إلغاء الدعوات.
+- إغلاق جلسة أي مستخدم.
+- رؤية جميع سجلات الدخول.
+- رؤية الأحداث الأمنية.
+- رؤية محاولات الوصول الفاشلة.
+- إدارة محتوى العرض.
+- نشر نسخة جديدة.
+- استرجاع نسخة سابقة.
+- إخفاء أقسام عن بعض المستخدمين.
+- تصدير تقارير الأمان.
+- وضع النظام في Maintenance Mode.
+- التحكم في سياسة العلامة المائية.
+- التحكم في مدة الجلسات.
+- منع دولة أو عنوان IP عند الحاجة.
+- تحديد الحد الأقصى للأجهزة لكل مستخدم.
+
+2. Super Admin
+صلاحيات إدارية واسعة باستثناء:
+- حذف الـOwner.
+- تغيير ملكية المشروع.
+- رؤية بعض البيانات المالية الحساسة إذا أخفاها الـOwner.
+- تعديل إعدادات الأمان الحرجة دون موافقة.
+
+3. Admin
+- إنشاء دعوات حسب الصلاحية.
+- إدارة المستخدمين المسموحين له.
+- متابعة المشاهدات.
+- تعديل محتوى محدد.
+- رؤية سجل النشاط المسموح.
+- إلغاء دعوات أنشأها.
+- لا يستطيع تغيير سياسات الأمان العليا.
+
+4. Presenter
+- تشغيل العرض.
+- اختيار الأقسام المسموح بها.
+- عرض Full Screen.
+- الانتقال بين المشاهد.
+- استخدام Presenter Notes.
+- لا يستطيع تعديل البيانات الحساسة.
+- لا يستطيع إنشاء Admin.
+
+5. Investor
+- عرض الأقسام المخصصة للمستثمر.
+- الاطلاع على نموذج الأعمال.
+- الاطلاع على التوقعات المالية التي سمح بها الـOwner.
+- لا يمكنه رؤية التفاصيل التقنية الحساسة إلا إذا أضيفت لصلاحيته.
+
+6. Partner
+- مشاهدة أقسام الشراكات والتكاملات والخطة.
+- صلاحيات مخصصة.
+
+7. Team Member
+- مشاهدة الأقسام المسموحة فقط.
+- إضافة تعليق داخلي إذا فُعلت الصلاحية.
+
+8. Viewer
+- مشاهدة فقط.
+- لا نسخ ولا طباعة ولا تنزيل.
+- جلسة محددة المدة.
+- علامة مائية شخصية دائمة.
+
+نظام الصلاحيات:
+
+استخدم RBAC مع Permission-Based Access Control.
+
+أمثلة للصلاحيات:
+
+presentation.view
+presentation.present
+presentation.edit
+presentation.publish
+presentation.restore_version
+presentation.view_financials
+presentation.view_architecture
+presentation.view_security
+presentation.view_roadmap
+presentation.export
+presentation.comment
+
+invitation.create
+invitation.view
+invitation.revoke
+invitation.extend
+invitation.resend
+
+user.view
+user.create
+user.edit
+user.disable
+user.delete
+user.force_logout
+
+security.view_events
+security.block_ip
+security.revoke_session
+security.export_report
+security.manage_policy
+
+audit.view
+audit.export
+
+settings.manage_brand
+settings.manage_email
+settings.manage_security
+settings.manage_sessions
+
+يجب أن تكون الصلاحيات على ثلاثة مستويات:
+
+1. مستوى الصفحة.
+2. مستوى القسم داخل الصفحة.
+3. مستوى الإجراء.
+
+مثال:
+قد يتمكن المستخدم من فتح صفحة النموذج المالي، لكن لا يرى صافي الربح أو نسب الشركاء.
+
+نظام الدعوات:
+
+المسار:
+admin.thanarah.com/invitations
+أو داخل presentation.thanarah.com/admin/invitations
+
+حقول إنشاء الدعوة:
+- اسم المدعو.
+- البريد الإلكتروني.
+- رقم مرجعي داخلي.
+- نوع المستخدم.
+- الصلاحية.
+- الأقسام المسموح بها.
+- وقت بداية صلاحية الدعوة.
+- وقت انتهائها.
+- مدة الجلسة بعد الدخول.
+- الحد الأقصى لعدد مرات الدخول.
+- الحد الأقصى للأجهزة.
+- السماح أو عدم السماح بالتعليقات.
+- السماح أو عدم السماح بالعرض الكامل.
+- السماح أو عدم السماح برؤية الأرقام المالية.
+- رسالة مخصصة.
+- سبب الدعوة.
+- اسم منشئ الدعوة.
+
+طريقة عمل الدعوة:
+
+1. الـAdmin ينشئ الدعوة.
+2. النظام يولد رمز دعوة Cryptographically Secure.
+3. لا يتم تخزين الرمز الخام في قاعدة البيانات.
+4. يتم تخزين Hash فقط.
+5. الدعوة ترسل إلى البريد.
+6. رابط الدعوة يعمل مرة واحدة لبدء التسجيل.
+7. المدعو يحدد كلمة مرور.
+8. يتم التحقق من البريد.
+9. يمكن طلب مصادقة ثنائية.
+10. بعد النجاح يتم إنشاء Session.
+11. يتم ربط الجلسة بالجهاز والمتصفح بصورة مرنة وآمنة.
+12. يسجل النظام:
+   - وقت الدخول.
+   - IP.
+   - الدولة.
+   - نوع الجهاز.
+   - المتصفح.
+   - نظام التشغيل.
+   - معرف الجلسة.
+   - مدة المشاهدة.
+   - الصفحات التي شاهدها.
+   - عدد مرات العودة.
+13. عند انتهاء المدة يتم تسجيل الخروج فورًا.
+14. عند إلغاء الدعوة تُلغى جميع الجلسات المرتبطة بها.
+15. لا يمكن إعادة استخدام رابط التسجيل الأولي.
+16. يمكن للـAdmin تمديد الدعوة مع تسجيل السبب.
+17. أي تمديد أو تغيير يجب أن يظهر في Audit Log.
+
+حالات الدعوة:
+
+Draft
+Scheduled
+Sent
+Opened
+Registration Started
+Active
+Expired
+Revoked
+Blocked
+Used
+Failed Delivery
+
+صفحة إدارة الدعوات:
+
+- بطاقات إحصائية:
+  - الدعوات النشطة.
+  - المنتهية.
+  - الملغاة.
+  - غير المفتوحة.
+  - محاولات الدخول المرفوضة.
+- جدول متقدم.
+- البحث.
+- الفلاتر.
+- الفرز.
+- إلغاء الدعوة.
+- تمديدها.
+- إعادة إرسالها.
+- نسخ رابط مؤقت إذا كانت الصلاحية تسمح.
+- فتح سجل نشاط الدعوة.
+- رؤية الأجهزة والجلسات.
+- تصدير CSV وPDF حسب الصلاحية.
+
+الأمان ومنع التسريب:
+
+مهم:
+لا تدّعِ أن المتصفح يستطيع منع Screenshot أو تصوير الشاشة بكاميرا خارجية بشكل كامل.
+
+طبق نظام حماية واقعي متعدد الطبقات:
+
+1. Dynamic Personalized Watermark
+يظهر فوق المحتوى بشكل خفيف ومتكرر ويحتوي على:
+- اسم المستخدم.
+- البريد المختصر.
+- رقم الجلسة.
+- التاريخ والوقت.
+- عبارة Confidential.
+- كود تتبع غير واضح للمستخدم.
+
+تتغير مواضع العلامة المائية ببطء لمنع إزالتها بسهولة.
+
+2. Forensic Watermark
+أنشئ نمطًا بصريًا خفيفًا مختلفًا لكل جلسة، يسمح بتحديد الجلسة المحتمل أن تكون مصدر الصورة المسربة.
+
+3. Visible Watermark
+تظهر بطريقة لا تعيق القراءة، لكنها موجودة في كل شاشة.
+
+4. Session-Specific Rendering
+كل مستخدم يرى نسخة مرتبطة بمعرف جلسة.
+
+5. Screenshot Detection
+على الويب لا يمكن ضمان اكتشاف Screenshot.
+يمكن تسجيل مؤشرات فقط مثل:
+- فقدان تركيز الصفحة.
+- تغيّر Visibility.
+- استخدام Print Screen في بعض البيئات.
+- فتح أدوات الطباعة.
+- محاولات النسخ المتكررة.
+
+لا تعتبر هذه الأدلة مؤكدة وحدها.
+
+6. Mobile Native Protection مستقبلًا
+في تطبيقات الهاتف الأصلية:
+- Android FLAG_SECURE.
+- iOS Screen Capture Detection.
+لكن هذا لا يمنع تصوير الجهاز بكاميرا خارجية.
+
+7. Screen Recording Warning
+عند اكتشاف مشاركة شاشة أو تسجيل في بيئات تدعم ذلك:
+- إظهار تحذير.
+- تسجيل Security Event.
+- إمكانية إخفاء الأقسام الحساسة حسب السياسة.
+
+8. External Camera Resistance
+يمكن إضافة:
+- Texture خفيف.
+- نمط Moiré دقيق.
+- Micro-pattern متحرك.
+- Temporal dithering خفيف.
+لكن يجب أن يكون اختياريًا؛ لأنه قد يؤثر على العين والشاشات، ولا يقدم حماية مضمونة ضد الكاميرات.
+
+لا تجعل النص الطبيعي مشوهًا للمستخدم.
+
+9. Disable Common Leakage Actions
+- تعطيل النقر الأيمن في صفحات العرض.
+- تعطيل النسخ للنصوص الحساسة.
+- تعطيل السحب والإفلات.
+- تعطيل الطباعة.
+- منع Save Page.
+- منع تحديد النص في العرض، مع إبقاء إمكانية الوصول Accessibility في الاعتبار.
+- منع فتح الصور الحساسة في تبويب مباشر.
+- استخدام Signed URLs.
+- منع Hotlinking.
+
+10. DevTools
+لا تدّعِ إمكانية منع DevTools بالكامل.
+يمكن:
+- عدم إرسال بيانات غير مصرح بها أصلًا.
+- تطبيق الصلاحيات في الخادم.
+- عدم الاعتماد على إخفاء عناصر الواجهة.
+- عدم وضع الأسرار في Frontend.
+- تعطيل Source Maps في Production أو حمايتها.
+- Minification.
+- Content Security Policy.
+- Trusted Types إن أمكن.
+- منع Inline Scripts غير الضرورية.
+
+11. Rate Limiting
+طبق Rate Limits على:
+- تسجيل الدخول.
+- التحقق.
+- الدعوات.
+- إعادة إرسال البريد.
+- استعادة كلمة المرور.
+- تحميل المحتوى.
+- API الحساسة.
+
+12. Brute Force Protection
+- زيادة تأخير تدريجية.
+- Captcha بعد عدد من المحاولات.
+- قفل مؤقت.
+- إشعار صاحب الحساب.
+- تسجيل الحدث.
+
+13. Device and Session Controls
+- عرض جميع الجلسات.
+- تسجيل خروج من جهاز محدد.
+- تسجيل خروج من جميع الأجهزة.
+- منع أكثر من جهاز حسب الدعوة.
+- انتهاء جلسة تلقائي.
+- Idle Timeout.
+- Absolute Session Timeout.
+- تجديد آمن للـTokens.
+- Refresh Token Rotation.
+
+14. Cookies
+- HttpOnly.
+- Secure.
+- SameSite Strict أو Lax حسب التدفق.
+- CSRF Protection.
+- عدم تخزين Tokens الحساسة في Local Storage.
+
+15. Passwords
+- Argon2id أو bcrypt بإعداد قوي.
+- Password Policy.
+- منع كلمات المرور المسربة عند توفر خدمة مناسبة.
+- عدم إرسال كلمة المرور بالبريد.
+- تغيير إجباري عند الاشتباه.
+
+16. Encryption
+- TLS أثناء النقل.
+- تشفير البيانات الحساسة في قاعدة البيانات.
+- تشفير النسخ الاحتياطية.
+- فصل مفاتيح التشفير عن قاعدة البيانات.
+
+17. Audit Log
+سجل غير قابل للتعديل من المستخدمين العاديين.
+
+يسجل:
+- تسجيل الدخول.
+- تسجيل الخروج.
+- فشل تسجيل الدخول.
+- إنشاء الدعوة.
+- تعديل الدعوة.
+- إلغاء الدعوة.
+- تمديدها.
+- فتح قسم حساس.
+- تغيير الصلاحيات.
+- إنشاء مستخدم.
+- حذف مستخدم.
+- تغيير إعداد أمني.
+- تصدير تقرير.
+- محاولة طباعة.
+- محاولة نسخ.
+- محاولة تحميل.
+- فقدان تركيز متكرر.
+- تغيير جهاز.
+- تغيير IP بصورة غير معتادة.
+- إلغاء جلسة.
+- محاولة فتح Route غير مسموح.
+
+كل Event يحتوي:
+- Actor.
+- Action.
+- Target.
+- Timestamp.
+- IP.
+- Device.
+- Session ID.
+- Result.
+- Risk Score.
+- Metadata.
+- Previous Value.
+- New Value.
+
+18. Risk Engine
+أنشئ Risk Score أوليًا حسب:
+- دولة جديدة.
+- جهاز جديد.
+- IP متغير سريعًا.
+- محاولات فاشلة.
+- فتح أقسام كثيرة بسرعة غير طبيعية.
+- أكثر من جلسة متزامنة.
+- محاولة فتح Route غير مصرح.
+- نشاط خارج وقت الدعوة.
+
+الحالات:
+Low
+Medium
+High
+Critical
+
+عند Critical:
+- قفل الجلسة.
+- طلب إعادة تحقق.
+- إرسال إشعار للـOwner.
+- تسجيل Security Incident.
+
+صفحات النظام:
+
+1. صفحة الدخول
+Route:
+/login
+
+المحتوى:
+- شعار ثناره.
+- البريد.
+- كلمة المرور.
+- تذكر الجهاز حسب السياسة.
+- نسيت كلمة المرور.
+- تحقق ثنائي.
+- رسالة الخصوصية.
+- رقم إصدار النظام.
+- لا يوجد رابط تسجيل عام.
+
+2. صفحة قبول الدعوة
+Route:
+/invite/[token]
+
+المحتوى:
+- اسم المدعو.
+- اسم الجهة الداعية.
+- مدة الدعوة.
+- تاريخ الانتهاء.
+- الأقسام المتاحة بصورة عامة دون كشف المحتوى.
+- قبول الشروط.
+- إنشاء كلمة المرور.
+- التحقق من البريد.
+- إعداد المصادقة الثنائية إذا كانت مطلوبة.
+
+3. صفحة الدعوة المنتهية
+Route:
+/invite/expired
+
+4. صفحة الدعوة الملغاة
+Route:
+/invite/revoked
+
+5. صفحة رفض الوصول
+Route:
+/access-denied
+
+6. لوحة التحكم
+Route:
+/dashboard
+
+تحتوي:
+- ترحيب شخصي.
+- آخر دخول.
+- مدة الجلسة المتبقية.
+- الأقسام المتاحة.
+- تقدم المشاهدة.
+- آخر تحديث للعرض.
+- تنبيهات الأمان.
+- استكمال العرض من آخر نقطة.
+- لا تعرض للمستخدم بيانات إدارية غير مصرح بها.
+
+7. وضع العرض التقديمي
+Route:
+/presentation
+
+المميزات:
+- عرض Section-Based.
+- انتقالات Motion هادئة.
+- Progress Indicator.
+- جدول محتويات جانبي.
+- Full Screen.
+- Presenter Mode.
+- Presenter Notes حسب الصلاحية.
+- قفل الأقسام الحساسة.
+- علامة مائية دائمة.
+- حفظ آخر موضع.
+- دعم الجوال والتابلت والكمبيوتر.
+- اختصارات لوحة مفاتيح مسموحة فقط.
+- خروج تلقائي عند انتهاء الجلسة.
+
+8. صفحة المقدمة
+Route:
+/presentation/introduction
+
+المحتوى:
+- ما هي ثناره؟
+- الرؤية.
+- الرسالة.
+- لماذا أُنشئت؟
+- القطاع المستهدف.
+- معنى الاسم والهوية.
+- فيديو أو Motion اختياري.
+
+9. المشكلة
+Route:
+/presentation/problem
+
+المحتوى:
+- تشتت الأنظمة الطبية.
+- ضعف التكامل.
+- صعوبة إدارة المنشآت.
+- الاعتماد على أنظمة منفصلة.
+- تكلفة التطوير.
+- ضعف تجربة المرضى.
+- محدودية الأتمتة.
+- صعوبة إطلاق الموقع والتطبيق.
+- عدم وجود منصة شاملة.
+
+10. الحل
+Route:
+/presentation/solution
+
+المحتوى:
+- نظام موحد.
+- Smart Clinic.
+- Website Builder.
+- WhatsApp AI.
+- CRM.
+- ERP.
+- التطبيقات.
+- الأتمتة.
+- النشر.
+- التكاملات.
+
+11. منظومات ثناره
+Route:
+/presentation/ecosystem
+
+اعرض منظومة رسومية تفاعلية:
+
+Thanarah Core
+Customer Portal
+Employee Administration
+Smart Clinic
+Website Builder
+AI Agents
+WhatsApp
+App Factory
+Deployment Platform
+CRM
+ERP
+Billing
+Analytics
+Security
+
+12. رحلة العميل
+Route:
+/presentation/customer-journey
+
+الخطوات:
+- اكتشاف المنصة.
+- اختيار الباقة.
+- اختيار الإضافات.
+- الدفع.
+- رفع بيانات المنشأة.
+- إنشاء Tenant.
+- تخصيص الهوية.
+- إنشاء الموقع.
+- تفعيل العيادة.
+- ربط واتساب.
+- تجهيز التطبيق.
+- الإطلاق.
+- الدعم المستمر.
+
+اجعلها Timeline تفاعلية.
+
+13. الباقات
+Route:
+/presentation/plans
+
+الباقات:
+Lite
+Pro
+Infinity
+Customize
+
+يجب أن تكون الأسعار قابلة للإخفاء حسب الصلاحية.
+
+14. Smart Clinic
+Route:
+/presentation/smart-clinic
+
+الأقسام:
+- المرضى.
+- الأطباء.
+- الفروع.
+- المواعيد.
+- الملفات الطبية.
+- خطط العلاج.
+- الأسنان.
+- الوصفات.
+- الأشعة.
+- التحاليل.
+- الفواتير.
+- التأمين.
+- المخزون.
+- المصروفات.
+- التقارير.
+- الصلاحيات.
+- التقييمات.
+- التنبيهات.
+
+15. Website Builder
+Route:
+/presentation/website-builder
+
+اعرض:
+- Drag and Drop.
+- القوالب.
+- تخصيص الهوية.
+- AI Generation.
+- الصفحات.
+- الحجز.
+- الدفع.
+- الدومين.
+- SEO.
+- النشر الفوري.
+
+16. WhatsApp AI
+Route:
+/presentation/whatsapp-ai
+
+اشرح:
+- ربط الحساب.
+- تدريب المساعد.
+- قاعدة المعرفة.
+- الخدمات.
+- الأسعار.
+- المواعيد.
+- التحويل البشري.
+- اللهجات.
+- الحجز.
+- العربون.
+- القيود الطبية.
+- سجل المحادثات.
+- Analytics.
+
+17. التطبيقات
+Route:
+/presentation/apps
+
+- Flutter.
+- iOS.
+- Android.
+- PWA.
+- Branding.
+- Build Pipeline.
+- Review Tracking.
+- Push Notifications.
+- Apple Wallet.
+- Google Wallet.
+
+18. نظام موظفي ثناره
+Route:
+/presentation/internal-operations
+
+- Owner.
+- Admin.
+- Managers.
+- Sales.
+- Marketing.
+- Support.
+- Developers.
+- Accounting.
+- Investors.
+- Quality.
+- HR.
+- Tasks.
+- Meetings.
+- Internal Chat.
+- CRM.
+- Projects.
+- Commissions.
+- Profit Distribution.
+
+19. البنية التقنية
+Route:
+/presentation/architecture
+
+اعرض Architecture Diagram تفاعلي:
+
+Users
+→ Edge Security
+→ Web Application
+→ API Gateway
+→ Authentication
+→ Core Services
+→ MongoDB
+→ Redis
+→ Queue
+→ Object Storage
+→ AI Gateway
+→ Deployment Platform
+→ Monitoring
+
+لا تعرض Secrets أو تفاصيل يمكن استخدامها للهجوم.
+
+20. الأمان
+Route:
+/presentation/security
+
+- Multi-Tenant Isolation.
+- RBAC.
+- MFA.
+- Encryption.
+- Audit Logs.
+- Signed URLs.
+- Session Security.
+- Backups.
+- Disaster Recovery.
+- Monitoring.
+- Incident Management.
+- Medical Data Privacy.
+
+21. نموذج الأعمال
+Route:
+/presentation/business-model
+
+- الاشتراكات.
+- الإضافات.
+- التطبيقات.
+- القوالب.
+- الرسائل.
+- AI Usage.
+- الخدمات المخصصة.
+- الأجهزة مستقبلًا.
+- Marketplace.
+- Commission Revenue.
+- Enterprise Contracts.
+
+22. السوق والتوسع
+Route:
+/presentation/market
+
+- السعودية.
+- الخليج.
+- الشرق الأوسط.
+- الأسواق العالمية.
+- العيادات.
+- المستشفيات.
+- مراكز الأسنان.
+- المختبرات.
+- المراكز الطبية.
+
+أي أرقام سوقية يجب أن تكون مرتبطة بمصدر أو موصوفة بأنها تقديرية.
+
+23. المميزات التنافسية
+Route:
+/presentation/competitive-advantages
+
+- منصة واحدة.
+- تخصيص عميق.
+- ذكاء اصطناعي.
+- سرعة الإطلاق.
+- موقع وتطبيق ونظام داخلي.
+- إدارة مركزية.
+- هوية مستقلة لكل عميل.
+- أتمتة.
+- قابلية توسع.
+- دعم متعدد اللغات.
+
+24. Roadmap
+Route:
+/presentation/roadmap
+
+المراحل:
+- Presentation MVP.
+- Core Platform.
+- Customer Portal.
+- Smart Clinic MVP.
+- Website Builder.
+- WhatsApp AI.
+- App Factory.
+- Pilot Clinics.
+- Commercial Launch.
+- Regional Expansion.
+
+25. الخطة الزمنية
+Route:
+/presentation/timeline
+
+- أول ثلاثة أشهر.
+- ثلاثة أشهر تجريب وتحسين.
+- مراحل التوسع التالية.
+
+26. الفريق
+Route:
+/presentation/team
+
+لا تعرض معلومات شخصية إلا المصرح بها.
+
+27. الاستثمار
+Route:
+/presentation/investment
+
+صلاحية منفصلة:
+presentation.view_financials
+
+المحتوى:
+- الاحتياج الاستثماري.
+- استخدام الأموال.
+- مراحل الصرف.
+- الافتراضات.
+- توقعات الإيرادات.
+- السيناريو المحافظ.
+- السيناريو المتوسط.
+- السيناريو المتفائل.
+- المخاطر.
+
+ضع علامة واضحة:
+“جميع الأرقام المعروضة تقديرية وقابلة للتغيير.”
+
+28. المخاطر
+Route:
+/presentation/risks
+
+- مخاطر تقنية.
+- مخاطر تشغيلية.
+- مخاطر تنظيمية.
+- مخاطر مالية.
+- مخاطر متاجر التطبيقات.
+- مخاطر AI.
+- مخاطر حماية البيانات.
+- خطط التخفيف.
+
+29. الخلاصة
+Route:
+/presentation/summary
+
+- الرسالة النهائية.
+- لماذا الآن؟
+- لماذا ثناره؟
+- الخطوة القادمة.
+- طلب اجتماع أو قرار.
+
+30. لوحة الإدارة
+Route:
+/admin
+
+31. المستخدمون
+Route:
+/admin/users
+
+32. الدعوات
+Route:
+/admin/invitations
+
+33. الجلسات
+Route:
+/admin/sessions
+
+34. الأحداث الأمنية
+Route:
+/admin/security-events
+
+35. سجل العمليات
+Route:
+/admin/audit-logs
+
+36. إدارة المحتوى
+Route:
+/admin/content
+
+37. إصدارات العرض
+Route:
+/admin/versions
+
+38. إعدادات العلامة المائية
+Route:
+/admin/watermark
+
+39. إعدادات البريد
+Route:
+/admin/email
+
+40. إعدادات الأمان
+Route:
+/admin/security-settings
+
+41. إعدادات النظام
+Route:
+/admin/settings
+
+42. صفحة حالة النظام
+Route:
+/admin/system-health
+
+43. صفحة الأخطاء
+Route:
+/admin/errors
+
+نظام إدارة المحتوى:
+
+كل قسم في العرض يجب أن يدعم:
+- عنوان عربي.
+- عنوان إنجليزي.
+- وصف.
+- نصوص متعددة.
+- صور.
+- فيديو.
+- مخططات.
+- بطاقات.
+- ترتيب.
+- حالة نشر.
+- Draft.
+- Published.
+- Archived.
+- Audience.
+- Required Permission.
+- تاريخ التحديث.
+- صاحب التعديل.
+- Version History.
+
+نظام الإصدارات:
+
+- كل Publish ينشئ Version.
+- حفظ التغييرات.
+- مقارنة إصدارين.
+- استرجاع إصدار سابق.
+- تسجيل من نشر الإصدار.
+- لا تحذف الإصدارات القديمة نهائيًا إلا بصلاحية Owner.
+
+نظام العرض الإبداعي:
+
+لا تجعل النظام شرائح PowerPoint تقليدية.
+
+اجعل التجربة مثل موقع تفاعلي فاخر:
+
+- Scroll Storytelling.
+- Full-screen Sections.
+- Parallax خفيف.
+- 3D Logo Hero.
+- Animated Architecture.
+- Interactive Timeline.
+- Hover Details.
+- Expandable Cards.
+- Device Mockups.
+- Animated Counters.
+- Data Flow Lines.
+- Smooth Page Transitions.
+- Progress Navigation.
+- Section Mini Map.
+- Keyboard Navigation.
+- Presenter View.
+- Reduced Motion Mode.
+- Accessibility.
+
+كل صفحة يجب أن تحتوي على:
+- عنوان واضح.
+- فكرة واحدة رئيسية.
+- تصوير بصري.
+- نص مختصر داخل الواجهة.
+- تفاصيل أعمق داخل Expand أو Drawer.
+- لا تضع فقرات ضخمة مباشرة في الشاشة.
+- استخدم الرسوم والـCards والـTimelines.
+- لا تختصر المحتوى في النظام نفسه، لكن نظمه بطبقات.
+
+الصفحة الرئيسية للعرض:
+
+Hero:
+“ثناره”
+“المنظومة الذكية الشاملة للقطاع الطبي”
+
+النص:
+“منصة موحدة تبني وتدير وتشغّل وتطوّر المنشآت الطبية رقميًا، من النظام الداخلي وحتى الموقع والتطبيق والذكاء الاصطناعي.”
+
+الأزرار:
+- ابدأ العرض.
+- استكمل من آخر مشاهدة.
+- عرض الخريطة.
+- تسجيل الخروج.
+
+المؤثر البصري:
+شعار ثناره 3D في المنتصف، حوله وحدات النظام تتحرك بصورة هادئة:
+Smart Clinic
+AI
+Website
+Applications
+CRM
+ERP
+Security
+Analytics
+
+الصور المطلوبة:
+
+لا تستخدم صورًا عشوائية جاهزة.
+
+أنشئ مجلد:
+public/presentation-assets
+
+المجلدات:
+- hero
+- architecture
+- clinic
+- website-builder
+- whatsapp-ai
+- applications
+- operations
+- financials
+- roadmap
+- security
+- mockups
+- diagrams
+
+كل صورة يجب أن:
+- تتوافق مع هوية ثناره.
+- خلفيتها أوف وايت أو خضراء.
+- تحتوي على عناصر طبية وتقنية حديثة.
+- لا تحتوي أخطاء لغوية.
+- لا تحتوي على أسماء شركات أخرى.
+- لا تحتوي على Replit.
+- تكون عالية الجودة.
+- يكون لها Alt Text.
+- يتم ضغطها للويب دون تشويه.
+- تكون WebP أو AVIF عند الاستخدام.
+- يحتفظ النظام بالنسخة الأصلية.
+
+مقاسات الصور:
+Hero Desktop: 1920×1080
+Section Cover: 1600×900
+Cards: 1200×900
+Mobile Mockups: 1080×1920
+Architecture: 2000×1200
+Social Preview: 1200×630
+
+أنشئ أولًا Placeholder Frames واضحة للصور المطلوبة، ولا تستخدم صورًا نهائية غير معتمدة.
+
+قاعدة البيانات المقترحة:
+
+users
+roles
+permissions
+role_permissions
+user_roles
+invitations
+invitation_permissions
+sessions
+trusted_devices
+login_attempts
+security_events
+audit_logs
+presentation_sections
+presentation_blocks
+presentation_versions
+presentation_views
+presentation_progress
+comments
+media_assets
+watermark_policies
+system_settings
+email_templates
+notifications
+blocked_ips
+risk_rules
+risk_assessments
+
+User:
+- id
+- fullName
+- email
+- passwordHash
+- status
+- preferredLanguage
+- profileImage
+- mfaEnabled
+- lastLoginAt
+- createdAt
+- updatedAt
+
+Invitation:
+- id
+- inviteeName
+- email
+- tokenHash
+- roleId
+- permissions
+- allowedSections
+- startsAt
+- expiresAt
+- maxLogins
+- maxDevices
+- usedCount
+- status
+- createdBy
+- revokedBy
+- revokeReason
+- createdAt
+- updatedAt
+
+Session:
+- id
+- userId
+- invitationId
+- sessionTokenHash
+- refreshTokenHash
+- ipAddress
+- country
+- userAgent
+- deviceFingerprint
+- startedAt
+- lastActivityAt
+- expiresAt
+- revokedAt
+- riskScore
+- status
+
+SecurityEvent:
+- id
+- type
+- severity
+- userId
+- sessionId
+- ipAddress
+- description
+- metadata
+- resolved
+- resolvedBy
+- createdAt
+
+PresentationView:
+- id
+- userId
+- sessionId
+- sectionId
+- openedAt
+- closedAt
+- duration
+- interactionCount
+- watermarkId
+
+API Routes المطلوبة:
+
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/verify-email
+POST /api/auth/mfa/verify
+POST /api/auth/refresh
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+
+POST /api/invitations
+GET /api/invitations
+GET /api/invitations/:id
+PATCH /api/invitations/:id
+POST /api/invitations/:id/revoke
+POST /api/invitations/:id/extend
+POST /api/invitations/:id/resend
+POST /api/invitations/accept
+
+GET /api/users
+POST /api/users
+GET /api/users/:id
+PATCH /api/users/:id
+POST /api/users/:id/disable
+POST /api/users/:id/force-logout
+
+GET /api/sessions
+DELETE /api/sessions/:id
+DELETE /api/users/:id/sessions
+
+GET /api/presentation/sections
+GET /api/presentation/sections/:slug
+POST /api/presentation/progress
+GET /api/presentation/progress
+
+GET /api/admin/audit-logs
+GET /api/admin/security-events
+POST /api/admin/security-events/:id/resolve
+POST /api/admin/blocked-ips
+
+GET /api/admin/content
+POST /api/admin/content
+PATCH /api/admin/content/:id
+POST /api/admin/content/publish
+POST /api/admin/versions/:id/restore
+
+الأمان في الـAPI:
+
+- Validate كل Input باستخدام Zod.
+- Authorization على الخادم.
+- لا تعتمد على إخفاء زر في الواجهة.
+- Check Permission داخل كل Route.
+- Check Invitation Scope.
+- Check Section Access.
+- Check Session Status.
+- Check Expiration.
+- Check Risk Status.
+- Rate Limit.
+- CSRF Protection.
+- Audit كل عملية حساسة.
+- Generic Error Messages للمستخدم.
+- Detailed Error Logs داخليًا فقط.
+- لا ترسل Stack Trace في Production.
+
+Headers:
+
+Content-Security-Policy
+Strict-Transport-Security
+X-Content-Type-Options
+Referrer-Policy
+Permissions-Policy
+Cross-Origin-Opener-Policy
+Cross-Origin-Resource-Policy
+Frame-Ancestors أو CSP لمنع التضمين غير المصرح.
+
+منع Clickjacking:
+- frame-ancestors 'none' أو قائمة نطاقات موثوقة فقط.
+
+المراقبة:
+
+- Error Tracking.
+- Uptime Monitoring.
+- Performance Monitoring.
+- Login Anomaly Monitoring.
+- Database Health.
+- Email Delivery Status.
+- Failed Job Monitoring.
+
+صفحة System Health تعرض:
+- API status.
+- Database status.
+- Email status.
+- Storage status.
+- Queue status.
+- Last backup.
+- Recent errors.
+- Active sessions.
+
+الاختبارات:
+
+Unit Tests:
+- Invitation expiry.
+- Permission checks.
+- Session expiry.
+- Token hashing.
+- Risk score.
+
+Integration Tests:
+- Invitation flow.
+- Login.
+- MFA.
+- Content access.
+- Revocation.
+- Force logout.
+
+E2E:
+- Admin creates invitation.
+- User accepts.
+- User logs in.
+- User views allowed pages.
+- User is blocked from unauthorized pages.
+- Invitation expires.
+- Admin revokes session.
+
+Security Tests:
+- IDOR.
+- Broken Access Control.
+- CSRF.
+- XSS.
+- Injection.
+- Rate limit bypass.
+- Token replay.
+- Session fixation.
+- Privilege escalation.
+- Unauthorized media access.
+
+شروط التسليم:
+
+1. الكود يعمل دون أخطاء.
+2. لا توجد صفحات تجريبية فارغة.
+3. لا يوجد Replit Branding.
+4. جميع التعليقات المؤسسية باسم Thanarah Team.
+5. التصميم مطابق لهوية ثناره.
+6. العربية RTL صحيحة.
+7. الإنجليزية LTR صحيحة.
+8. الصلاحيات مطبقة على الخادم.
+9. لا توجد بيانات حساسة في Frontend.
+10. نظام الدعوات يعمل بالكامل.
+11. انتهاء الدعوة يلغي الوصول.
+12. إلغاء الدعوة يلغي الجلسات.
+13. العلامة المائية مرتبطة بالمستخدم والجلسة.
+14. كل نشاط حساس مسجل.
+15. جميع الصور تستخدم من مجلد الأصول.
+16. يوجد README باسم Thanarah Team.
+17. يوجد ملف env.example دون أسرار.
+18. يوجد Database Seed منفصل للتطوير فقط.
+19. لا تنشئ حساب Owner بكلمة مرور ثابتة.
+20. يتم إنشاء أول Owner من خلال Setup Flow آمن أو Environment Variable مرة واحدة.
+21. بعد الإنشاء يتم تعطيل Setup Route.
+22. يوجد دليل تشغيل ونشر.
+23. لا تضع Secrets في Git.
+24. لا تضع بيانات العملاء داخل Logs.
+25. لا تستخدم أي نص يزعم منع Screenshot بصورة مضمونة.
+
+ترتيب التنفيذ:
+
+المرحلة الأولى:
+- إنشاء المشروع.
+- إعداد الهوية.
+- Layout.
+- RTL/LTR.
+- Database.
+- Authentication.
+- Owner Setup.
+- Roles and Permissions.
+
+المرحلة الثانية:
+- Invitations.
+- Email Templates.
+- Session Tracking.
+- Audit Logs.
+- Security Events.
+
+المرحلة الثالثة:
+- Presentation Engine.
+- Content Sections.
+- Progress Tracking.
+- Watermarks.
+- Presenter Mode.
+
+المرحلة الرابعة:
+- Admin Dashboard.
+- User Management.
+- Invitations Dashboard.
+- Sessions.
+- Security Center.
+- Content Management.
+
+المرحلة الخامسة:
+- تحسين التصميم.
+- Animation.
+- Responsive.
+- Accessibility.
+- Tests.
+- Security Hardening.
+- Production Build.
+
+ابدأ أولًا بإنشاء:
+
+1. Architecture Summary.
+2. Folder Structure.
+3. Database Schema.
+4. Roles and Permissions Matrix.
+5. Routes Map.
+6. Implementation Plan.
+7. ثم ابدأ كتابة المشروع.
+
+لا تبدأ بكتابة عشرات الملفات قبل عرض الهيكل المقترح.
+
+بعد اعتماد الهيكل:
+نفذ النظام Module by Module.
+
+ممنوع:
+- إنشاء صفحات شكلية فقط.
+- وضع بيانات وهمية كأنها حقيقية.
+- الاعتماد على Client-Side Authorization.
+- وضع الأسرار في الواجهة.
+- استخدام أسماء شركات خارجية داخل التصميم.
+- استخدام Replit Branding.
+- استخدام Lorem Ipsum.
+- كتابة تعليقات طويلة مولدة آليًا.
+- إخفاء أخطاء TypeScript.
+- استخدام any دون ضرورة.
+- تعطيل قواعد الأمان لتسريع التنفيذ.
+
+حقوق المشروع:
+
+Copyright © 2026 Thanarah Team.
+All rights reserved.
+
+الـFooter الداخلي:
+ثناره — تقنية تخدم الإنسان.
+
+لا تعرض الـFooter داخل وضع Presentation Full Screen إلا بصورة خفيفة جدًا.
+```
+
+---
+
+## الشكل الإبداعي لأول تجربة
+
+عند دخول المستخدم من الدعوة، لا تظهر له لوحة تقليدية مباشرة. تكون البداية كالتالي:
+
+1. شاشة أوف وايت هادئة.
+2. شعار ثناره يظهر بحركة 3D بسيطة.
+3. رسالة:
+   **مرحبًا بك في الرؤية المستقبلية للرعاية الصحية**
+4. يظهر اسم المدعو بصورة شخصية:
+   **مرحبًا أ/ محمد**
+5. رسالة الخصوصية:
+   **هذه الجلسة مخصصة لك ومحمية بعلامة تعريف رقمية.**
+6. زر: **بدء الرحلة**
+7. يبدأ العرض بخريطة النظام، ثم يتوسع كل جزء عند الضغط عليه.
+
+## أهم ما سنفعله أمنيًا
+
+بدل محاولة خداع الكاميرات بطريقة غير مضمونة، سنستخدم:
+
+* علامة مائية متحركة باسم المشاهد.
+* كود جلسة مخفي داخل التصميم.
+* Watermark جنائي مختلف لكل مستخدم.
+* مدة جلسة محددة.
+* دعوة مرتبطة بجهاز واحد أو أكثر حسب الإعداد.
+* تسجيل الصفحات التي شاهدها.
+* إلغاء فوري لكل الجلسات.
+* تنبيه عند نشاط غير طبيعي.
+* عدم إرسال أي بيانات لا يملك المستخدم صلاحية رؤيتها.
+* إخفاء الأرقام المالية والأقسام التقنية حسب الدور.
+* تخزين الصور والملفات بروابط موقعة تنتهي صلاحيتها.
+* تسجيل محاولات النسخ والطباعة وفتح الأقسام غير المصرح بها.
+
+النص أعلاه هو المواصفات الأولية الكاملة التي تُرسل إلى Replit قبل بدء البرمجة.

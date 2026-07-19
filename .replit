@@ -18,3 +18,15 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+MONGODB_DATABASE_NAME = "thanarah_presentation"
+NODE_ENV = "development"
+SMTP2GO_HOST = "mail.smtp2go.com"
+SMTP2GO_PORT = "587"
+SMTP_FROM_EMAIL = "noreply@thanarh.com"
+SMTP_FROM_NAME = "نظام ثناره الطبي"
+THANARAH_OWNER_EMAIL_1 = "youssefd.business@gmail.com"
+THANARAH_OWNER_EMAIL_2 = "faisal.m.alenzai@gmail.com"

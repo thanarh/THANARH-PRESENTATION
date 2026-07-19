@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Thanarah Presentation Portal"
+version = "1.0.0"
+id = "artifacts/thanarah-portal"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21287
+
+[services.development]
+run = "pnpm --filter @workspace/thanarah-portal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/thanarah-portal", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/thanarah-portal/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21287"
+BASE_PATH = "/"
