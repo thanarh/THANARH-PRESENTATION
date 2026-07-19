@@ -5,6 +5,7 @@ import { Route, Switch, Router as WouterRouter, Redirect } from 'wouter';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthGuard, AdminGuard } from './components/Guards';
+import { PageTransition } from './components/PageTransition';
 
 // Public Pages
 import Login from './pages/Login';
@@ -100,7 +101,9 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <AuthProvider>
             <TooltipProvider>
-              <Router />
+              <PageTransition>
+                <Router />
+              </PageTransition>
               <Toaster />
             </TooltipProvider>
           </AuthProvider>

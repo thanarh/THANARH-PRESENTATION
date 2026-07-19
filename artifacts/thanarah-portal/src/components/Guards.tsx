@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'wouter';
-import { Loader2 } from 'lucide-react';
+import { LogoSpinner } from './LogoSpinner';
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -14,11 +14,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }, [user, isLoading, setLocation]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LogoSpinner size={72} />;
   }
 
   if (!user) return null;
