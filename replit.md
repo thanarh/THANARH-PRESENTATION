@@ -1,45 +1,75 @@
-# [Project name]
+# Thanarah Presentation Portal — بوابة ثناره التقديمية
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A private, invitation-only investor & partner presentation portal for Thanarah Medical-Tech. Access is fully controlled via invite codes, JWT sessions, and role-based permissions (8 roles). All presentation views are watermarked and session-tracked.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+Two workflows run in parallel — start them both from the **Workflows** panel:
+
+| Workflow | Command | Port |
+|---|---|---|
+| **API Server** | `PORT=8080 pnpm --filter @workspace/api-server run dev` | 8080 |
+| **Thanarah Portal** | `PORT=3000 BASE_PATH=/ pnpm --filter @workspace/thanarah-portal run dev` | 3000 |
+
+The Vite dev server proxies `/api/*` requests to the API server at port 8080.
+
+### One-off commands
+- `pnpm install` — install / sync all workspace dependencies
+- `pnpm run typecheck` — typecheck all packages
+- `pnpm run build` — typecheck + build everything
+- `pnpm --filter @workspace/api-server run seed` — seed presentation data (run once after setup)
+
+## Required Secrets
+
+| Secret | Notes |
+|---|---|
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `SESSION_SECRET` | JWT signing secret (already set) |
+| `SMTP2GO_USERNAME` | SMTP2GO username — optional, needed for invitation emails |
+| `SMTP2GO_PASSWORD` | SMTP2GO password — optional, needed for invitation emails |
+
+## Pre-configured Environment Variables (shared)
+
+Set in `.replit` `[userenv.shared]`:
+- `MONGODB_DATABASE_NAME` = `thanarah_presentation`
+- `NODE_ENV` = `development`
+- `SMTP2GO_HOST` / `SMTP2GO_PORT` / `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME`
+- `THANARAH_OWNER_EMAIL_1` / `THANARAH_OWNER_EMAIL_2`
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **pnpm workspaces**, Node.js 20, TypeScript 5.9
+- **Frontend**: React 19, Vite 7, Tailwind CSS 4, TanStack Query, Wouter, Radix UI (`artifacts/thanarah-portal`)
+- **API**: Express 5, MongoDB + Mongoose 9, JWT (httpOnly cookies), bcryptjs (`artifacts/api-server`)
+- **Shared libs**: `lib/api-client-react`, `lib/api-zod`, `lib/api-spec`, `lib/db`
+- **Build**: esbuild (API bundle), Vite (frontend)
 
-## Where things live
+## Where Things Live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+```
+artifacts/
+  thanarah-portal/   React + Vite frontend (port 3000)
+  api-server/        Express API (port 8080)
+lib/
+  api-client-react/  Generated React Query hooks + custom fetch
+  api-zod/           Generated Zod schemas
+  api-spec/          OpenAPI spec (source of truth for API contracts)
+  db/                Drizzle ORM schema (Postgres — not used by default; Mongo is primary)
+```
 
-## Architecture decisions
+## Architecture Decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Auth uses **httpOnly JWT cookies** (no localStorage) to prevent XSS token theft.
+- The API server builds to a single `dist/index.mjs` via esbuild before each dev start.
+- MongoDB is the primary database (Mongoose); `lib/db` (Drizzle/Postgres) is present but unused by the current app.
+- The Vite dev proxy (`/api → localhost:8080`) bridges the two services in development; in production the platform proxy handles path-based routing.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The API server **builds before starting** (`dev` = build + start). Cold starts take ~2–3 seconds.
+- `PORT` and `BASE_PATH` env vars are **required** by both the Vite config and the API — the workflows set them inline.
+- MongoDB duplicate-index warnings on startup are harmless (schema defines index twice via `index: true` + `schema.index()`).
 
-## Pointers
+## User Preferences
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+_Populate as you build._
