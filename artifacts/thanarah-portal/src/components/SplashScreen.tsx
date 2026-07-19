@@ -1,200 +1,145 @@
 /**
  * SplashScreen — Thanarah branded intro animation.
  *
- * Sequence (total ~2.1 s):
- *   0 s – 0.95 s : Icon slides from right → left (its logo position) while
- *                  spinning 360°. Text ("ثناره" / "THANARAH") fades in from
- *                  the right simultaneously.
- *   0.95 s – 1.5 s: Logo fully assembled; brief hold.
- *   1.5 s – 2.1 s : Screen splits from centre — top half slides up, bottom
- *                   half slides down — revealing the app beneath.
+ * Sequence (~2.0 s total):
+ *   0 s – 0.9 s  : Logo scales up from 88% + fades in.
+ *   0.9 s – 1.5 s: Hold.
+ *   1.5 s – 2.1 s: Curtain split — top half slides up, bottom slides down.
  */
 
 import { useEffect } from 'react';
 
-// ─── Timing (ms) ─────────────────────────────────────────────────────────────
-const MOVE_MS   = 950;   // icon slide + text reveal
-const HOLD_MS   = 550;   // logo settled, hold
-const SPLIT_MS  = 600;   // curtain split
-const TOTAL_MS  = MOVE_MS + HOLD_MS + SPLIT_MS; // 2 100 ms
+// ─── Timing ──────────────────────────────────────────────────────────────────
+const REVEAL_MS = 900;
+const HOLD_MS   = 600;
+const SPLIT_MS  = 600;
+const TOTAL_MS  = REVEAL_MS + HOLD_MS + SPLIT_MS; // 2 100 ms
 
-// ─── Layout ──────────────────────────────────────────────────────────────────
-const ICON_PX   = 110;   // rendered icon size
-const GAP_PX    = 22;    // gap between icon and text block
-// Approximate half-width of the full assembled logo.
-// Icon starts this many px to the right of its final position,
-// which puts it roughly at the screen centre.
-const ICON_OFFSET_PX = 145;
-
-// App background (hsl 40 20% 96% → warm cream)
+// ─── Colour ──────────────────────────────────────────────────────────────────
 const BG = 'hsl(40,20%,96%)';
-const INK = '#1A4D35';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const s = (ms: number) => `${ms / 1000}s`;
+// ─── Logo image (horizontal — icon + wordmark already assembled) ──────────────
+//     Responsive: at most 320 px wide, scales down on small screens.
+const LOGO_W = 'clamp(200px, 45vw, 320px)';
 
-// The logo content rendered inside each curtain panel.
-// `topHalf` flips the clip so the top panel shows only the top portion and
-// the bottom panel shows only the bottom portion — achieved by positioning
-// the logo relative to each panel's edge.
-function LogoContent() {
+// The same logo block is duplicated inside each curtain so the split
+// looks seamless.  Each panel clips its own half via overflow:hidden.
+function LogoBlock() {
   return (
-    <div
+    <img
+      src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
+      alt="Thanarah"
+      draggable={false}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: GAP_PX,
-        /* Force LTR so icon is always on the left regardless of app RTL setting */
-        direction: 'ltr',
-        position: 'relative',
+        width: LOGO_W,
+        height: 'auto',
+        display: 'block',
+        userSelect: 'none',
+        pointerEvents: 'none',
+        // Reveal animation — applied only in the static (pre-split) phase.
+        // The curtain panels duplicate the logo at full opacity so they don't
+        // inherit this animation after it has already run.
+        animation: `th-logo-reveal ${REVEAL_MS}ms cubic-bezier(0.22,1,0.36,1) both`,
       }}
-    >
-      {/* ── Spinning, sliding icon ── */}
-      <img
-        src={`${import.meta.env.BASE_URL}logo-icon.png`}
-        alt=""
-        aria-hidden="true"
-        width={ICON_PX}
-        height={ICON_PX}
-        style={{
-          flexShrink: 0,
-          display: 'block',
-          animation: `th-icon-slide ${s(MOVE_MS)} cubic-bezier(0.22,1,0.36,1) both`,
-        }}
-      />
-
-      {/* ── Text block (fades + slides in from the right) ── */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          animation: `th-text-reveal ${s(MOVE_MS * 0.65)} ease-out ${s(MOVE_MS * 0.28)} both`,
-        }}
-      >
-        {/* Arabic wordmark */}
-        <span
-          style={{
-            fontFamily: "'Cairo', sans-serif",
-            fontSize: 54,
-            fontWeight: 700,
-            color: INK,
-            lineHeight: 1.0,
-            direction: 'rtl',
-            display: 'block',
-          }}
-        >
-          ثناره
-        </span>
-        {/* Latin subtitle */}
-        <span
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 15,
-            fontWeight: 600,
-            letterSpacing: '0.28em',
-            color: INK,
-            marginTop: 4,
-            display: 'block',
-          }}
-        >
-          THANARAH
-        </span>
-      </div>
-    </div>
+    />
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Props ───────────────────────────────────────────────────────────────────
 interface SplashScreenProps {
   onDone: () => void;
 }
 
 export function SplashScreen({ onDone }: SplashScreenProps) {
   useEffect(() => {
-    const t = setTimeout(onDone, TOTAL_MS + 80);
-    return () => clearTimeout(t);
+    const id = setTimeout(onDone, TOTAL_MS + 80);
+    return () => clearTimeout(id);
   }, [onDone]);
 
-  const splitDelay = s(MOVE_MS + HOLD_MS);
+  const splitDelay = `${(REVEAL_MS + HOLD_MS) / 1000}s`;
 
-  // Shared style for a curtain panel's inner logo wrapper.
-  // Each panel clips to its own half (overflow: hidden on the parent),
-  // so we just need the logo centred relative to the full viewport height.
-  // The logo is visually centred at viewport-centre (50 vh from top).
-  // • Top panel (height 50 vh):   logo centre is at panel-bottom  → top: 100%
-  // • Bottom panel (top @ 50 vh): logo centre is at panel-top     → top: 0%
-  const logoWrapperStyle = (isTop: boolean): React.CSSProperties => ({
-    position: 'absolute',
-    left: '50%',
-    top: isTop ? '100%' : '0%',
-    transform: 'translate(-50%, -50%)',
-    // Keep pointer events off
-    pointerEvents: 'none',
-  });
-
+  // Shared curtain base style
   const curtainBase: React.CSSProperties = {
-    position: 'fixed',
+    position:  'fixed',
     left: 0,
     right: 0,
     background: BG,
-    overflow: 'hidden',
-    zIndex: 9999,
+    overflow:  'hidden',
+    zIndex:    9999,
     pointerEvents: 'none',
   };
 
+  // Logo wrapper inside a curtain panel — centred across the full viewport
+  // height so the split lands exactly in the middle of the logo.
+  //   Top panel (h = 50 vh):   logo centre ↔ panel bottom → top: 100%
+  //   Bottom panel (top 50 vh): logo centre ↔ panel top   → top: 0%
+  const logoWrapper = (isTop: boolean): React.CSSProperties => ({
+    position:  'absolute',
+    left:      '50%',
+    top:       isTop ? '100%' : '0%',
+    transform: 'translate(-50%, -50%)',
+    pointerEvents: 'none',
+  });
+
   return (
     <>
-      {/* ── Top curtain (slides upward) ── */}
+      {/* ── Top curtain ── */}
       <div
         style={{
           ...curtainBase,
-          top: 0,
+          top:    0,
           height: '50vh',
-          animation: `th-curtain-top ${s(SPLIT_MS)} cubic-bezier(0.4,0,0.6,1) ${splitDelay} both`,
+          animation: `th-curtain-top ${SPLIT_MS}ms cubic-bezier(0.4,0,0.2,1) ${splitDelay} both`,
         }}
       >
-        <div style={logoWrapperStyle(true)}>
-          <LogoContent />
+        {/* Logo at full opacity — no reveal animation inside curtain */}
+        <div style={logoWrapper(true)}>
+          <img
+            src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
+            alt=""
+            aria-hidden
+            draggable={false}
+            style={{ width: LOGO_W, height: 'auto', display: 'block', pointerEvents: 'none' }}
+          />
         </div>
       </div>
 
-      {/* ── Bottom curtain (slides downward) ── */}
+      {/* ── Bottom curtain ── */}
       <div
         style={{
           ...curtainBase,
-          top: '50vh',
+          top:    '50vh',
           bottom: 0,
-          animation: `th-curtain-bottom ${s(SPLIT_MS)} cubic-bezier(0.4,0,0.6,1) ${splitDelay} both`,
+          animation: `th-curtain-bottom ${SPLIT_MS}ms cubic-bezier(0.4,0,0.2,1) ${splitDelay} both`,
         }}
       >
-        <div style={logoWrapperStyle(false)}>
-          <LogoContent />
+        <div style={logoWrapper(false)}>
+          <img
+            src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
+            alt=""
+            aria-hidden
+            draggable={false}
+            style={{ width: LOGO_W, height: 'auto', display: 'block', pointerEvents: 'none' }}
+          />
         </div>
       </div>
 
       <style>{`
-        /* Icon: slides from the right while rotating 360° */
-        @keyframes th-icon-slide {
-          from { transform: translateX(${ICON_OFFSET_PX}px) rotate(0deg); }
-          to   { transform: translateX(0)                   rotate(360deg); }
+        /* Logo fades in + scales up from 88% */
+        @keyframes th-logo-reveal {
+          from { opacity: 0; transform: scale(0.88); }
+          to   { opacity: 1; transform: scale(1);    }
         }
 
-        /* Text block: fades + drifts in from the right */
-        @keyframes th-text-reveal {
-          from { opacity: 0; transform: translateX(24px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-
-        /* Curtain top: slides the entire top panel upward */
+        /* Top curtain slides up and off screen */
         @keyframes th-curtain-top {
-          from { transform: translateY(0); }
+          from { transform: translateY(0);    }
           to   { transform: translateY(-100%); }
         }
 
-        /* Curtain bottom: slides the entire bottom panel downward */
+        /* Bottom curtain slides down and off screen */
         @keyframes th-curtain-bottom {
-          from { transform: translateY(0); }
+          from { transform: translateY(0);   }
           to   { transform: translateY(100%); }
         }
       `}</style>
