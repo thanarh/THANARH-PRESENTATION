@@ -1,67 +1,66 @@
-# Thanarah Presentation Portal
+# Thanarah Presentation Portal — بوابة ثناره التقديمية
 
-A secure, invitation-only platform for medical-tech presentations with multi-role access control, dynamic watermarking, session tracking, and multilingual support (AR, EN, TR, UR) with RTL-first design.
-
-## Stack
-
-- **Frontend**: React 19, TypeScript, Vite 7, TanStack Query v5, Wouter, Framer Motion, Tailwind CSS v4, shadcn/ui
-- **Backend**: Express 5, Node.js 22+, MongoDB Atlas (Mongoose 9), JWT + httpOnly cookies, Pino logging
-- **Tooling**: pnpm workspaces, Orval (OpenAPI codegen for API client/Zod schemas), esbuild
+A secure, invitation-only investor & partner presentation portal for Thanarah Medical-Tech. Built with React 19 + Vite (frontend), Express 5 (API), MongoDB (auth/sessions), and PostgreSQL via Drizzle ORM.
 
 ## Project Structure
 
 ```
 artifacts/
-  api-server/       — Express backend (port 8080)
-  thanarah-portal/  — React/Vite frontend (port from $PORT)
-  mockup-sandbox/   — Component preview sandbox
+  api-server/          — Express 5 API server (port 8080 in dev)
+  thanarah-portal/     — React 19 + Vite frontend (port from $PORT)
+  mockup-sandbox/      — Design mockup preview server
 lib/
-  api-spec/         — OpenAPI 3.1 definitions (source of truth for API)
-  api-client-react/ — Auto-generated TanStack Query hooks (via Orval)
-  api-zod/          — Auto-generated Zod validation schemas (via Orval)
-  db/               — Drizzle ORM config (schema/scripts only)
+  db/                  — PostgreSQL schema + Drizzle ORM
+  api-client-react/    — Auto-generated React Query hooks
+  api-spec/            — OpenAPI spec + Orval codegen config
+  api-zod/             — Zod validators for API I/O
 ```
 
-## Running in Development
+## How to Run
 
+The project uses pnpm workspaces. Both services start automatically via the configured workflows:
+
+- **API Server** — `PORT=8080 pnpm --filter @workspace/api-server run dev`
+- **Thanarah Portal** — `pnpm --filter @workspace/thanarah-portal run dev`
+
+To install dependencies after a fresh clone:
 ```bash
 pnpm install
 ```
 
-Both services start automatically via configured workflows:
-- **API Server**: `artifacts/api-server: API Server` workflow (port 8080)
-- **Frontend**: `artifacts/thanarah-portal: web` workflow (port from $PORT)
-
-## Initial Setup (first time only)
-
-1. Visit `/setup` in the browser and use your `OWNER_SETUP_KEY` to create the first owner account.
-2. Seed presentation content: `pnpm --filter @workspace/api-server run seed`
-
 ## Required Secrets
+
+Set these in Replit Secrets (never commit them):
 
 | Secret | Purpose |
 |--------|---------|
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `JWT_SECRET` | JWT signing secret |
-| `SESSION_SECRET` | Session signing secret |
-| `OWNER_SETUP_KEY` | Key for initial owner account creation |
-| `SMTP_PASSWORD` | cPanel SMTP password for noreply@thanarah.com |
+| `MONGODB_URI` | MongoDB connection string |
+| `JWT_SECRET` | JWT signing key |
+| `SMTP_PASSWORD` | cPanel SMTP password for `noreply@thanarah.com` |
+| `SESSION_SECRET` | Express session secret |
 
-## Key Environment Variables (already configured)
+`DATABASE_URL` is provisioned automatically by Replit PostgreSQL.
 
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
-- `MONGODB_DATABASE_NAME` — defaults to `thanarah_presentation`
-- `THANARAH_OWNER_EMAIL_1`, `THANARAH_OWNER_EMAIL_2` — visit notification recipients
-- `BASE_URL`, `FRONTEND_URL` — set to the Replit dev domain
+## Environment Variables (already configured)
 
-## API Changes
+| Variable | Value |
+|----------|-------|
+| `SMTP_HOST` | business197.web-hosting.com |
+| `SMTP_PORT` | 465 |
+| `SMTP_SECURE` | true |
+| `SMTP_USERNAME` | noreply@thanarah.com |
+| `SMTP_FROM_EMAIL` | noreply@thanarah.com |
+| `SMTP_FROM_NAME` | Thanarah |
+| `MAIL_PROVIDER` | CPANEL |
+| `MONGODB_DATABASE_NAME` | thanarah_presentation |
+| `NODE_ENV` | development |
 
-Modify `lib/api-spec` OpenAPI definitions first, then regenerate client code:
-```bash
-pnpm --filter @workspace/api-client-react run generate
-pnpm --filter @workspace/api-zod run generate
-```
+## Access Model
+
+The portal is invitation-only — no public registration. Roles: Owner → Super Admin → Admin → Presenter → Investor → Partner → Team Member → Viewer.
 
 ## User Preferences
 
-- Use pnpm for all package management operations.
+- Keep the existing monorepo structure (pnpm workspaces)
+- SMTP uses cPanel only (not SMTP2GO)
+- SMTP_PASSWORD stays in Replit Secrets only — never logged or committed
