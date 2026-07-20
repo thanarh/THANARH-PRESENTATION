@@ -1,69 +1,170 @@
-import nodemailer from "nodemailer";
+/**
+ * Email service — Thanarah Presentation Portal
+ * Uses the official Thanarah cPanel SMTP account.
+ * Credentials are read exclusively from server-side environment variables.
+ * The SMTP password is NEVER logged, committed, or sent to the browser.
+ *
+ * © 2026 Thanarah Team — فريق ثناره
+ */
+
+import nodemailer, { type Transporter } from "nodemailer";
 import { logger } from "./logger";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP2GO_HOST || "mail.smtp2go.com",
-  port: parseInt(process.env.SMTP2GO_PORT || "587"),
-  secure: false,
-  auth: {
-    user: process.env.SMTP2GO_USERNAME,
-    pass: process.env.SMTP2GO_PASSWORD,
-  },
-});
+// ─── SMTP state ──────────────────────────────────────────────────────────────
 
-const FROM = `${process.env.SMTP_FROM_NAME || "نظام ثناره الطبي"} <${process.env.SMTP_FROM_EMAIL || "noreply@thanarh.com"}>`;
+type MailStatus = "ok" | "degraded" | "unchecked";
+
+let _transporter: Transporter | null = null;
+let _status: MailStatus = "unchecked";
+let _lastVerified: Date | null = null;
+let _lastError: string | null = null;
+
+/** Returns current mail service health (safe to expose to admin UI). */
+export function getMailStatus() {
+  return {
+    status: _status,
+    provider: "cPanel SMTP",
+    host: process.env.SMTP_HOST || "business197.web-hosting.com",
+    port: Number(process.env.SMTP_PORT ?? 465),
+    secure: (process.env.SMTP_SECURE ?? "true") === "true",
+    sender: process.env.SMTP_FROM_EMAIL || "noreply@thanarah.com",
+    lastVerified: _lastVerified,
+    lastError: _lastError, // sanitized — no credentials
+  };
+}
+
+/** Lazy-initialise the shared Nodemailer transporter. */
+function getTransporter(): Transporter {
+  if (_transporter) return _transporter;
+
+  _transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "business197.web-hosting.com",
+    port: Number(process.env.SMTP_PORT ?? 465),
+    secure: (process.env.SMTP_SECURE ?? "true") === "true",
+    auth: {
+      user: process.env.SMTP_USERNAME || "noreply@thanarah.com",
+      pass: process.env.SMTP_PASSWORD,
+    },
+    connectionTimeout: 10_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 15_000,
+  });
+
+  return _transporter;
+}
+
+/** Verify SMTP on server startup — keeps the portal running on failure. */
+export async function verifySmtpConnection(): Promise<void> {
+  if (!process.env.SMTP_PASSWORD) {
+    _status = "degraded";
+    _lastError = "SMTP_PASSWORD secret is not configured";
+    logger.warn("Mail service degraded: SMTP_PASSWORD not set");
+    return;
+  }
+  try {
+    await getTransporter().verify();
+    _status = "ok";
+    _lastVerified = new Date();
+    _lastError = null;
+    logger.info("Mail service: SMTP connection verified");
+  } catch (err: any) {
+    _status = "degraded";
+    // Sanitise: remove anything that looks like a password/credential
+    _lastError = String(err?.message ?? "SMTP verification failed").replace(
+      /pass(word)?[^,\s]*/gi,
+      "[redacted]",
+    );
+    logger.warn({ sanitizedError: _lastError }, "Mail service degraded");
+  }
+}
+
+// ─── Sender identity ─────────────────────────────────────────────────────────
+
+const fromAddress = () =>
+  `${process.env.SMTP_FROM_NAME ?? "Thanarah"} <${process.env.SMTP_FROM_EMAIL ?? "noreply@thanarah.com"}>`;
+
+// ─── Core send helper ────────────────────────────────────────────────────────
 
 export async function sendEmail(opts: {
   to: string;
   subject: string;
   html: string;
-}): Promise<void> {
+  text?: string;
+  replyTo?: string;
+}): Promise<boolean> {
   try {
-    await transporter.sendMail({ from: FROM, ...opts });
+    await getTransporter().sendMail({
+      from: fromAddress(),
+      replyTo: opts.replyTo,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text ?? opts.subject,
+    });
     logger.info({ to: opts.to, subject: opts.subject }, "Email sent");
-  } catch (err) {
-    logger.error({ err, to: opts.to }, "Failed to send email");
-    // Don't throw — email failures should not block the response in most cases
+    return true;
+  } catch (err: any) {
+    logger.error(
+      { to: opts.to, subject: opts.subject, code: err?.code },
+      "Failed to send email",
+    );
+    return false;
   }
 }
 
-function baseTemplate(content: string): string {
-  return `
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
+// ─── Base HTML template ──────────────────────────────────────────────────────
+
+function baseTemplate(opts: {
+  content: string;
+  dir?: "rtl" | "ltr";
+  lang?: string;
+  logoUrl?: string;
+}): string {
+  const { content, dir = "rtl", lang = "ar" } = opts;
+  return `<!DOCTYPE html>
+<html dir="${dir}" lang="${lang}">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="color-scheme" content="light"/>
+  <title>Thanarah</title>
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #F7F5F1; margin: 0; padding: 0; direction: rtl; }
-    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .header { background: #0F3D33; padding: 32px; text-align: center; }
-    .header img { width: 160px; }
-    .header h1 { color: #A9CBB5; font-size: 14px; margin: 12px 0 0; font-weight: 400; letter-spacing: 2px; }
-    .body { padding: 40px 48px; color: #1A1A1A; line-height: 1.7; font-size: 15px; }
-    .btn { display: inline-block; background: #1E6B4D; color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 24px 0; font-size: 15px; }
-    .footer { background: #F7F5F1; padding: 20px 48px; text-align: center; color: #6B7280; font-size: 12px; border-top: 1px solid #e8e6e1; }
-    .divider { height: 1px; background: #e8e6e1; margin: 24px 0; }
-    .label { color: #1E6B4D; font-weight: 600; }
+    body{margin:0;padding:0;background:#F7F5F1;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#1A1A1A;}
+    .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+    .hdr{background:#0F3D33;padding:32px 40px;text-align:center;}
+    .hdr-logo{display:inline-block;margin:0 auto;}
+    .hdr-logo-text{color:#A9CBB5;font-size:26px;font-weight:700;letter-spacing:1px;margin:0;line-height:1.2;}
+    .hdr-sub{color:#A9CBB5;font-size:11px;letter-spacing:3px;margin:6px 0 0;font-weight:400;}
+    .body{padding:40px 48px;line-height:1.75;font-size:15px;color:#1A1A1A;}
+    .btn{display:inline-block;background:#1E6B4D;color:#fff !important;text-decoration:none;padding:15px 36px;border-radius:10px;font-weight:700;font-size:15px;margin:28px 0;letter-spacing:0.3px;}
+    .details-card{background:#F7F5F1;border-radius:10px;padding:20px 24px;margin:24px 0;}
+    .details-card p{margin:8px 0;font-size:14px;}
+    .label{color:#1E6B4D;font-weight:600;}
+    .notice{background:#FEF9EC;border:1px solid #F0C955;border-radius:8px;padding:14px 18px;font-size:13px;color:#7A5A00;margin:20px 0;}
+    .divider{height:1px;background:#E5E2DC;margin:24px 0;}
+    .ftr{background:#F7F5F1;border-top:1px solid #E5E2DC;padding:24px 40px;text-align:center;color:#6B7280;font-size:12px;line-height:1.8;}
+    .ftr strong{color:#0F3D33;}
+    @media(max-width:600px){.body{padding:28px 24px;}.hdr{padding:24px;}.ftr{padding:20px 24px;}}
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div style="color:#A9CBB5; font-size: 28px; font-weight: 700; letter-spacing: 1px;">ثناره</div>
-      <h1>THANARAH</h1>
+  <div class="wrap">
+    <div class="hdr">
+      <p class="hdr-logo-text">ثناره</p>
+      <p class="hdr-sub">THANARAH</p>
     </div>
     <div class="body">${content}</div>
-    <div class="footer">
-      <p>هذا البريد مرسل من نظام ثناره الطبي</p>
-      <p>ثناره — تقنية تخدم الإنسان</p>
-      <p style="color:#0F3D33; font-size: 10px;">© 2026 Thanarah Team. All rights reserved.</p>
+    <div class="ftr">
+      <strong>ثناره — تقنية تخدم الإنسان</strong><br/>
+      Thanarah — Technology Serving People<br/><br/>
+      <span style="color:#0F3D33;font-size:11px;">© 2026 Thanarah Team. All rights reserved.</span>
     </div>
   </div>
 </body>
-</html>
-  `.trim();
+</html>`;
 }
+
+// ─── Email templates ─────────────────────────────────────────────────────────
 
 export async function sendInvitationEmail(opts: {
   to: string;
@@ -72,23 +173,31 @@ export async function sendInvitationEmail(opts: {
   expiresAt: Date;
   inviterName: string;
   customMessage?: string;
+  lang?: string;
 }): Promise<void> {
-  const html = baseTemplate(`
-    <p>مرحباً <span class="label">${opts.inviteeName}</span>،</p>
-    <p>تمت دعوتك من قِبل <span class="label">${opts.inviterName}</span> للاطلاع على رؤية ومنظومة مشروع <strong>ثناره</strong> الطبي الشاملة.</p>
-    ${opts.customMessage ? `<p>${opts.customMessage}</p>` : ""}
-    <div class="divider"></div>
-    <p>الدعوة سارية حتى: <span class="label">${opts.expiresAt.toLocaleDateString("ar-SA")}</span></p>
-    <p>انقر على الزر أدناه لقبول الدعوة وإنشاء حسابك:</p>
-    <center><a href="${opts.inviteUrl}" class="btn">قبول الدعوة</a></center>
-    <div class="divider"></div>
-    <p style="font-size: 13px; color: #6B7280;">هذه الجلسة مخصصة لك ومحمية بعلامة تعريف رقمية. يُرجى عدم مشاركة الرابط.</p>
-  `);
-
+  const expiry = opts.expiresAt.toLocaleDateString("ar-SA", {
+    year: "numeric", month: "long", day: "numeric",
+  });
+  const html = baseTemplate({
+    content: `
+      <p>مرحباً <span class="label">${opts.inviteeName}</span>،</p>
+      <p>تمت دعوتك من قِبل <span class="label">${opts.inviterName}</span> للاطلاع على رؤية ومنظومة مشروع <strong>ثناره</strong> الطبي الشاملة.</p>
+      ${opts.customMessage ? `<p>${opts.customMessage}</p>` : ""}
+      <div class="details-card">
+        <p><span class="label">صلاحية الدعوة:</span> ${expiry}</p>
+      </div>
+      <p>انقر على الزر أدناه لقبول الدعوة وإنشاء حسابك:</p>
+      <center><a href="${opts.inviteUrl}" class="btn">دخول تجربة ثناره</a></center>
+      <div class="notice">
+        هذه الدعوة شخصية ومخصصة للمستلم فقط. يرجى عدم مشاركتها أو إعادة توجيهها.<br/>
+        This invitation is personal and intended only for its recipient. Do not share or forward it.
+      </div>`,
+  });
   await sendEmail({
     to: opts.to,
-    subject: "دعوة للاطلاع على منظومة ثناره الطبية",
+    subject: "دعوة خاصة للدخول إلى تجربة ثناره",
     html,
+    text: `مرحباً ${opts.inviteeName}، تمت دعوتك إلى ثناره.\nرابط القبول: ${opts.inviteUrl}\nصلاحية الدعوة: ${expiry}`,
   });
 }
 
@@ -97,16 +206,16 @@ export async function sendVerificationEmail(opts: {
   name: string;
   code: string;
 }): Promise<void> {
-  const html = baseTemplate(`
-    <p>مرحباً <span class="label">${opts.name}</span>،</p>
-    <p>رمز التحقق من بريدك الإلكتروني هو:</p>
-    <center>
-      <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #0F3D33; background: #F7F5F1; padding: 24px 40px; border-radius: 8px; display: inline-block; margin: 16px 0;">${opts.code}</div>
-    </center>
-    <p>الرمز صالح لمدة 10 دقائق.</p>
-  `);
-
-  await sendEmail({ to: opts.to, subject: "رمز التحقق - ثناره", html });
+  const html = baseTemplate({
+    content: `
+      <p>مرحباً <span class="label">${opts.name}</span>،</p>
+      <p>رمز التحقق من بريدك الإلكتروني هو:</p>
+      <center>
+        <div style="font-size:38px;font-weight:700;letter-spacing:10px;color:#0F3D33;background:#F7F5F1;padding:24px 40px;border-radius:10px;display:inline-block;margin:16px 0;">${opts.code}</div>
+      </center>
+      <p style="color:#6B7280;font-size:13px;">الرمز صالح لمدة 10 دقائق.</p>`,
+  });
+  await sendEmail({ to: opts.to, subject: "رمز التحقق — ثناره", html });
 }
 
 export async function sendLoginAlertEmail(opts: {
@@ -117,32 +226,46 @@ export async function sendLoginAlertEmail(opts: {
   device: string;
   time: Date;
 }): Promise<void> {
-  const html = baseTemplate(`
-    <p>مرحباً <span class="label">${opts.name}</span>،</p>
-    <p>تم تسجيل الدخول إلى حسابك في ثناره من:</p>
-    <ul style="margin: 16px 0; padding-right: 20px;">
-      <li>الجهاز: ${opts.device}</li>
-      <li>العنوان: ${opts.ipAddress}${opts.country ? ` (${opts.country})` : ""}</li>
-      <li>الوقت: ${opts.time.toLocaleString("ar-SA")}</li>
-    </ul>
-    <p>إذا لم تكن أنت، تواصل مع المسؤول فوراً.</p>
-  `);
+  const html = baseTemplate({
+    content: `
+      <p>مرحباً <span class="label">${opts.name}</span>،</p>
+      <p>تم تسجيل دخول جديد إلى حسابك:</p>
+      <div class="details-card">
+        <p><span class="label">الجهاز:</span> ${opts.device}</p>
+        <p><span class="label">العنوان:</span> ${opts.ipAddress}${opts.country ? ` (${opts.country})` : ""}</p>
+        <p><span class="label">الوقت:</span> ${opts.time.toLocaleString("ar-SA")}</p>
+      </div>
+      <div class="notice">إذا لم تكن أنت، تواصل مع المسؤول فوراً.</div>`,
+  });
+  await sendEmail({ to: opts.to, subject: "تنبيه: تسجيل دخول جديد — ثناره", html });
+}
 
-  await sendEmail({ to: opts.to, subject: "تنبيه: تسجيل دخول جديد - ثناره", html });
+export async function sendPasswordResetEmail(opts: {
+  to: string;
+  name: string;
+  resetUrl: string;
+}): Promise<void> {
+  const html = baseTemplate({
+    content: `
+      <p>مرحباً <span class="label">${opts.name}</span>،</p>
+      <p>تلقّينا طلباً لإعادة تعيين كلمة مرور حسابك. انقر على الزر أدناه:</p>
+      <center><a href="${opts.resetUrl}" class="btn">إعادة تعيين كلمة المرور</a></center>
+      <p style="color:#6B7280;font-size:13px;">الرابط صالح لمدة 30 دقيقة فقط. إذا لم تطلب ذلك، تجاهل هذا البريد.</p>`,
+  });
+  await sendEmail({ to: opts.to, subject: "إعادة تعيين كلمة المرور — ثناره", html });
 }
 
 export async function sendVisitRequestConfirmation(opts: {
   to: string;
   name: string;
 }): Promise<void> {
-  const html = baseTemplate(`
-    <p>مرحباً <span class="label">${opts.name}</span>،</p>
-    <p>تم استلام طلب زيارتك لمنظومة ثناره الطبية بنجاح.</p>
-    <p>سيتم مراجعة طلبك والتواصل معك في أقرب وقت ممكن.</p>
-    <p>شكراً لاهتمامك بثناره.</p>
-  `);
-
-  await sendEmail({ to: opts.to, subject: "تأكيد استلام طلب الزيارة - ثناره", html });
+  const html = baseTemplate({
+    content: `
+      <p>مرحباً <span class="label">${opts.name}</span>،</p>
+      <p>تم استلام طلب زيارتك بنجاح.</p>
+      <p>سيتم مراجعة طلبك والتواصل معك قريباً. شكراً لاهتمامك بثناره.</p>`,
+  });
+  await sendEmail({ to: opts.to, subject: "تأكيد استلام طلب الزيارة — ثناره", html });
 }
 
 export async function sendVisitRequestAdminNotification(opts: {
@@ -153,32 +276,37 @@ export async function sendVisitRequestAdminNotification(opts: {
   reason: string;
   visitorType: string;
 }): Promise<void> {
-  const html = baseTemplate(`
-    <p>طلب زيارة جديد في نظام ثناره:</p>
-    <ul style="margin: 16px 0; padding-right: 20px;">
-      <li>الاسم: <span class="label">${opts.visitorName}</span></li>
-      <li>البريد: ${opts.visitorEmail}</li>
-      <li>الجوال: ${opts.visitorPhone}</li>
-      <li>النوع: ${opts.visitorType}</li>
-      <li>السبب: ${opts.reason}</li>
-    </ul>
-    <p>يمكنك الموافقة أو رفض الطلب من لوحة التحكم.</p>
-  `);
-
-  await sendEmail({ to: opts.to, subject: `طلب زيارة جديد - ${opts.visitorName}`, html });
+  const html = baseTemplate({
+    content: `
+      <p>طلب زيارة جديد:</p>
+      <div class="details-card">
+        <p><span class="label">الاسم:</span> ${opts.visitorName}</p>
+        <p><span class="label">البريد:</span> ${opts.visitorEmail}</p>
+        <p><span class="label">الجوال:</span> ${opts.visitorPhone}</p>
+        <p><span class="label">النوع:</span> ${opts.visitorType}</p>
+        <p><span class="label">السبب:</span> ${opts.reason}</p>
+      </div>
+      <p>يمكنك المراجعة والرد من لوحة تحكم ثناره.</p>`,
+  });
+  await sendEmail({
+    to: opts.to,
+    subject: `طلب زيارة جديد — ${opts.visitorName}`,
+    html,
+  });
 }
 
-export async function sendPasswordResetEmail(opts: {
-  to: string;
-  name: string;
-  resetUrl: string;
-}): Promise<void> {
-  const html = baseTemplate(`
-    <p>مرحباً <span class="label">${opts.name}</span>،</p>
-    <p>طلبت إعادة تعيين كلمة المرور. انقر على الزر أدناه:</p>
-    <center><a href="${opts.resetUrl}" class="btn">إعادة تعيين كلمة المرور</a></center>
-    <p>الرابط صالح لمدة 30 دقيقة. إذا لم تطلب ذلك، تجاهل هذا البريد.</p>
-  `);
-
-  await sendEmail({ to: opts.to, subject: "إعادة تعيين كلمة المرور - ثناره", html });
+export async function sendTestEmail(to: string): Promise<boolean> {
+  const html = baseTemplate({
+    content: `
+      <p>هذا بريد تجريبي من نظام ثناره.</p>
+      <div class="details-card">
+        <p><span class="label">الخادم:</span> ${process.env.SMTP_HOST ?? "business197.web-hosting.com"}</p>
+        <p><span class="label">المُرسِل:</span> ${process.env.SMTP_FROM_EMAIL ?? "noreply@thanarah.com"}</p>
+        <p><span class="label">الوقت:</span> ${new Date().toLocaleString("ar-SA")}</p>
+      </div>
+      <p style="color:#1E6B4D;font-weight:600;">✓ الاتصال بالبريد الإلكتروني يعمل بنجاح.</p>
+      <hr style="border:none;border-top:1px solid #e5e2dc;margin:20px 0;"/>
+      <p style="color:#6B7280;font-size:13px;">This is a test email from the Thanarah portal mail system.</p>`,
+  });
+  return sendEmail({ to, subject: "بريد تجريبي — ثناره | Test Email", html });
 }
