@@ -13,6 +13,7 @@ import { SplashScreen } from './components/SplashScreen';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
 import VisitRequest from './pages/VisitRequest';
+import ResetPassword from './pages/ResetPassword';
 import InviteAccept from './pages/InviteAccept';
 import ErrorPage from './pages/ErrorPage';
 import NotFound from '@/pages/not-found';
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/setup" component={Setup} />
       <Route path="/visit-request" component={VisitRequest} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/invite/expired" component={() => <ErrorPage type="expired" />} />
       <Route path="/invite/revoked" component={() => <ErrorPage type="revoked" />} />
       <Route path="/access-denied" component={() => <ErrorPage type="denied" />} />

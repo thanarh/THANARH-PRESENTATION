@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useLogin } from '@workspace/api-client-react';
+import { useLogin, useForgotPassword } from '@workspace/api-client-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -11,7 +11,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../components/ui/form';
-import { Loader2, ArrowRight, AlertCircle } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '../components/ui/dialog';
+import { Loader2, ArrowRight, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const loginSchema = z.object({
@@ -19,6 +22,11 @@ const loginSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
+const forgotSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+// ─── Side video panel ─────────────────────────────────────────────────────────
 function LoginVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -43,9 +51,7 @@ function LoginVideo() {
           (e.currentTarget as HTMLVideoElement).playbackRate = 2;
         }}
       />
-      {/* dark gradient overlay so it looks refined */}
       <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
-      {/* Logo watermark bottom-left */}
       <div className="absolute bottom-8 left-8 z-10">
         <img
           src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
@@ -57,11 +63,121 @@ function LoginVideo() {
   );
 }
 
+// ─── Forgot-password dialog ───────────────────────────────────────────────────
+function ForgotPasswordDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { t, isRtl } = useLanguage();
+  const [sent, setSent] = useState(false);
+
+  const form = useForm<z.infer<typeof forgotSchema>>({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { email: '' },
+  });
+
+  const { mutate: forgot, isPending } = useForgotPassword({
+    mutation: {
+      onSuccess: () => setSent(true),
+    },
+  });
+
+  const onSubmit = (values: z.infer<typeof forgotSchema>) => {
+    forgot({ data: { email: values.email } });
+  };
+
+  // reset state when re-opened
+  useEffect(() => {
+    if (open) { setSent(false); form.reset(); }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent
+        className="max-w-md"
+        dir={isRtl ? 'rtl' : 'ltr'}
+      >
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">
+            {t('forgotPasswordTitle')}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {t('forgotPasswordDesc')}
+          </DialogDescription>
+        </DialogHeader>
+
+        {sent ? (
+          <div className="text-center py-6 space-y-4">
+            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-7 h-7 text-primary" />
+            </div>
+            <p className="font-semibold text-foreground">{t('resetLinkSent')}</p>
+            <p className="text-sm text-muted-foreground">{t('resetLinkSentDesc')}</p>
+            <Button variant="outline" className="w-full h-11 mt-2" onClick={onClose}>
+              {t('cancel')}
+            </Button>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <Label className="font-medium">{t('email')}</Label>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="name@example.com"
+                          className="h-11 ps-9"
+                          dir="ltr"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-3 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-11"
+                  onClick={onClose}
+                >
+                  {t('cancel')}
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={isPending}
+                >
+                  {isPending
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : t('sendResetLink')}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Login page ──────────────────────────────────────────────────────────
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login: authLogin } = useAuth();
   const { t, isRtl } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -92,7 +208,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex" dir={isRtl ? 'rtl' : 'ltr'}>
 
-      {/* ── Video panel — desktop only, left side (right side in RTL) ── */}
+      {/* ── Video panel — desktop only ── */}
       <div className="hidden lg:block lg:w-1/2 xl:w-[55%] relative">
         <LoginVideo />
       </div>
@@ -108,20 +224,17 @@ export default function Login() {
 
         {/* Header */}
         <header className="p-6 flex justify-between items-center relative z-10">
-          {/* Logo only on mobile (desktop shows it on the video panel) */}
           <img
             src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
             alt="Thanarah"
             className="h-7 object-contain lg:hidden"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-          <div className="hidden lg:block" /> {/* spacer */}
+          <div className="hidden lg:block" />
           <LanguageSwitcher />
         </header>
 
-        {/* Form centred */}
+        {/* Form */}
         <main className="flex-1 flex items-center justify-center p-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -133,18 +246,21 @@ export default function Login() {
               {/* accent line */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-medium-green to-secondary" />
 
+              {/* Logo icon — no background wrapper */}
               <div className="mb-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <div className="flex items-center justify-center mx-auto mb-6">
                   <img
                     src={`${import.meta.env.BASE_URL}logo-icon.png`}
-                    alt="Icon"
-                    className="w-8 h-8 object-contain"
+                    alt="Thanarah"
+                    className="w-12 h-12 object-contain"
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">{t('login')}</h1>
                 <p className="text-muted-foreground text-sm">
-                  Sign in to access the presentation portal.
+                  {isRtl
+                    ? 'سجّل دخولك للوصول إلى البوابة التقديمية.'
+                    : 'Sign in to access the presentation portal.'}
                 </p>
               </div>
 
@@ -167,6 +283,7 @@ export default function Login() {
                           <Input
                             placeholder="name@example.com"
                             className="h-12 bg-background/50"
+                            dir="ltr"
                             data-testid="input-email"
                             {...field}
                           />
@@ -182,12 +299,13 @@ export default function Login() {
                       <FormItem>
                         <div className="flex justify-between items-center">
                           <Label className="text-foreground font-medium">{t('password')}</Label>
-                          <a
-                            href="#"
+                          <button
+                            type="button"
                             className="text-xs text-primary font-medium hover:underline"
+                            onClick={() => setForgotOpen(true)}
                           >
                             {t('forgotPassword')}
-                          </a>
+                          </button>
                         </div>
                         <FormControl>
                           <Input
@@ -236,6 +354,9 @@ export default function Login() {
           </motion.div>
         </main>
       </div>
+
+      {/* Forgot password dialog */}
+      <ForgotPasswordDialog open={forgotOpen} onClose={() => setForgotOpen(false)} />
     </div>
   );
 }
