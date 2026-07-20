@@ -29,39 +29,157 @@ const forgotSchema = z.object({
 // ─── Side video panel ─────────────────────────────────────────────────────────
 function LoginVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    v.playbackRate = 2;
+    // Slow, cinematic playback — hides compression artifacts from fast motion
+    v.playbackRate = 0.6;
     v.play().catch(() => {});
   }, []);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#0d1f15]">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="none"
-        className="absolute inset-0 w-full h-full object-cover"
-        onLoadedMetadata={(e) => {
-          (e.currentTarget as HTMLVideoElement).playbackRate = 2;
-        }}
+    <div className="relative w-full h-full overflow-hidden bg-[#060f0a]">
+
+      {/* ── Video — slow cinematic playback ──────────────────────────────── */}
+      <motion.div
+        className="absolute inset-0"
+        initial={{ opacity: 0, scale: 1.08 }}
+        animate={revealed ? { opacity: 1, scale: 1.03 } : {}}
+        transition={{ duration: 3.5, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <source src={`${import.meta.env.BASE_URL}login-demo.webm`} type="video/webm" />
-        <source src={`${import.meta.env.BASE_URL}login-demo.mov`} type="video/quicktime" />
-      </video>
-      <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
-      <div className="absolute bottom-8 left-8 z-10">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          onCanPlay={() => setRevealed(true)}
+          onLoadedMetadata={(e) => {
+            (e.currentTarget as HTMLVideoElement).playbackRate = 0.6;
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            // Subtle post-process: boost contrast, add warmth, reduce over-brightness
+            filter: 'brightness(0.72) contrast(1.18) saturate(0.8) sepia(0.12)',
+          }}
+        >
+          <source src={`${import.meta.env.BASE_URL}login-demo.webm`} type="video/webm" />
+          <source src={`${import.meta.env.BASE_URL}login-demo.mov`} type="video/quicktime" />
+        </video>
+      </motion.div>
+
+      {/* ── Edge vignette — hides compression artifacts at perimeter ─────── */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            radial-gradient(ellipse 90% 90% at 50% 50%,
+              transparent 30%,
+              rgba(4,12,8,0.55) 70%,
+              rgba(4,12,8,0.92) 100%
+            )
+          `,
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
+      />
+
+      {/* ── Top & bottom gradient bars — masks cut edges cleanly ─────────── */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            linear-gradient(to bottom,
+              rgba(6,15,10,0.88) 0%,
+              transparent 22%,
+              transparent 72%,
+              rgba(6,15,10,0.92) 100%
+            )
+          `,
+          pointerEvents: 'none',
+          zIndex: 3,
+        }}
+      />
+
+      {/* ── Brand colour wash — ties video to brand palette ──────────────── */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(135deg, rgba(15,61,51,0.38) 0%, transparent 60%, rgba(30,107,77,0.12) 100%)',
+          mixBlendMode: 'multiply',
+          pointerEvents: 'none',
+          zIndex: 4,
+        }}
+      />
+
+      {/* ── Film-grain texture (SVG feTurbulence) — masks compression noise ─ */}
+      <svg aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.04, pointerEvents: 'none', zIndex: 5 }}>
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain)" />
+      </svg>
+
+      {/* ── Opaque curtain that lifts slowly on load ─────────────────────── */}
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 2.8, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: '#060f0a',
+          pointerEvents: 'none',
+          zIndex: 6,
+        }}
+      />
+
+      {/* ── Branding ─────────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1.2, delay: 2.0, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute bottom-8 left-8"
+        style={{ zIndex: 10 }}
+      >
         <img
           src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
           alt="Thanarah"
-          className="h-7 object-contain opacity-80 brightness-0 invert"
+          className="h-7 object-contain brightness-0 invert"
+          style={{ opacity: 0.7 }}
         />
-      </div>
+      </motion.div>
+
+      {/* ── Subtle gold accent line ───────────────────────────────────────── */}
+      <motion.div
+        aria-hidden
+        initial={{ scaleX: 0, opacity: 0 }}
+        animate={{ scaleX: 1, opacity: 1 }}
+        transition={{ duration: 1.4, delay: 2.4, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          position: 'absolute',
+          bottom: 56,
+          left: 32,
+          width: 80,
+          height: 1,
+          background: 'linear-gradient(90deg, rgba(201,168,76,0.8), transparent)',
+          transformOrigin: 'left center',
+          zIndex: 10,
+        }}
+      />
     </div>
   );
 }
