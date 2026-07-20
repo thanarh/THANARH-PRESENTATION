@@ -41,16 +41,19 @@ function LoginVideo() {
     <div className="relative w-full h-full overflow-hidden bg-[#0d1f15]">
       <video
         ref={videoRef}
-        src={`${import.meta.env.BASE_URL}login-demo.mov`}
         autoPlay
         muted
         loop
         playsInline
+        preload="none"
         className="absolute inset-0 w-full h-full object-cover"
         onLoadedMetadata={(e) => {
           (e.currentTarget as HTMLVideoElement).playbackRate = 2;
         }}
-      />
+      >
+        <source src={`${import.meta.env.BASE_URL}login-demo.webm`} type="video/webm" />
+        <source src={`${import.meta.env.BASE_URL}login-demo.mov`} type="video/quicktime" />
+      </video>
       <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
       <div className="absolute bottom-8 left-8 z-10">
         <img

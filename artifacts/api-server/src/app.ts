@@ -6,6 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -58,6 +59,14 @@ app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
 
+// Gzip/Brotli compression for all responses — reduces bandwidth by ~70 %
+app.use(compression({
+  // Skip compression for small responses (< 1 KB) — overhead not worth it
+  threshold: 1024,
+  // Use highest compression for text (JSON, HTML, JS, CSS)
+  level: 6,
+}));
+
 app.use(
   pinoHttp({
     logger,
@@ -98,17 +107,34 @@ app.use("/api", router);
 if (process.env.NODE_ENV === "production" && fs.existsSync(PORTAL_DIR)) {
   logger.info({ PORTAL_DIR }, "Serving portal static files");
 
-  // Long-lived cache for hashed asset bundles
+  // Long-lived cache for hashed asset bundles (JS/CSS with content hash)
   app.use(
     "/assets",
     express.static(path.join(PORTAL_DIR, "assets"), {
       maxAge: "1y",
       immutable: true,
+      setHeaders(res, filePath) {
+        // Allow pre-compressed brotli/gzip to be served with correct encoding
+        if (filePath.endsWith(".br")) res.setHeader("Content-Encoding", "br");
+        else if (filePath.endsWith(".gz")) res.setHeader("Content-Encoding", "gzip");
+      },
     }),
   );
 
-  // Everything else (logos, fonts, manifest …)
-  app.use(express.static(PORTAL_DIR, { maxAge: "1h" }));
+  // Videos — 7-day cache; browsers won't re-download unless changed
+  app.use(
+    express.static(PORTAL_DIR, {
+      maxAge: "7d",
+      setHeaders(res, filePath) {
+        if (/\.(mov|webm|mp4|ogv)$/.test(filePath)) {
+          res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
+          res.setHeader("Accept-Ranges", "bytes"); // enable range requests for video seeking
+        } else if (/\.(png|jpg|jpeg|ico|svg|woff2?)$/.test(filePath)) {
+          res.setHeader("Cache-Control", "public, max-age=86400"); // 1-day for images
+        }
+      },
+    }),
+  );
 
   // SPA catch-all — return index.html for any non-API, non-file path
   app.get("/{*path}", (_req: Request, res: Response) => {
