@@ -1,75 +1,67 @@
-# Thanarah Presentation Portal — بوابة ثناره التقديمية
+# Thanarah Presentation Portal
 
-A private, invitation-only investor & partner presentation portal for Thanarah Medical-Tech. Access is fully controlled via invite codes, JWT sessions, and role-based permissions (8 roles). All presentation views are watermarked and session-tracked.
-
-## Run & Operate
-
-Two workflows run in parallel — start them both from the **Workflows** panel:
-
-| Workflow | Command | Port |
-|---|---|---|
-| **API Server** | `PORT=8080 pnpm --filter @workspace/api-server run dev` | 8080 |
-| **Thanarah Portal** | `PORT=3000 BASE_PATH=/ pnpm --filter @workspace/thanarah-portal run dev` | 3000 |
-
-The Vite dev server proxies `/api/*` requests to the API server at port 8080.
-
-### One-off commands
-- `pnpm install` — install / sync all workspace dependencies
-- `pnpm run typecheck` — typecheck all packages
-- `pnpm run build` — typecheck + build everything
-- `pnpm --filter @workspace/api-server run seed` — seed presentation data (run once after setup)
-
-## Required Secrets
-
-| Secret | Notes |
-|---|---|
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `SESSION_SECRET` | JWT signing secret (already set) |
-| `SMTP2GO_USERNAME` | SMTP2GO username — optional, needed for invitation emails |
-| `SMTP2GO_PASSWORD` | SMTP2GO password — optional, needed for invitation emails |
-
-## Pre-configured Environment Variables (shared)
-
-Set in `.replit` `[userenv.shared]`:
-- `MONGODB_DATABASE_NAME` = `thanarah_presentation`
-- `NODE_ENV` = `development`
-- `SMTP2GO_HOST` / `SMTP2GO_PORT` / `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME`
-- `THANARAH_OWNER_EMAIL_1` / `THANARAH_OWNER_EMAIL_2`
+A secure, invitation-only platform for medical-tech presentations with multi-role access control, dynamic watermarking, session tracking, and multilingual support (AR, EN, TR, UR) with RTL-first design.
 
 ## Stack
 
-- **pnpm workspaces**, Node.js 20, TypeScript 5.9
-- **Frontend**: React 19, Vite 7, Tailwind CSS 4, TanStack Query, Wouter, Radix UI (`artifacts/thanarah-portal`)
-- **API**: Express 5, MongoDB + Mongoose 9, JWT (httpOnly cookies), bcryptjs (`artifacts/api-server`)
-- **Shared libs**: `lib/api-client-react`, `lib/api-zod`, `lib/api-spec`, `lib/db`
-- **Build**: esbuild (API bundle), Vite (frontend)
+- **Frontend**: React 19, TypeScript, Vite 7, TanStack Query v5, Wouter, Framer Motion, Tailwind CSS v4, shadcn/ui
+- **Backend**: Express 5, Node.js 22+, MongoDB Atlas (Mongoose 9), JWT + httpOnly cookies, Pino logging
+- **Tooling**: pnpm workspaces, Orval (OpenAPI codegen for API client/Zod schemas), esbuild
 
-## Where Things Live
+## Project Structure
 
 ```
 artifacts/
-  thanarah-portal/   React + Vite frontend (port 3000)
-  api-server/        Express API (port 8080)
+  api-server/       — Express backend (port 8080)
+  thanarah-portal/  — React/Vite frontend (port from $PORT)
+  mockup-sandbox/   — Component preview sandbox
 lib/
-  api-client-react/  Generated React Query hooks + custom fetch
-  api-zod/           Generated Zod schemas
-  api-spec/          OpenAPI spec (source of truth for API contracts)
-  db/                Drizzle ORM schema (Postgres — not used by default; Mongo is primary)
+  api-spec/         — OpenAPI 3.1 definitions (source of truth for API)
+  api-client-react/ — Auto-generated TanStack Query hooks (via Orval)
+  api-zod/          — Auto-generated Zod validation schemas (via Orval)
+  db/               — Drizzle ORM config (schema/scripts only)
 ```
 
-## Architecture Decisions
+## Running in Development
 
-- Auth uses **httpOnly JWT cookies** (no localStorage) to prevent XSS token theft.
-- The API server builds to a single `dist/index.mjs` via esbuild before each dev start.
-- MongoDB is the primary database (Mongoose); `lib/db` (Drizzle/Postgres) is present but unused by the current app.
-- The Vite dev proxy (`/api → localhost:8080`) bridges the two services in development; in production the platform proxy handles path-based routing.
+```bash
+pnpm install
+```
 
-## Gotchas
+Both services start automatically via configured workflows:
+- **API Server**: `artifacts/api-server: API Server` workflow (port 8080)
+- **Frontend**: `artifacts/thanarah-portal: web` workflow (port from $PORT)
 
-- The API server **builds before starting** (`dev` = build + start). Cold starts take ~2–3 seconds.
-- `PORT` and `BASE_PATH` env vars are **required** by both the Vite config and the API — the workflows set them inline.
-- MongoDB duplicate-index warnings on startup are harmless (schema defines index twice via `index: true` + `schema.index()`).
+## Initial Setup (first time only)
+
+1. Visit `/setup` in the browser and use your `OWNER_SETUP_KEY` to create the first owner account.
+2. Seed presentation content: `pnpm --filter @workspace/api-server run seed`
+
+## Required Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `JWT_SECRET` | JWT signing secret |
+| `SESSION_SECRET` | Session signing secret |
+| `OWNER_SETUP_KEY` | Key for initial owner account creation |
+| `SMTP_PASSWORD` | cPanel SMTP password for noreply@thanarah.com |
+
+## Key Environment Variables (already configured)
+
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
+- `MONGODB_DATABASE_NAME` — defaults to `thanarah_presentation`
+- `THANARAH_OWNER_EMAIL_1`, `THANARAH_OWNER_EMAIL_2` — visit notification recipients
+- `BASE_URL`, `FRONTEND_URL` — set to the Replit dev domain
+
+## API Changes
+
+Modify `lib/api-spec` OpenAPI definitions first, then regenerate client code:
+```bash
+pnpm --filter @workspace/api-client-react run generate
+pnpm --filter @workspace/api-zod run generate
+```
 
 ## User Preferences
 
-_Populate as you build._
+- Use pnpm for all package management operations.

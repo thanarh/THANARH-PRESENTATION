@@ -72,6 +72,8 @@ SMTP_HOST = "business197.web-hosting.com"
 SMTP_PORT = "465"
 SMTP_SECURE = "true"
 SMTP_USERNAME = "noreply@thanarah.com"
+BASE_URL = "https://c29fdafc-62cb-45e2-979f-b4881840009a-00-2umynhr2afvye.pike.replit.dev"
+FRONTEND_URL = "https://c29fdafc-62cb-45e2-979f-b4881840009a-00-2umynhr2afvye.pike.replit.dev"
 
 [nix]
 channel = "stable-25_05"
