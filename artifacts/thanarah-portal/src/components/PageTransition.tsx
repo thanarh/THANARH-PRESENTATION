@@ -1,6 +1,6 @@
 /**
- * PageTransition — shows the spinning Thanarah logo briefly on route change.
- * Wrap the Router with this inside WouterRouter so it has access to location.
+ * PageTransition — shows the Thanarah logo briefly on route change.
+ * Does NOT fire on the initial automatic redirect (e.g. / → /login).
  */
 
 import { useEffect, useState, useRef } from 'react';
@@ -9,24 +9,35 @@ import { useLocation } from 'wouter';
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [visible, setVisible] = useState(false);
+
+  // Track whether the component has been "settled" (i.e. past the first render
+  // and any automatic initial redirect).  We wait for two location values before
+  // treating a change as a real user-driven navigation.
+  const settledRef   = useRef(false);
   const prevLocation = useRef(location);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Only trigger on actual navigation (not first mount)
+    // First effect run: record the initial location, mark settled after 800 ms
+    // (enough time for the automatic redirect to complete during the splash).
+    const settleTimer = setTimeout(() => {
+      prevLocation.current = location; // sync to wherever the app landed
+      settledRef.current = true;
+    }, 800);
+
+    return () => clearTimeout(settleTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Don't react to location changes until we're settled
+    if (!settledRef.current) return;
     if (prevLocation.current === location) return;
     prevLocation.current = location;
 
-    // Show spinner
     setVisible(true);
-
-    // Clear any previous timer
     if (timerRef.current) clearTimeout(timerRef.current);
-
-    // Hide after 400ms — just enough to feel snappy, not sluggish
-    timerRef.current = setTimeout(() => {
-      setVisible(false);
-    }, 400);
+    timerRef.current = setTimeout(() => setVisible(false), 400);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
