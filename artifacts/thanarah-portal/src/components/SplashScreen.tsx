@@ -2,7 +2,7 @@
  * SplashScreen — Thanarah cinematic branded intro (Framer Motion).
  *
  * Sequence:
- *   0.0 s – 0.3 s  : Dark void.
+ *   0.0 s – 0.3 s  : Warm beige void.
  *   0.3 s – 0.9 s  : Grid lines materialise.
  *   0.6 s – 1.2 s  : Hexagon ring pulses in.
  *   1.0 s – 1.6 s  : Logo fades + rises with glow.
@@ -13,18 +13,19 @@
  *   4.1 s           : onDone fires.
  */
 
-import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
 // ─── Timing ──────────────────────────────────────────────────────────────────
 const DONE_MS = 4100;
 
-// ─── Palette ──────────────────────────────────────────────────────────────────
-const BG       = '#07100D';          // near-black forest
-const EMERALD  = '#1E6B4D';          // brand primary
-const GOLD     = '#C9A84C';          // luxury accent
-const MINT     = '#A9CBB5';          // soft highlight
-const GRID_CLR = 'rgba(30,107,77,0.12)';
+// ─── Palette — warm beige theme ───────────────────────────────────────────────
+const BG        = '#F0EAD6';          // warm linen beige
+const EMERALD   = '#1E6B4D';          // brand primary
+const GOLD      = '#A07820';          // deeper gold — readable on light bg
+const DEEP      = '#14311F';          // near-black text
+const GRID_CLR  = 'rgba(30,107,77,0.09)';
+const ORB_CLR   = 'rgba(30,107,77,0.10)';
 
 // ─── Grid ─────────────────────────────────────────────────────────────────────
 function GridLines() {
@@ -35,7 +36,7 @@ function GridLines() {
       aria-hidden
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 1.2, delay: 0.3 }}
+      transition={{ duration: 1.4, delay: 0.3 }}
       style={{
         position: 'absolute',
         inset: 0,
@@ -46,28 +47,20 @@ function GridLines() {
       preserveAspectRatio="xMidYMid slice"
       viewBox="0 0 1200 800"
     >
-      {/* Vertical lines */}
       {Array.from({ length: cols + 1 }, (_, i) => (
         <line
           key={`v${i}`}
-          x1={(i / cols) * 1200}
-          y1={0}
-          x2={(i / cols) * 1200}
-          y2={800}
-          stroke={GRID_CLR}
-          strokeWidth="0.8"
+          x1={(i / cols) * 1200} y1={0}
+          x2={(i / cols) * 1200} y2={800}
+          stroke={GRID_CLR} strokeWidth="1"
         />
       ))}
-      {/* Horizontal lines */}
       {Array.from({ length: rows + 1 }, (_, i) => (
         <line
           key={`h${i}`}
-          x1={0}
-          y1={(i / rows) * 800}
-          x2={1200}
-          y2={(i / rows) * 800}
-          stroke={GRID_CLR}
-          strokeWidth="0.8"
+          x1={0}    y1={(i / rows) * 800}
+          x2={1200} y2={(i / rows) * 800}
+          stroke={GRID_CLR} strokeWidth="1"
         />
       ))}
     </motion.svg>
@@ -93,33 +86,27 @@ function HexRing() {
       aria-hidden
       initial={{ opacity: 0, scale: 0.7 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
+      transition={{ duration: 0.9, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
       preserveAspectRatio="xMidYMid meet"
       viewBox="0 0 1200 800"
     >
-      {/* Outer ring */}
+      {/* Outer ring — subtle gold */}
       <motion.polygon
         points={points2}
         fill="none"
-        stroke={`rgba(201,168,76,0.15)`}
-        strokeWidth="0.8"
+        stroke="rgba(160,120,32,0.22)"
+        strokeWidth="0.9"
         strokeDasharray="6 4"
         animate={{ rotate: 360 }}
         transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
         style={{ transformOrigin: `${cx}px ${cy}px` }}
       />
-      {/* Inner ring */}
+      {/* Inner ring — emerald */}
       <motion.polygon
         points={points}
         fill="none"
-        stroke={`rgba(30,107,77,0.35)`}
+        stroke="rgba(30,107,77,0.28)"
         strokeWidth="1.2"
         strokeDasharray="12 6"
         animate={{ rotate: -360 }}
@@ -137,7 +124,7 @@ function HexRing() {
             r={3}
             fill={GOLD}
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0.4, 1] }}
+            animate={{ opacity: [0, 0.9, 0.4, 0.9] }}
             transition={{ duration: 2, delay: 1.2 + i * 0.1, repeat: Infinity, repeatDelay: 3 }}
           />
         );
@@ -152,14 +139,14 @@ function Scanline() {
     <motion.div
       aria-hidden
       initial={{ top: '-2px', opacity: 0 }}
-      animate={{ top: ['0%', '100%'], opacity: [0, 0.6, 0] }}
+      animate={{ top: ['0%', '100%'], opacity: [0, 0.5, 0] }}
       transition={{ duration: 1.0, delay: 3.0, ease: 'linear' }}
       style={{
         position: 'absolute',
         left: 0,
         right: 0,
         height: '2px',
-        background: `linear-gradient(90deg, transparent, ${EMERALD}80, ${GOLD}60, ${EMERALD}80, transparent)`,
+        background: `linear-gradient(90deg, transparent, ${EMERALD}70, rgba(160,120,32,0.5), ${EMERALD}70, transparent)`,
         pointerEvents: 'none',
         zIndex: 5,
       }}
@@ -173,14 +160,14 @@ function GlowOrb() {
     <motion.div
       aria-hidden
       initial={{ opacity: 0, scale: 0.4 }}
-      animate={{ opacity: [0, 0.18, 0.12], scale: [0.4, 1.1, 1] }}
-      transition={{ duration: 1.4, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      animate={{ opacity: [0, 1, 0.7], scale: [0.4, 1.1, 1] }}
+      transition={{ duration: 1.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
       style={{
         position: 'absolute',
         width: 'min(70vw, 560px)',
         height: 'min(70vw, 560px)',
         borderRadius: '50%',
-        background: `radial-gradient(circle, ${EMERALD}22 0%, transparent 70%)`,
+        background: `radial-gradient(circle, ${ORB_CLR} 0%, transparent 70%)`,
         pointerEvents: 'none',
       }}
     />
@@ -207,13 +194,13 @@ function GoldLine() {
   );
 }
 
-// ─── Diamond iris exit ────────────────────────────────────────────────────────
+// ─── Diamond iris exit — panels match BG so exit is seamless ─────────────────
 function IrisExit({ active }: { active: boolean }) {
   const panels = [
-    { top: 0, left: 0, right: '50%', bottom: '50%', origin: 'top left' },
-    { top: 0, left: '50%', right: 0, bottom: '50%', origin: 'top right' },
-    { top: '50%', left: 0, right: '50%', bottom: 0, origin: 'bottom left' },
-    { top: '50%', left: '50%', right: 0, bottom: 0, origin: 'bottom right' },
+    { top: 0,     left: 0,     right: '50%', bottom: '50%', origin: 'top left' },
+    { top: 0,     left: '50%', right: 0,     bottom: '50%', origin: 'top right' },
+    { top: '50%', left: 0,     right: '50%', bottom: 0,     origin: 'bottom left' },
+    { top: '50%', left: '50%', right: 0,     bottom: 0,     origin: 'bottom right' },
   ];
   return (
     <>
@@ -225,10 +212,7 @@ function IrisExit({ active }: { active: boolean }) {
           transition={{ duration: 0.55, delay: active ? i * 0.04 : 0, ease: [0.4, 0, 0.2, 1] }}
           style={{
             position: 'absolute',
-            top: p.top,
-            left: p.left,
-            right: p.right,
-            bottom: p.bottom,
+            top: p.top, left: p.left, right: p.right, bottom: p.bottom,
             background: BG,
             transformOrigin: p.origin,
             zIndex: 10,
@@ -294,28 +278,23 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
       >
         {/* Logo */}
         <motion.div
-          initial={{ opacity: 0, y: 24, filter: 'blur(12px)' }}
+          initial={{ opacity: 0, y: 24, filter: 'blur(10px)' }}
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.9, delay: 1.0, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          {/* Logo glow halo */}
+          {/* Subtle warm halo on light background */}
           <motion.div
             aria-hidden
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.5, 0.3] }}
-            transition={{ duration: 1.2, delay: 1.4 }}
+            animate={{ opacity: [0, 0.35, 0.2] }}
+            transition={{ duration: 1.4, delay: 1.3 }}
             style={{
               position: 'absolute',
-              inset: '-24px',
+              inset: '-28px',
               borderRadius: '50%',
-              background: `radial-gradient(circle, ${EMERALD}30 0%, transparent 70%)`,
-              filter: 'blur(20px)',
+              background: `radial-gradient(circle, rgba(30,107,77,0.18) 0%, transparent 70%)`,
+              filter: 'blur(18px)',
               pointerEvents: 'none',
             }}
           />
@@ -328,7 +307,8 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
               height: 'auto',
               display: 'block',
               userSelect: 'none',
-              filter: `drop-shadow(0 0 24px ${EMERALD}55) drop-shadow(0 2px 8px rgba(0,0,0,0.6))`,
+              // No invert — original logo colours work on beige
+              filter: `drop-shadow(0 1px 6px rgba(30,107,77,0.2)) drop-shadow(0 2px 12px rgba(0,0,0,0.08))`,
             }}
           />
         </motion.div>
@@ -336,7 +316,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
         {/* Gold accent line */}
         <GoldLine />
 
-        {/* Arabic tagline */}
+        {/* Arabic tagline — deep colour for legibility on light bg */}
         <motion.p
           dir="rtl"
           initial={{ opacity: 0, letterSpacing: '0.4em' }}
@@ -344,9 +324,9 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
           transition={{ duration: 0.9, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
           style={{
             fontFamily: "'Noto Naskh Arabic', 'Amiri', serif",
-            color: MINT,
+            color: EMERALD,
             fontSize: 'clamp(12px, 2vw, 17px)',
-            fontWeight: 500,
+            fontWeight: 600,
             margin: 0,
             textAlign: 'center',
           }}
@@ -361,9 +341,9 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
           transition={{ duration: 0.6, delay: 2.5, ease: [0.22, 1, 0.36, 1] }}
           style={{
             fontFamily: "'Inter', 'Segoe UI', sans-serif",
-            color: `rgba(201,168,76,0.75)`,
+            color: GOLD,
             fontSize: 'clamp(9px, 1.3vw, 12px)',
-            fontWeight: 400,
+            fontWeight: 500,
             letterSpacing: '0.22em',
             textTransform: 'uppercase',
             margin: '10px 0 0',
