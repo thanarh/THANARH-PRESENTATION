@@ -8,7 +8,28 @@
  */
 
 import nodemailer, { type Transporter } from "nodemailer";
+import { readFileSync, existsSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import { logger } from "./logger";
+
+// ─── Logo (embedded base64 for reliable email rendering) ─────────────────────
+// Read at module load — never fetches from network, works in all email clients.
+function loadLogoBase64(): string {
+  const candidates = [
+    join(dirname(fileURLToPath(import.meta.url)), "../public/email-logo.png"),
+    join(process.cwd(), "public/email-logo.png"),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return readFileSync(p).toString("base64");
+  }
+  return ""; // graceful: no logo beats a broken email
+}
+
+const LOGO_B64 = loadLogoBase64();
+const LOGO_TAG = LOGO_B64
+  ? `<img src="data:image/png;base64,${LOGO_B64}" alt="Thanarah" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;" />`
+  : `<p style="color:#A9CBB5;font-size:24px;font-weight:700;margin:0;letter-spacing:1px;">ثناره</p>`;
 
 // ─── SMTP state ──────────────────────────────────────────────────────────────
 
@@ -150,8 +171,7 @@ function baseTemplate(opts: {
 <body>
   <div class="wrap">
     <div class="hdr">
-      <p class="hdr-logo-text">ثناره</p>
-      <p class="hdr-sub">THANARAH</p>
+      ${LOGO_TAG}
     </div>
     <div class="body">${content}</div>
     <div class="ftr">
