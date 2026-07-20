@@ -1,0 +1,1 @@
+- [SMTP Configuration](smtp-config.md) — cPanel SMTP only (not SMTP2GO); SMTP_PASSWORD must stay in Replit Secrets only.
