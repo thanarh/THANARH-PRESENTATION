@@ -2,47 +2,256 @@
  * SplashScreen — Thanarah cinematic branded intro (Framer Motion).
  *
  * Sequence:
- *   0.0 s – 0.7 s  : Logo scales + fades in.
- *   0.4 s – 1.0 s  : Orbit rings expand (staggered).
- *   0.9 s – 1.5 s  : First Arabic line slides up.
- *   1.5 s – 2.0 s  : Second Arabic line slides up.
- *   2.0 s – 2.7 s  : Hold.
- *   2.7 s – 3.3 s  : Curtain split — top slides up, bottom slides down.
- *   3.4 s           : onDone fires.
+ *   0.0 s – 0.3 s  : Dark void.
+ *   0.3 s – 0.9 s  : Grid lines materialise.
+ *   0.6 s – 1.2 s  : Hexagon ring pulses in.
+ *   1.0 s – 1.6 s  : Logo fades + rises with glow.
+ *   1.8 s – 2.3 s  : Arabic tagline — letter by letter.
+ *   2.5 s – 3.0 s  : English sub-line.
+ *   3.0 s – 3.5 s  : Hold — scanline sweeps.
+ *   3.5 s – 4.0 s  : Diamond-iris collapse exits.
+ *   4.1 s           : onDone fires.
  */
 
-import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
-// ─── Timing constants ─────────────────────────────────────────────────────────
-const DONE_MS = 3400;
+// ─── Timing ──────────────────────────────────────────────────────────────────
+const DONE_MS = 4100;
 
-// ─── Brand colours ───────────────────────────────────────────────────────────
-const BG      = '#F7F5F1';
-const PRIMARY = '#1E6B4D';
-const DARK    = '#0F3D33';
+// ─── Palette ──────────────────────────────────────────────────────────────────
+const BG       = '#07100D';          // near-black forest
+const EMERALD  = '#1E6B4D';          // brand primary
+const GOLD     = '#C9A84C';          // luxury accent
+const MINT     = '#A9CBB5';          // soft highlight
+const GRID_CLR = 'rgba(30,107,77,0.12)';
 
-// ─── Logo width ───────────────────────────────────────────────────────────────
-const LOGO_W = 'clamp(160px, 38vw, 280px)';
+// ─── Grid ─────────────────────────────────────────────────────────────────────
+function GridLines() {
+  const cols = 12;
+  const rows = 8;
+  return (
+    <motion.svg
+      aria-hidden
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1.2, delay: 0.3 }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+      }}
+      preserveAspectRatio="xMidYMid slice"
+      viewBox="0 0 1200 800"
+    >
+      {/* Vertical lines */}
+      {Array.from({ length: cols + 1 }, (_, i) => (
+        <line
+          key={`v${i}`}
+          x1={(i / cols) * 1200}
+          y1={0}
+          x2={(i / cols) * 1200}
+          y2={800}
+          stroke={GRID_CLR}
+          strokeWidth="0.8"
+        />
+      ))}
+      {/* Horizontal lines */}
+      {Array.from({ length: rows + 1 }, (_, i) => (
+        <line
+          key={`h${i}`}
+          x1={0}
+          y1={(i / rows) * 800}
+          x2={1200}
+          y2={(i / rows) * 800}
+          stroke={GRID_CLR}
+          strokeWidth="0.8"
+        />
+      ))}
+    </motion.svg>
+  );
+}
 
-// ─── Orbit ring sizes ─────────────────────────────────────────────────────────
-const RINGS = [
-  { size: 'clamp(260px, 55vw, 420px)', border: `1.5px solid ${PRIMARY}30`, delay: 0.3 },
-  { size: 'clamp(340px, 70vw, 540px)', border: `1px dashed ${PRIMARY}20`,  delay: 0.45 },
-  { size: 'clamp(420px, 85vw, 660px)', border: `1px solid ${PRIMARY}12`,   delay: 0.6  },
-];
+// ─── Rotating hex ring ────────────────────────────────────────────────────────
+function HexRing() {
+  const r = 200;
+  const cx = 600, cy = 400;
+  const points = Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i - Math.PI / 6;
+    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  }).join(' ');
+  const r2 = 260;
+  const points2 = Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i;
+    return `${cx + r2 * Math.cos(a)},${cy + r2 * Math.sin(a)}`;
+  }).join(' ');
 
-const DOT_ANGLES = [0, 60, 120, 180, 240, 300];
+  return (
+    <motion.svg
+      aria-hidden
+      initial={{ opacity: 0, scale: 0.7 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+      }}
+      preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 1200 800"
+    >
+      {/* Outer ring */}
+      <motion.polygon
+        points={points2}
+        fill="none"
+        stroke={`rgba(201,168,76,0.15)`}
+        strokeWidth="0.8"
+        strokeDasharray="6 4"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+        style={{ transformOrigin: `${cx}px ${cy}px` }}
+      />
+      {/* Inner ring */}
+      <motion.polygon
+        points={points}
+        fill="none"
+        stroke={`rgba(30,107,77,0.35)`}
+        strokeWidth="1.2"
+        strokeDasharray="12 6"
+        animate={{ rotate: -360 }}
+        transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+        style={{ transformOrigin: `${cx}px ${cy}px` }}
+      />
+      {/* Corner dots */}
+      {Array.from({ length: 6 }, (_, i) => {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        return (
+          <motion.circle
+            key={i}
+            cx={cx + r * Math.cos(a)}
+            cy={cy + r * Math.sin(a)}
+            r={3}
+            fill={GOLD}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0.4, 1] }}
+            transition={{ duration: 2, delay: 1.2 + i * 0.1, repeat: Infinity, repeatDelay: 3 }}
+          />
+        );
+      })}
+    </motion.svg>
+  );
+}
+
+// ─── Scanline sweep ───────────────────────────────────────────────────────────
+function Scanline() {
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ top: '-2px', opacity: 0 }}
+      animate={{ top: ['0%', '100%'], opacity: [0, 0.6, 0] }}
+      transition={{ duration: 1.0, delay: 3.0, ease: 'linear' }}
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        height: '2px',
+        background: `linear-gradient(90deg, transparent, ${EMERALD}80, ${GOLD}60, ${EMERALD}80, transparent)`,
+        pointerEvents: 'none',
+        zIndex: 5,
+      }}
+    />
+  );
+}
+
+// ─── Glow orb ─────────────────────────────────────────────────────────────────
+function GlowOrb() {
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ opacity: 0, scale: 0.4 }}
+      animate={{ opacity: [0, 0.18, 0.12], scale: [0.4, 1.1, 1] }}
+      transition={{ duration: 1.4, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        position: 'absolute',
+        width: 'min(70vw, 560px)',
+        height: 'min(70vw, 560px)',
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${EMERALD}22 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
+// ─── Gold accent line ─────────────────────────────────────────────────────────
+function GoldLine() {
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ scaleX: 0, opacity: 0 }}
+      animate={{ scaleX: 1, opacity: 1 }}
+      transition={{ duration: 0.7, delay: 1.5, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        width: 'clamp(60px, 14vw, 120px)',
+        height: '1.5px',
+        background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`,
+        transformOrigin: 'center',
+        marginTop: 8,
+        marginBottom: 8,
+      }}
+    />
+  );
+}
+
+// ─── Diamond iris exit ────────────────────────────────────────────────────────
+function IrisExit({ active }: { active: boolean }) {
+  const panels = [
+    { top: 0, left: 0, right: '50%', bottom: '50%', origin: 'top left' },
+    { top: 0, left: '50%', right: 0, bottom: '50%', origin: 'top right' },
+    { top: '50%', left: 0, right: '50%', bottom: 0, origin: 'bottom left' },
+    { top: '50%', left: '50%', right: 0, bottom: 0, origin: 'bottom right' },
+  ];
+  return (
+    <>
+      {panels.map((p, i) => (
+        <motion.div
+          key={i}
+          initial={{ scale: 0 }}
+          animate={active ? { scale: 1 } : { scale: 0 }}
+          transition={{ duration: 0.55, delay: active ? i * 0.04 : 0, ease: [0.4, 0, 0.2, 1] }}
+          style={{
+            position: 'absolute',
+            top: p.top,
+            left: p.left,
+            right: p.right,
+            bottom: p.bottom,
+            background: BG,
+            transformOrigin: p.origin,
+            zIndex: 10,
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 interface SplashScreenProps {
   onDone: () => void;
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
 export function SplashScreen({ onDone }: SplashScreenProps) {
+  const [irisActive, setIrisActive] = useState(false);
+
   useEffect(() => {
-    const id = setTimeout(onDone, DONE_MS);
-    return () => clearTimeout(id);
+    const iris = setTimeout(() => setIrisActive(true), 3500);
+    const done = setTimeout(onDone, DONE_MS);
+    return () => { clearTimeout(iris); clearTimeout(done); };
   }, [onDone]);
 
   return (
@@ -52,203 +261,136 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
         inset: 0,
         zIndex: 20000,
         overflow: 'hidden',
+        background: BG,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         pointerEvents: 'none',
       }}
     >
-      {/* ── Background + content layer ─────────────────────────────────── */}
+      {/* Ambient grid */}
+      <GridLines />
+
+      {/* Glow orb */}
+      <GlowOrb />
+
+      {/* Hex ring */}
+      <HexRing />
+
+      {/* Scanline sweep */}
+      <Scanline />
+
+      {/* ── Core content ──────────────────────────────────────────────── */}
       <div
         style={{
-          position: 'absolute',
-          inset: 0,
-          background: BG,
+          position: 'relative',
+          zIndex: 2,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 28,
+          gap: 0,
         }}
       >
-        {/* Orbit rings */}
-        <div
-          aria-hidden
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: 24, filter: 'blur(12px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.9, delay: 1.0, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: 'absolute',
-            inset: 0,
+            position: 'relative',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            pointerEvents: 'none',
           }}
         >
-          {RINGS.map((ring, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: ring.delay, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                position: 'absolute',
-                width: ring.size,
-                height: ring.size,
-                borderRadius: '50%',
-                border: ring.border,
-              }}
-            />
-          ))}
+          {/* Logo glow halo */}
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.5, 0.3] }}
+            transition={{ duration: 1.2, delay: 1.4 }}
+            style={{
+              position: 'absolute',
+              inset: '-24px',
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${EMERALD}30 0%, transparent 70%)`,
+              filter: 'blur(20px)',
+              pointerEvents: 'none',
+            }}
+          />
+          <img
+            src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
+            alt="Thanarah"
+            draggable={false}
+            style={{
+              width: 'clamp(180px, 32vw, 300px)',
+              height: 'auto',
+              display: 'block',
+              userSelect: 'none',
+              filter: `drop-shadow(0 0 24px ${EMERALD}55) drop-shadow(0 2px 8px rgba(0,0,0,0.6))`,
+            }}
+          />
+        </motion.div>
 
-          {/* Dot markers on ring 1 */}
-          {DOT_ANGLES.map((deg) => (
-            <motion.div
-              key={deg}
-              aria-hidden
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.45 }}
-              transition={{ duration: 0.5, delay: 0.55, ease: 'easeOut' }}
-              style={{
-                position: 'absolute',
-                width: 5,
-                height: 5,
-                borderRadius: '50%',
-                background: PRIMARY,
-                transform: `rotate(${deg}deg) translateY(calc(clamp(130px, 27.5vw, 210px) * -1))`,
-              }}
-            />
-          ))}
-        </div>
+        {/* Gold accent line */}
+        <GoldLine />
 
-        {/* Logo */}
-        <motion.img
-          src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
-          alt="Thanarah"
-          draggable={false}
-          initial={{ opacity: 0, scale: 0.82 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        {/* Arabic tagline */}
+        <motion.p
+          dir="rtl"
+          initial={{ opacity: 0, letterSpacing: '0.4em' }}
+          animate={{ opacity: 1, letterSpacing: '0.06em' }}
+          transition={{ duration: 0.9, delay: 1.8, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            width: LOGO_W,
-            height: 'auto',
-            display: 'block',
-            position: 'relative',
-            zIndex: 1,
-            userSelect: 'none',
-            filter: 'drop-shadow(0 2px 12px rgba(30,107,77,0.18))',
+            fontFamily: "'Noto Naskh Arabic', 'Amiri', serif",
+            color: MINT,
+            fontSize: 'clamp(12px, 2vw, 17px)',
+            fontWeight: 500,
+            margin: 0,
+            textAlign: 'center',
+          }}
+        >
+          حين تتكامل التقنية، تبدأ رعاية أفضل
+        </motion.p>
+
+        {/* English sub */}
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 2.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            fontFamily: "'Inter', 'Segoe UI', sans-serif",
+            color: `rgba(201,168,76,0.75)`,
+            fontSize: 'clamp(9px, 1.3vw, 12px)',
+            fontWeight: 400,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            margin: '10px 0 0',
+            textAlign: 'center',
+          }}
+        >
+          Thanarah&nbsp;·&nbsp;Medical&nbsp;Technology
+        </motion.p>
+
+        {/* Bottom progress bar */}
+        <motion.div
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{ duration: 2.8, delay: 1.0, ease: 'linear' }}
+          style={{
+            marginTop: 32,
+            width: 'clamp(80px, 18vw, 160px)',
+            height: '1.5px',
+            background: `linear-gradient(90deg, ${EMERALD}, ${GOLD})`,
+            transformOrigin: 'left center',
+            borderRadius: 2,
           }}
         />
-
-        {/* Arabic tagline — line 1 */}
-        <motion.p
-          dir="rtl"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            fontFamily: "'Noto Naskh Arabic', 'Amiri', serif",
-            color: DARK,
-            fontSize: 'clamp(13px, 2.2vw, 18px)',
-            fontWeight: 500,
-            letterSpacing: '0.02em',
-            position: 'relative',
-            zIndex: 1,
-            margin: 0,
-          }}
-        >
-          حين تتكامل التقنية، تبدأ رعاية أفضل.
-        </motion.p>
-
-        {/* Arabic tagline — line 2 */}
-        <motion.p
-          dir="rtl"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.5, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            fontFamily: "'Noto Naskh Arabic', 'Amiri', serif",
-            color: PRIMARY,
-            fontSize: 'clamp(15px, 2.8vw, 22px)',
-            fontWeight: 700,
-            letterSpacing: '0.04em',
-            position: 'relative',
-            zIndex: 1,
-            margin: 0,
-          }}
-        >
-          مرحباً بك في ثناره.
-        </motion.p>
       </div>
 
-      {/* ── Top curtain ───────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ y: 0 }}
-        animate={{ y: '-100%' }}
-        transition={{ duration: 0.65, delay: 2.7, ease: [0.4, 0, 0.2, 1] }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '50%',
-          background: BG,
-          zIndex: 2,
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Logo top half inside curtain — creates the split illusion */}
-        <div style={{ position: 'relative', paddingBottom: 14 }}>
-          <img
-            src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
-            alt=""
-            aria-hidden
-            draggable={false}
-            style={{
-              width: LOGO_W,
-              height: 'auto',
-              display: 'block',
-              userSelect: 'none',
-              filter: 'drop-shadow(0 2px 12px rgba(30,107,77,0.18))',
-            }}
-          />
-        </div>
-      </motion.div>
-
-      {/* ── Bottom curtain ────────────────────────────────────────────────── */}
-      <motion.div
-        initial={{ y: 0 }}
-        animate={{ y: '100%' }}
-        transition={{ duration: 0.65, delay: 2.7, ease: [0.4, 0, 0.2, 1] }}
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '50%',
-          background: BG,
-          zIndex: 2,
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Logo bottom half inside curtain */}
-        <div style={{ position: 'relative', paddingTop: 14 }}>
-          <img
-            src={`${import.meta.env.BASE_URL}logo-horizontal.png`}
-            alt=""
-            aria-hidden
-            draggable={false}
-            style={{
-              width: LOGO_W,
-              height: 'auto',
-              display: 'block',
-              userSelect: 'none',
-              filter: 'drop-shadow(0 2px 12px rgba(30,107,77,0.18))',
-            }}
-          />
-        </div>
-      </motion.div>
+      {/* ── Iris exit panels ────────────────────────────────────────────── */}
+      <IrisExit active={irisActive} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
+import rateLimit from "express-rate-limit";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -21,9 +22,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  // CORP/COOP are only safe in production where we control origins;
+  // in development the Vite proxy creates cross-origin requests that these would block.
   if (process.env.NODE_ENV === "production") {
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
     res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
     res.setHeader(
       "Content-Security-Policy",
@@ -32,6 +35,28 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   }
   next();
 });
+
+// Rate limiting — global (generous) + strict on auth endpoints
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many authentication attempts, please try again later." },
+  skipSuccessfulRequests: true,
+});
+
+app.use(globalLimiter);
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
 
 app.use(
   pinoHttp({

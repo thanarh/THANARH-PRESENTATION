@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { connectDb } from "./lib/db";
+import { verifySmtpConnection } from "./lib/email";
 
 const rawPort = process.env["PORT"];
 
@@ -28,3 +29,6 @@ app.listen(port, (err) => {
 connectDb().catch((err) => {
   logger.warn({ err }, "Initial MongoDB connection failed — will retry on first request");
 });
+
+// Verify SMTP on startup — logs status but never blocks the server.
+verifySmtpConnection().catch(() => {});

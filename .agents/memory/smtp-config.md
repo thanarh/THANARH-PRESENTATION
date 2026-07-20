@@ -1,26 +1,14 @@
 ---
 name: SMTP Configuration
-description: Thanarah uses cPanel SMTP (not SMTP2GO). Env vars and constraints.
+description: cPanel SMTP only; SMTP2GO is configured but not used.
 ---
 
-## Rule
-Use cPanel SMTP via Nodemailer. Never SMTP2GO. Never log or commit SMTP_PASSWORD.
+# SMTP Setup
 
-**Why:** SMTP2GO credentials were previously exposed. Switched to official Thanarah cPanel account.
+The project uses **cPanel SMTP** (`business197.web-hosting.com`, port 465, SSL) via Nodemailer. SMTP2GO env vars exist (`SMTP2GO_HOST`, `SMTP2GO_PORT`) but are unused — ignore them.
 
-## Config
-- Host: business197.web-hosting.com
-- Port: 465, secure: true (SSL/TLS)
-- User: noreply@thanarah.com
-- From: SMTP_FROM_NAME + SMTP_FROM_EMAIL env vars
+`SMTP_PASSWORD` must live in Replit Secrets only (never in env var files or logs).
 
-## Secrets required
-- SMTP_PASSWORD → Replit Secret (never in code)
+`verifySmtpConnection()` is called at server startup in `artifacts/api-server/src/index.ts` and logs `Mail service: SMTP connection verified` on success.
 
-## Non-secrets (shared env)
-SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USERNAME, SMTP_FROM_EMAIL, SMTP_FROM_NAME, MAIL_PROVIDER=CPANEL
-
-## How to apply
-- email.ts uses getTransporter() (lazy singleton) — no reconnect per email
-- verifySmtpConnection() called at startup — degrades gracefully, never crashes portal
-- sendTestEmail(to) exported for admin use
+**Why:** The user explicitly chose cPanel over SMTP2GO; changing providers requires updating `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME` env vars and the `SMTP_PASSWORD` secret.

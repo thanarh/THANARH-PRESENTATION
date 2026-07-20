@@ -39,19 +39,21 @@ function setCookies(res: Response, accessToken: string, refreshToken: string): v
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
+    path: "/",
     maxAge: 15 * 60 * 1000,
   });
   res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
+    path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
 function clearCookies(res: Response): void {
-  res.clearCookie("access_token");
-  res.clearCookie("refresh_token");
+  res.clearCookie("access_token", { path: "/" });
+  res.clearCookie("refresh_token", { path: "/" });
 }
 
 // POST /api/auth/setup — one-time owner setup
