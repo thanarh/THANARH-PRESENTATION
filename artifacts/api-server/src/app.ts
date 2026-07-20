@@ -1,9 +1,17 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+// Resolve the portal's built static directory (works both locally and on Render)
+// Repo layout: artifacts/api-server/dist/index.mjs → ../../.. → repo root
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORTAL_DIR = path.resolve(__dirname, "../../../artifacts/thanarah-portal/dist/public");
 
 const app: Express = express();
 
@@ -57,6 +65,33 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// ── Serve the React portal in production ──────────────────────────────────────
+// In development the Vite dev-server handles the frontend on a separate port.
+// On Render (production) there is only one process, so Express serves the
+// pre-built static files and falls back to index.html for SPA routing.
+if (process.env.NODE_ENV === "production" && fs.existsSync(PORTAL_DIR)) {
+  logger.info({ PORTAL_DIR }, "Serving portal static files");
+
+  // Long-lived cache for hashed asset bundles
+  app.use(
+    "/assets",
+    express.static(path.join(PORTAL_DIR, "assets"), {
+      maxAge: "1y",
+      immutable: true,
+    }),
+  );
+
+  // Everything else (logos, fonts, manifest …)
+  app.use(express.static(PORTAL_DIR, { maxAge: "1h" }));
+
+  // SPA catch-all — return index.html for any non-API, non-file path
+  app.get("*", (_req: Request, res: Response) => {
+    res.sendFile(path.join(PORTAL_DIR, "index.html"));
+  });
+} else if (process.env.NODE_ENV === "production") {
+  logger.warn({ PORTAL_DIR }, "Portal static files not found — frontend will not be served");
+}
 
 // Global error handler
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
