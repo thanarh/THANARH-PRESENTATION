@@ -51,7 +51,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: '/admin/visits',             icon: Globe,           labelKey: 'visits' },
     { href: '/admin/system-health',      icon: Heart,           labelKey: 'systemHealth' },
     { href: '/admin/settings',           icon: Settings,        labelKey: 'settings' },
-  ];
+  ] as const;
 
   const SidebarContent = () => (
     <>
