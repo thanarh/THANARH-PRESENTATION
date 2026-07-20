@@ -80,15 +80,18 @@ app.use(
   }),
 );
 
-// CORS: strict in production (only the configured FRONTEND_URL), permissive in dev.
-const allowedOrigin =
-  process.env.NODE_ENV === "production"
-    ? process.env.FRONTEND_URL || false   // false = reject every cross-origin request when not configured
-    : true;                               // reflect any origin in development
+// CORS: in production the frontend is served from the same Express process
+// (same origin), so cross-origin headers are only needed for external clients
+// such as a mobile app.  When ALLOWED_ORIGINS is set (comma-separated list)
+// those origins are whitelisted; otherwise only same-origin requests are
+// served, which is correct for the single-service Render deployment.
+const productionOrigin: cors.CorsOptions["origin"] = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : false; // false = no cross-origin; same-origin requests never hit CORS
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: process.env.NODE_ENV === "production" ? productionOrigin : true,
   }),
 );
 
