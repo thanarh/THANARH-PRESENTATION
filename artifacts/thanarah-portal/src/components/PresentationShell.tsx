@@ -62,23 +62,77 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRtl, nextSection, prevSection, setLocation]);
 
-  // Anti-inspect & copy
+  // ── Content-protection layer ────────────────────────────────
   useEffect(() => {
     const preventDefault = (e: Event) => e.preventDefault();
+
+    // Block context-menu, text-selection and drag
     document.addEventListener('contextmenu', preventDefault);
     document.addEventListener('selectstart', preventDefault);
     document.addEventListener('dragstart', preventDefault);
+
+    // Block keyboard shortcuts that expose/copy content:
+    //   F12, Ctrl+Shift+I/J/C  → DevTools
+    //   Ctrl+U                 → View source
+    //   Ctrl+S                 → Save page
+    //   Ctrl+P                 → Print dialog
+    //   Ctrl+A                 → Select all
+    const blockKeys = (e: KeyboardEvent) => {
+      const ctrl  = e.ctrlKey  || e.metaKey;   // Cmd on macOS
+      const shift = e.shiftKey;
+      const key   = e.key;
+
+      const isDevTools  = key === 'F12'
+                        || (ctrl && shift && ['I','i','J','j','C','c'].includes(key));
+      const isViewSrc   = ctrl && !shift && ['U','u'].includes(key);
+      const isSavePage  = ctrl && !shift && ['S','s'].includes(key);
+      const isPrint     = ctrl && !shift && ['P','p'].includes(key);
+      const isSelectAll = ctrl && !shift && ['A','a'].includes(key);
+
+      if (isDevTools || isViewSrc || isSavePage || isPrint || isSelectAll) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener('keydown', blockKeys, { capture: true });
+
     return () => {
       document.removeEventListener('contextmenu', preventDefault);
       document.removeEventListener('selectstart', preventDefault);
       document.removeEventListener('dragstart', preventDefault);
+      document.removeEventListener('keydown', blockKeys, { capture: true } as EventListenerOptions);
     };
   }, []);
 
   const completionPercent = progress?.completionPercent || 0;
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden selection:bg-transparent">
+    <div className="presentation-shell flex h-screen bg-background text-foreground overflow-hidden selection:bg-transparent">
+      {/* ── Print + screenshot CSS deterrents ─────────────────── */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          body::after {
+            visibility: visible !important;
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1E6B4D;
+            content: "⛔  هذا المحتوى سري ومحمي  |  Confidential – Not for distribution";
+            white-space: pre;
+          }
+        }
+        /* Prevent text selection globally inside the presentation */
+        .presentation-shell * {
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+        }
+      `}</style>
       <Watermark />
       <SessionTimer />
 

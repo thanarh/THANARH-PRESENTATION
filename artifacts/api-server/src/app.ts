@@ -39,9 +39,15 @@ app.use(
   }),
 );
 
+// CORS: strict in production (only the configured FRONTEND_URL), permissive in dev.
+const allowedOrigin =
+  process.env.NODE_ENV === "production"
+    ? process.env.FRONTEND_URL || false   // false = reject every cross-origin request when not configured
+    : true;                               // reflect any origin in development
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || true,
+    origin: allowedOrigin,
     credentials: true,
   }),
 );

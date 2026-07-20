@@ -51,8 +51,8 @@ const sessionSchema = new mongoose.Schema<ISession>(
 );
 
 sessionSchema.index({ userId: 1, status: 1 });
-sessionSchema.index({ sessionTokenHash: 1 });
-sessionSchema.index({ expiresAt: 1 });
+// sessionTokenHash already indexed via unique:true in the schema definition — no duplicate needed
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index to auto-delete expired sessions
 
 const Session: Model<ISession> = mongoose.models.Session ?? mongoose.model<ISession>("Session", sessionSchema);
 export default Session;

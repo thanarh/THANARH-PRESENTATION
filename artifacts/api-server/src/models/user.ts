@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema<IUser>(
   { timestamps: true },
 );
 
-userSchema.index({ email: 1 });
+// email already indexed via unique:true in the schema definition — no duplicate needed
 
 const User: Model<IUser> = mongoose.models.User ?? mongoose.model<IUser>("User", userSchema);
 export default User;
