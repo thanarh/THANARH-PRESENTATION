@@ -1,6 +1,19 @@
 import { Router, type Response } from "express";
 import { authenticate, type AuthRequest, ADMIN_ROLES } from "../lib/auth";
 import { generateSecureToken, hashToken } from "../lib/auth";
+import crypto from "crypto";
+
+function generateInviteCode(): string {
+  // Format: XXXX-XXXX (8 uppercase alphanumeric chars)
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous I/1/O/0
+  let code = "";
+  const bytes = crypto.randomBytes(8);
+  for (let i = 0; i < 8; i++) {
+    code += chars[bytes[i] % chars.length];
+    if (i === 3) code += "-";
+  }
+  return code;
+}
 import Invitation from "../models/invitation";
 import User from "../models/user";
 import { logAudit } from "../models/auditLog";
@@ -64,6 +77,39 @@ router.get("/stats", authenticate, async (req: AuthRequest, res: Response) => {
   res.json({ active, expired, revoked, unopened, failedAttempts, total });
 });
 
+// GET /api/invitations/validate-code/:code  (public — used by the invite page)
+router.get("/validate-code/:code", async (req: any, res: Response) => {
+  await connectDb();
+  const code = (req.params.code as string).toUpperCase().replace(/\s/g, "");
+  const invitation = await Invitation.findOne({ inviteCode: code }).populate("createdBy", "fullName").lean();
+
+  if (!invitation || invitation.status === "revoked" || invitation.status === "expired") {
+    res.status(404).json({ error: "كود الدعوة غير صحيح أو منتهي الصلاحية" });
+    return;
+  }
+
+  if (new Date() > invitation.expiresAt) {
+    await Invitation.findByIdAndUpdate(invitation._id, { status: "expired" });
+    res.status(404).json({ error: "انتهت صلاحية كود الدعوة" });
+    return;
+  }
+
+  if (invitation.status === "active") {
+    res.status(400).json({ error: "تم استخدام هذه الدعوة مسبقاً" });
+    return;
+  }
+
+  res.json({
+    inviteCode: code,
+    inviteeName: invitation.inviteeName,
+    email: invitation.email,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt.toISOString(),
+    allowedSections: invitation.allowedSections,
+    inviterName: (invitation.createdBy as any)?.fullName || "Thanarah Team",
+  });
+});
+
 // GET /api/invitations/validate/:token
 router.get("/validate/:token", async (req: any, res: Response) => {
   await connectDb();
@@ -110,11 +156,13 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 
   const rawToken = generateSecureToken();
   const tokenHash = hashToken(rawToken);
+  const inviteCode = generateInviteCode();
 
   const invitation = await Invitation.create({
     inviteeName,
     email,
     tokenHash,
+    inviteCode,
     role,
     permissions: permissions || [],
     allowedSections: allowedSections || [],
@@ -134,7 +182,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 
   const creator = await User.findById(req.userId).lean();
   const baseUrl = process.env.BASE_URL || "https://presentation.thanarah.com";
-  const inviteUrl = `${baseUrl}/invite/${rawToken}`;
+  const portalUrl = `${baseUrl}/invite`;
 
   let emailDelivered = true;
   let emailError: string | null = null;
@@ -143,7 +191,8 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     await sendInvitationEmail({
       to: email,
       inviteeName,
-      inviteUrl,
+      inviteCode,
+      portalUrl,
       expiresAt: new Date(expiresAt),
       inviterName: creator?.fullName || "Thanarah Team",
       customMessage,
@@ -258,15 +307,17 @@ router.post("/:id/resend", authenticate, async (req: AuthRequest, res: Response)
   const creator = await User.findById(req.userId).lean();
   const rawToken = generateSecureToken();
   const tokenHash = hashToken(rawToken);
-  // Generate fresh token before attempting email
-  await Invitation.findByIdAndUpdate(req.params.id, { tokenHash, status: "draft" });
+  const newCode = generateInviteCode();
+  // Generate fresh token + code before attempting email
+  await Invitation.findByIdAndUpdate(req.params.id, { tokenHash, inviteCode: newCode, status: "draft" });
 
   const baseUrl = process.env.BASE_URL || "https://presentation.thanarah.com";
   try {
     await sendInvitationEmail({
       to: invitation.email,
       inviteeName: invitation.inviteeName,
-      inviteUrl: `${baseUrl}/invite/${rawToken}`,
+      inviteCode: newCode,
+      portalUrl: `${baseUrl}/invite`,
       expiresAt: invitation.expiresAt,
       inviterName: creator?.fullName || "Thanarah Team",
       customMessage: invitation.customMessage,
@@ -284,15 +335,15 @@ router.post("/:id/resend", authenticate, async (req: AuthRequest, res: Response)
 // POST /api/invitations/accept
 router.post("/accept", async (req: any, res: Response) => {
   await connectDb();
-  const { token, password, acceptedTerms } = req.body;
+  const { inviteCode, password, acceptedTerms } = req.body;
 
-  if (!token || !password || !acceptedTerms) {
-    res.status(400).json({ error: "Missing required fields" });
+  if (!inviteCode || !password || !acceptedTerms) {
+    res.status(400).json({ error: "جميع الحقول مطلوبة" });
     return;
   }
 
-  const tokenHash = hashToken(token);
-  const invitation = await Invitation.findOne({ tokenHash });
+  const code = (inviteCode as string).toUpperCase().replace(/\s/g, "");
+  const invitation = await Invitation.findOne({ inviteCode: code });
 
   if (!invitation || invitation.status === "revoked") {
     res.status(400).json({ error: "Invalid invitation" });
@@ -341,6 +392,7 @@ function formatInvitation(inv: any) {
     id: inv._id?.toString(),
     inviteeName: inv.inviteeName,
     email: inv.email,
+    inviteCode: inv.inviteCode ?? null,
     role: inv.role,
     status: inv.status,
     allowedSections: inv.allowedSections || [],

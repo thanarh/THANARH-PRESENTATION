@@ -189,7 +189,8 @@ function baseTemplate(opts: {
 export async function sendInvitationEmail(opts: {
   to: string;
   inviteeName: string;
-  inviteUrl: string;
+  inviteCode: string;
+  portalUrl: string;
   expiresAt: Date;
   inviterName: string;
   customMessage?: string;
@@ -203,11 +204,20 @@ export async function sendInvitationEmail(opts: {
       <p>مرحباً <span class="label">${opts.inviteeName}</span>،</p>
       <p>تمت دعوتك من قِبل <span class="label">${opts.inviterName}</span> للاطلاع على رؤية ومنظومة مشروع <strong>ثناره</strong> الطبي الشاملة.</p>
       ${opts.customMessage ? `<p>${opts.customMessage}</p>` : ""}
-      <div class="details-card">
+
+      <p style="margin:0 0 8px;font-weight:600;">كود الدعوة الخاص بك:</p>
+      <center>
+        <div style="font-size:32px;font-weight:800;letter-spacing:8px;color:#0F3D33;background:#F7F5F1;border:2px solid #A9CBB5;padding:20px 40px;border-radius:12px;display:inline-block;margin:8px 0;font-family:monospace;">
+          ${opts.inviteCode}
+        </div>
+      </center>
+
+      <div class="details-card" style="margin-top:20px;">
         <p><span class="label">صلاحية الدعوة:</span> ${expiry}</p>
       </div>
-      <p>انقر على الزر أدناه لقبول الدعوة وإنشاء حسابك:</p>
-      <center><a href="${opts.inviteUrl}" class="btn">دخول تجربة ثناره</a></center>
+
+      <p>انقر على الزر أدناه للدخول إلى البوابة، ثم أدخل الكود أعلاه عند الطلب:</p>
+      <center><a href="${opts.portalUrl}" class="btn">الدخول إلى بوابة ثناره</a></center>
       <div class="notice">
         هذه الدعوة شخصية ومخصصة للمستلم فقط. يرجى عدم مشاركتها أو إعادة توجيهها.<br/>
         This invitation is personal and intended only for its recipient. Do not share or forward it.
@@ -217,7 +227,7 @@ export async function sendInvitationEmail(opts: {
     to: opts.to,
     subject: "دعوة خاصة للدخول إلى تجربة ثناره",
     html,
-    text: `مرحباً ${opts.inviteeName}، تمت دعوتك إلى ثناره.\nرابط القبول: ${opts.inviteUrl}\nصلاحية الدعوة: ${expiry}`,
+    text: `مرحباً ${opts.inviteeName}، تمت دعوتك إلى ثناره.\nكود الدعوة: ${opts.inviteCode}\nرابط البوابة: ${opts.portalUrl}\nصلاحية الدعوة: ${expiry}`,
   });
 }
 

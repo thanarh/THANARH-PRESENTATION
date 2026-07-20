@@ -9,6 +9,7 @@ export interface IInvitation extends Document {
   inviteeName: string;
   email: string;
   tokenHash: string;
+  inviteCode: string;
   role: string;
   permissions: string[];
   allowedSections: string[];
@@ -44,6 +45,7 @@ const invitationSchema = new mongoose.Schema<IInvitation>(
     inviteeName: { type: String, required: true, trim: true },
     email: { type: String, required: true, lowercase: true, trim: true },
     tokenHash: { type: String, required: true, unique: true },
+    inviteCode: { type: String, unique: true, sparse: true },
     role: { type: String, required: true },
     permissions: [{ type: String }],
     allowedSections: [{ type: String }],

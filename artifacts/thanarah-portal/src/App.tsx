@@ -48,7 +48,7 @@ function Router() {
       <Route path="/invite/expired" component={() => <ErrorPage type="expired" />} />
       <Route path="/invite/revoked" component={() => <ErrorPage type="revoked" />} />
       <Route path="/access-denied" component={() => <ErrorPage type="denied" />} />
-      <Route path="/invite/:token" component={InviteAccept} />
+      <Route path="/invite" component={InviteAccept} />
 
       {/* Authenticated Routes */}
       <Route path="/dashboard">
