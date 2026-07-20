@@ -86,7 +86,7 @@ if (process.env.NODE_ENV === "production" && fs.existsSync(PORTAL_DIR)) {
   app.use(express.static(PORTAL_DIR, { maxAge: "1h" }));
 
   // SPA catch-all — return index.html for any non-API, non-file path
-  app.get("*", (_req: Request, res: Response) => {
+  app.get("/{*path}", (_req: Request, res: Response) => {
     res.sendFile(path.join(PORTAL_DIR, "index.html"));
   });
 } else if (process.env.NODE_ENV === "production") {
