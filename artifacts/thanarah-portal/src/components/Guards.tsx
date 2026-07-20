@@ -27,13 +27,13 @@ export function AdminGuard({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && user && !['admin', 'owner', 'superadmin'].includes(user.role)) {
+    if (!isLoading && user && !['admin', 'owner', 'super_admin'].includes(user.role)) {
       setLocation('/dashboard');
     }
   }, [user, isLoading, setLocation]);
 
   if (isLoading) return null;
-  if (!user || !['admin', 'owner', 'superadmin'].includes(user.role)) return null;
+  if (!user || !['admin', 'owner', 'super_admin'].includes(user.role)) return null;
 
   return <>{children}</>;
 }

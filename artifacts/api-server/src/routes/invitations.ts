@@ -6,6 +6,7 @@ import User from "../models/user";
 import { logAudit } from "../models/auditLog";
 import { sendInvitationEmail } from "../lib/email";
 import { connectDb } from "../lib/db";
+import { logger } from "../lib/logger";
 import bcrypt from "bcryptjs";
 
 const router = Router();
@@ -135,21 +136,34 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
   const baseUrl = process.env.BASE_URL || "https://presentation.thanarah.com";
   const inviteUrl = `${baseUrl}/invite/${rawToken}`;
 
-  await sendInvitationEmail({
-    to: email,
-    inviteeName,
-    inviteUrl,
-    expiresAt: new Date(expiresAt),
-    inviterName: creator?.fullName || "Thanarah Team",
-    customMessage,
-  });
+  let emailDelivered = true;
+  let emailError: string | null = null;
 
-  await Invitation.findByIdAndUpdate(invitation._id, { status: "sent" });
+  try {
+    await sendInvitationEmail({
+      to: email,
+      inviteeName,
+      inviteUrl,
+      expiresAt: new Date(expiresAt),
+      inviterName: creator?.fullName || "Thanarah Team",
+      customMessage,
+    });
+    await Invitation.findByIdAndUpdate(invitation._id, { status: "sent" });
+  } catch (err: unknown) {
+    emailDelivered = false;
+    emailError = err instanceof Error ? err.message : "Unknown email error";
+    logger.error({ err, invitationId: invitation._id, to: email }, "Failed to send invitation email — marked as failed_delivery");
+    await Invitation.findByIdAndUpdate(invitation._id, { status: "failed_delivery" });
+  }
 
   await logAudit({ actor: creator?.fullName || req.userId!, actorId: invitation.createdBy, action: "invitation.created", target: email, result: "success", riskScore: "low", ipAddress: String(req.ip || ""), timestamp: new Date() });
 
   const updated = await Invitation.findById(invitation._id).populate("createdBy", "fullName").lean();
-  res.status(201).json(formatInvitation(updated!));
+  res.status(201).json({
+    ...formatInvitation(updated!),
+    _emailDelivered: emailDelivered,
+    _emailError: emailError,
+  });
 });
 
 // GET /api/invitations/:id
@@ -244,19 +258,27 @@ router.post("/:id/resend", authenticate, async (req: AuthRequest, res: Response)
   const creator = await User.findById(req.userId).lean();
   const rawToken = generateSecureToken();
   const tokenHash = hashToken(rawToken);
-  await Invitation.findByIdAndUpdate(req.params.id, { tokenHash, status: "sent" });
+  // Generate fresh token before attempting email
+  await Invitation.findByIdAndUpdate(req.params.id, { tokenHash, status: "draft" });
 
   const baseUrl = process.env.BASE_URL || "https://presentation.thanarah.com";
-  await sendInvitationEmail({
-    to: invitation.email,
-    inviteeName: invitation.inviteeName,
-    inviteUrl: `${baseUrl}/invite/${rawToken}`,
-    expiresAt: invitation.expiresAt,
-    inviterName: creator?.fullName || "Thanarah Team",
-    customMessage: invitation.customMessage,
-  });
-
-  res.json({ success: true, message: "Invitation resent" });
+  try {
+    await sendInvitationEmail({
+      to: invitation.email,
+      inviteeName: invitation.inviteeName,
+      inviteUrl: `${baseUrl}/invite/${rawToken}`,
+      expiresAt: invitation.expiresAt,
+      inviterName: creator?.fullName || "Thanarah Team",
+      customMessage: invitation.customMessage,
+    });
+    await Invitation.findByIdAndUpdate(req.params.id, { status: "sent" });
+    res.json({ success: true, message: "Invitation resent" });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown email error";
+    logger.error({ err, invitationId: req.params.id, to: invitation.email }, "Failed to resend invitation email");
+    await Invitation.findByIdAndUpdate(req.params.id, { status: "failed_delivery" });
+    res.status(502).json({ error: "Invitation saved but email delivery failed. Check SMTP settings.", detail: msg });
+  }
 });
 
 // POST /api/invitations/accept

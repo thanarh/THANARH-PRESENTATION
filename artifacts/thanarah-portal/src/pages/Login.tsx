@@ -309,7 +309,7 @@ export default function Login() {
     mutation: {
       onSuccess: (data: any) => {
         authLogin(data.user);
-        if (['admin', 'owner', 'superadmin'].includes(data.user.role)) {
+        if (['admin', 'owner', 'super_admin'].includes(data.user.role)) {
           setLocation('/admin');
         } else {
           setLocation('/dashboard');
