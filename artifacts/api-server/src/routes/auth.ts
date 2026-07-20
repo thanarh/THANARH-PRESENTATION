@@ -21,6 +21,7 @@ import {
   sendPasswordResetEmail,
 } from "../lib/email";
 import { connectDb } from "../lib/db";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -34,27 +35,6 @@ function getDeviceType(ua: string): string {
   return "desktop";
 }
 
-function setCookies(res: Response, accessToken: string, refreshToken: string): void {
-  res.cookie("access_token", accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 15 * 60 * 1000,
-  });
-  res.cookie("refresh_token", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-}
-
-function clearCookies(res: Response): void {
-  res.clearCookie("access_token", { path: "/" });
-  res.clearCookie("refresh_token", { path: "/" });
-}
 
 // POST /api/auth/setup — one-time owner setup
 router.post("/setup", async (req: Request, res: Response) => {
@@ -177,7 +157,6 @@ router.post("/login", async (req: Request, res: Response) => {
 
   const accessToken = signAccessToken({ userId: user.id, sessionId: session.id, role: user.role });
   const refreshJwt = signRefreshToken({ userId: user.id, sessionId: session.id, role: user.role });
-  setCookies(res, accessToken, refreshJwt);
 
   await logAudit({ actor: user.fullName, actorId: user._id as unknown as import("mongoose").Types.ObjectId, action: "login.success", result: "success", riskScore: "low", ipAddress: ip, sessionId: session.id, timestamp: new Date() });
 
@@ -185,6 +164,8 @@ router.post("/login", async (req: Request, res: Response) => {
   sendLoginAlertEmail({ to: user.email, name: user.fullName, ipAddress: ip, device: getDeviceType(ua), time: new Date() }).catch(() => {});
 
   res.json({
+    accessToken,
+    refreshToken: refreshJwt,
     user: {
       id: user.id,
       fullName: user.fullName,
@@ -206,7 +187,6 @@ router.post("/login", async (req: Request, res: Response) => {
 router.post("/logout", authenticate, async (req: AuthRequest, res: Response) => {
   await connectDb();
   await Session.findOneAndUpdate({ _id: req.sessionId }, { status: "revoked", revokedAt: new Date() });
-  clearCookies(res);
   await logAudit({ actor: req.userId || "unknown", action: "logout", result: "success", riskScore: "low", ipAddress: getIp(req), sessionId: req.sessionId, timestamp: new Date() });
   res.json({ success: true, message: "Logged out" });
 });
@@ -214,7 +194,7 @@ router.post("/logout", authenticate, async (req: AuthRequest, res: Response) => 
 // POST /api/auth/refresh
 router.post("/refresh", async (req: Request, res: Response) => {
   await connectDb();
-  const refreshJwt = req.cookies?.refresh_token;
+  const refreshJwt = req.body?.refreshToken as string | undefined;
   if (!refreshJwt) {
     res.status(401).json({ error: "No refresh token" });
     return;
@@ -230,15 +210,16 @@ router.post("/refresh", async (req: Request, res: Response) => {
 
     const newAccessToken = signAccessToken({ userId: user.id, sessionId: payload.sessionId, role: user.role });
     const newRefreshToken = signRefreshToken({ userId: user.id, sessionId: payload.sessionId, role: user.role });
-    setCookies(res, newAccessToken, newRefreshToken);
 
     res.json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
       user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, permissions: user.permissions, allowedSections: user.allowedSections, preferredLanguage: user.preferredLanguage, mfaEnabled: user.mfaEnabled, lastLoginAt: user.lastLoginAt?.toISOString() ?? null, sessionExpiresAt: null },
       requiresMfa: false,
       mfaSessionToken: null,
     });
-  } catch {
-    clearCookies(res);
+  } catch (err) {
+    logger.error({ err }, "Refresh token verification failed");
     res.status(401).json({ error: "Invalid refresh token" });
   }
 });

@@ -46,7 +46,7 @@ export interface AuthRequest extends Request {
 
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
   try {
-    const token = req.cookies?.access_token || req.headers.authorization?.split(" ")[1];
+    const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
       res.status(401).json({ error: "Authentication required" });
@@ -58,7 +58,8 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     req.sessionId = payload.sessionId;
     req.userRole = payload.role;
     next();
-  } catch {
+  } catch (err) {
+    logger.error({ err }, "Token verification failed");
     res.status(401).json({ error: "Invalid or expired token" });
   }
 }

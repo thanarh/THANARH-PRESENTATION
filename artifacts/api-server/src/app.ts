@@ -3,7 +3,6 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
@@ -90,11 +89,9 @@ const allowedOrigin =
 app.use(
   cors({
     origin: allowedOrigin,
-    credentials: true,
   }),
 );
 
-app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 

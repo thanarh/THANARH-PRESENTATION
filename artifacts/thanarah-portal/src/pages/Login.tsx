@@ -308,7 +308,7 @@ export default function Login() {
   const { mutate: login, isPending } = useLogin({
     mutation: {
       onSuccess: (data: any) => {
-        authLogin(data.user);
+        authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
         if (['admin', 'owner', 'super_admin'].includes(data.user.role)) {
           setLocation('/admin');
         } else {
@@ -316,7 +316,8 @@ export default function Login() {
         }
       },
       onError: (err: any) => {
-        setErrorMsg(err.error || 'Login failed');
+        const msg = err?.data?.error || err?.message || 'Login failed';
+        setErrorMsg(msg);
       },
     },
   });
