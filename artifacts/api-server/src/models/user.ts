@@ -20,6 +20,7 @@ export interface IUser extends Document {
   emailVerificationExpiry?: Date;
   passwordResetToken?: string;
   passwordResetExpiry?: Date;
+  phone?: string;
   invitationId?: mongoose.Types.ObjectId;
   lastLoginAt?: Date;
   failedLoginAttempts: number;
@@ -50,6 +51,7 @@ const userSchema = new mongoose.Schema<IUser>(
     emailVerificationExpiry: Date,
     passwordResetToken: String,
     passwordResetExpiry: Date,
+    phone: { type: String, trim: true },
     invitationId: { type: mongoose.Schema.Types.ObjectId, ref: "Invitation" },
     lastLoginAt: Date,
     failedLoginAttempts: { type: Number, default: 0 },

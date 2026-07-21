@@ -9,8 +9,42 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../components/ui/form';
-import { Loader2, ArrowRight, Mail, User, ShieldCheck, AlertCircle, KeyRound } from 'lucide-react';
+import { Loader2, ArrowRight, Mail, User, ShieldCheck, AlertCircle, KeyRound, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// ─── Saudi phone input ────────────────────────────────────────────────────────
+
+function SaudiPhoneInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div
+      className="flex items-center h-11 rounded-md border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden"
+      dir="ltr"
+    >
+      <div className="flex items-center gap-1.5 px-3 border-r border-input bg-muted/40 h-full shrink-0">
+        <span className="text-base leading-none">🇸🇦</span>
+        <span className="text-sm font-medium text-foreground">+966</span>
+      </div>
+      <input
+        type="tel"
+        dir="ltr"
+        inputMode="numeric"
+        value={value}
+        onChange={e => {
+          const digits = e.target.value.replace(/\D/g, '').slice(0, 9);
+          onChange(digits);
+        }}
+        placeholder="5X XXX XXXX"
+        className="flex-1 h-full px-3 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+      />
+    </div>
+  );
+}
 
 // ─── Step 1: enter code ──────────────────────────────────────────────────────
 
@@ -18,9 +52,14 @@ const codeSchema = z.object({
   code: z.string().min(4, 'الكود قصير جداً').max(20),
 });
 
-// ─── Step 2: set password ─────────────────────────────────────────────────────
+// ─── Step 2: set password + phone ────────────────────────────────────────────
 
 const acceptSchema = z.object({
+  phone: z
+    .string()
+    .min(9, 'رقم الجوال يجب أن يكون 9 أرقام')
+    .max(9, 'رقم الجوال يجب أن يكون 9 أرقام')
+    .regex(/^5\d{8}$/, 'رقم الجوال يجب أن يبدأ بـ 5'),
   password: z.string().min(8, 'كلمة المرور يجب أن تكون 8 أحرف على الأقل'),
   confirmPassword: z.string(),
   acceptedTerms: z.boolean().refine(val => val === true, {
@@ -80,7 +119,7 @@ export default function InviteAccept() {
   // ── Step 2 form ──
   const acceptForm = useForm<z.infer<typeof acceptSchema>>({
     resolver: zodResolver(acceptSchema),
-    defaultValues: { password: '', confirmPassword: '', acceptedTerms: false },
+    defaultValues: { phone: '', password: '', confirmPassword: '', acceptedTerms: false },
   });
 
   const onAccept = async (values: z.infer<typeof acceptSchema>) => {
@@ -95,6 +134,7 @@ export default function InviteAccept() {
           inviteCode: invite.inviteCode,
           password: values.password,
           acceptedTerms: values.acceptedTerms,
+          phone: `+966${values.phone}`,
         }),
       });
       const data = await res.json();
@@ -251,6 +291,25 @@ export default function InviteAccept() {
 
               <Form {...acceptForm}>
                 <form onSubmit={acceptForm.handleSubmit(onAccept)} className="space-y-4">
+                  {/* Phone */}
+                  <FormField
+                    control={acceptForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label className="text-foreground font-medium flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5" />
+                          رقم الجوال
+                        </Label>
+                        <FormControl>
+                          <SaudiPhoneInput value={field.value} onChange={field.onChange} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Password */}
                   <FormField
                     control={acceptForm.control}
                     name="password"

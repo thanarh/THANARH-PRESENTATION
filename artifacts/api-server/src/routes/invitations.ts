@@ -335,7 +335,7 @@ router.post("/:id/resend", authenticate, async (req: AuthRequest, res: Response)
 // POST /api/invitations/accept
 router.post("/accept", async (req: any, res: Response) => {
   await connectDb();
-  const { inviteCode, password, acceptedTerms } = req.body;
+  const { inviteCode, password, acceptedTerms, phone } = req.body;
 
   if (!inviteCode || !password || !acceptedTerms) {
     res.status(400).json({ error: "جميع الحقول مطلوبة" });
@@ -373,6 +373,7 @@ router.post("/accept", async (req: any, res: Response) => {
     permissions: invitation.permissions,
     allowedSections: invitation.allowedSections,
     invitationId: invitation._id,
+    ...(phone ? { phone: String(phone).trim() } : {}),
   });
 
   await Invitation.findByIdAndUpdate(invitation._id, {
