@@ -58,8 +58,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Logo header */}
       <div className="p-5 border-b border-sidebar-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-bold text-base leading-none">T</span>
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 overflow-hidden">
+            <img src="/logo-icon.png" alt="Thanarah" className="w-6 h-6 object-contain" />
           </div>
           <h1 className="font-bold text-base text-sidebar-foreground tracking-tight">Thanarah Admin</h1>
         </div>
