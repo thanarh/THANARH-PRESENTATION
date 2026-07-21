@@ -138,10 +138,22 @@ if (process.env.NODE_ENV === "production" && fs.existsSync(PORTAL_DIR)) {
 
   // SPA catch-all — return index.html for any non-API, non-file path
   app.get("/{*path}", (_req: Request, res: Response) => {
-    res.sendFile(path.join(PORTAL_DIR, "index.html"));
+    const indexPath = path.join(PORTAL_DIR, "index.html");
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        logger.error({ err, indexPath }, "Failed to send index.html");
+        res.status(500).send("Internal Server Error");
+      }
+    });
   });
 } else if (process.env.NODE_ENV === "production") {
   logger.warn({ PORTAL_DIR }, "Portal static files not found — frontend will not be served");
+  // Provide a readable error instead of a silent 404
+  app.get("/{*path}", (_req: Request, res: Response) => {
+    res.status(503).send(
+      "<h1>Portal not built</h1><p>Static files missing. Check build logs.</p>"
+    );
+  });
 }
 
 // Global error handler

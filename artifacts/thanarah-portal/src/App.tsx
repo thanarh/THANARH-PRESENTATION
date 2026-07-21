@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, Redirect } from 'wouter';
@@ -102,23 +103,25 @@ function App() {
   const [splash, setSplash] = useState(true);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <AuthProvider>
-            <TooltipProvider>
-              {/* App renders underneath — auth check runs during splash */}
-              <PageTransition>
-                <Router />
-              </PageTransition>
-              <Toaster />
-              {/* Splash sits on top, unmounts after animation */}
-              {splash && <SplashScreen onDone={() => setSplash(false)} />}
-            </TooltipProvider>
-          </AuthProvider>
-        </WouterRouter>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <AuthProvider>
+              <TooltipProvider>
+                {/* App renders underneath — auth check runs during splash */}
+                <PageTransition>
+                  <Router />
+                </PageTransition>
+                <Toaster />
+                {/* Splash sits on top, unmounts after animation */}
+                {splash && <SplashScreen onDone={() => setSplash(false)} />}
+              </TooltipProvider>
+            </AuthProvider>
+          </WouterRouter>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

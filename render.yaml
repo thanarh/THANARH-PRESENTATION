@@ -28,7 +28,7 @@ services:
       pnpm --filter @workspace/thanarah-portal run build &&
       pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps ./artifacts/api-server/dist/index.mjs
-    healthCheckPath: /api/health
+    healthCheckPath: /api/healthz
     autoDeploy: true
     envVars:
       - key: NODE_ENV
