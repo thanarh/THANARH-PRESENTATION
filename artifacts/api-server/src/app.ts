@@ -16,6 +16,10 @@ const PORTAL_DIR = path.resolve(__dirname, "../../../artifacts/thanarah-portal/d
 
 const app: Express = express();
 
+// Trust the first proxy hop (Render's load balancer / Replit's edge proxy).
+// Required for express-rate-limit to read X-Forwarded-For correctly.
+app.set("trust proxy", 1);
+
 // Security headers
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-Content-Type-Options", "nosniff");

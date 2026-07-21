@@ -42,24 +42,39 @@ const sections = [
 
 // ─── Owner accounts ───────────────────────────────────────────────────────────
 
-interface OwnerDef {
+interface AccountDef {
   fullName: string;
   email: string;
   defaultPassword: string;
+  role: "owner" | "investor" | "viewer";
 }
 
-const owners: OwnerDef[] = [
+const owners: AccountDef[] = [
   {
     fullName: "يوسف — Owner",
     email: process.env.THANARAH_OWNER_EMAIL_1 || "youssefd.business@gmail.com",
     defaultPassword: "Thanarah@2026!",
+    role: "owner",
   },
   {
     fullName: "فيصل — Owner",
     email: process.env.THANARAH_OWNER_EMAIL_2 || "faisal.m.alenzai@gmail.com",
     defaultPassword: "Thanarah@2026!",
+    role: "owner",
   },
 ];
+
+// ─── Demo / guest account ─────────────────────────────────────────────────────
+// A pre-seeded investor account for demos — no invitation needed.
+// Credentials: demo@thanarah.com / Demo@Thanarah2026!
+// Override email via THANARAH_DEMO_EMAIL env var.
+
+const demoAccount: AccountDef = {
+  fullName: "زائر تجريبي — Demo",
+  email: process.env.THANARAH_DEMO_EMAIL || "demo@thanarah.com",
+  defaultPassword: "Demo@Thanarah2026!",
+  role: "investor",
+};
 
 // ─── Seed ─────────────────────────────────────────────────────────────────────
 
@@ -93,7 +108,7 @@ async function seed() {
       fullName: owner.fullName,
       email: owner.email.toLowerCase(),
       passwordHash,
-      role: "owner",
+      role: owner.role,
       status: "active",
       emailVerified: true,
       permissions: [],
@@ -112,6 +127,32 @@ async function seed() {
   }
   if (skipped.length) {
     logger.info(`  Skipped (already exist): ${skipped.join(", ")}`);
+  }
+
+  // 3. Demo / guest account
+  logger.info("Seeding demo account…");
+  const demoExisting = await User.findOne({ email: demoAccount.email.toLowerCase() }).lean();
+  if (demoExisting) {
+    logger.info(`  Skipped demo (already exists): ${demoAccount.email}`);
+  } else {
+    const passwordHash = await bcrypt.hash(demoAccount.defaultPassword, 12);
+    await User.create({
+      fullName: demoAccount.fullName,
+      email: demoAccount.email.toLowerCase(),
+      passwordHash,
+      role: demoAccount.role,
+      status: "active",
+      emailVerified: true,
+      permissions: [],
+      allowedSections: [],
+      preferredLanguage: "ar",
+    });
+    logger.info("─────────────────────────────────────────────────────");
+    logger.info("✓ Demo account created");
+    logger.info(`  Email    : ${demoAccount.email}`);
+    logger.info(`  Password : ${demoAccount.defaultPassword}`);
+    logger.info(`  Role     : ${demoAccount.role}`);
+    logger.info("─────────────────────────────────────────────────────");
   }
 
   logger.info("Seed complete ✓");
