@@ -223,12 +223,13 @@ export async function sendInvitationEmail(opts: {
         This invitation is personal and intended only for its recipient. Do not share or forward it.
       </div>`,
   });
-  await sendEmail({
+  const sent = await sendEmail({
     to: opts.to,
     subject: "دعوة خاصة للدخول إلى تجربة ثناره",
     html,
     text: `مرحباً ${opts.inviteeName}، تمت دعوتك إلى ثناره.\nكود الدعوة: ${opts.inviteCode}\nرابط البوابة: ${opts.portalUrl}\nصلاحية الدعوة: ${expiry}`,
   });
+  if (!sent) throw new Error("SMTP delivery failed — check mail service status");
 }
 
 export async function sendVerificationEmail(opts: {
