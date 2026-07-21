@@ -23,6 +23,7 @@ export interface IInvitation extends Document {
   allowComments: boolean;
   allowFullScreen: boolean;
   allowViewFinancials: boolean;
+  phone?: string;
   customMessage?: string;
   reason?: string;
   internalRef?: string;
@@ -63,6 +64,7 @@ const invitationSchema = new mongoose.Schema<IInvitation>(
     allowComments: { type: Boolean, default: false },
     allowFullScreen: { type: Boolean, default: true },
     allowViewFinancials: { type: Boolean, default: false },
+    phone: { type: String, trim: true },
     customMessage: String,
     reason: String,
     internalRef: String,

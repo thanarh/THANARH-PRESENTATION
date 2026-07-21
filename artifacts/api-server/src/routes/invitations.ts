@@ -17,7 +17,7 @@ function generateInviteCode(): string {
 import Invitation from "../models/invitation";
 import User from "../models/user";
 import { logAudit } from "../models/auditLog";
-import { sendInvitationEmail } from "../lib/email";
+import { sendInvitationEmail, sendAdminInvitationNotification } from "../lib/email";
 import { connectDb } from "../lib/db";
 import { logger } from "../lib/logger";
 import bcrypt from "bcryptjs";
@@ -147,7 +147,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const { inviteeName, email, role, allowedSections, permissions, startsAt, expiresAt, maxLogins, maxDevices, sessionDurationMinutes, allowComments, allowFullScreen, allowViewFinancials, customMessage, reason } = req.body;
+  const { inviteeName, email, phone, role, allowedSections, permissions, startsAt, expiresAt, maxLogins, maxDevices, sessionDurationMinutes, allowComments, allowFullScreen, allowViewFinancials, customMessage, reason } = req.body;
 
   if (!inviteeName || !email || !role || !expiresAt) {
     res.status(400).json({ error: "Missing required fields" });
@@ -161,6 +161,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
   const invitation = await Invitation.create({
     inviteeName,
     email,
+    phone: phone ? String(phone).trim() : undefined,
     tokenHash,
     inviteCode,
     role,
@@ -187,6 +188,11 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
   let emailDelivered = true;
   let emailError: string | null = null;
 
+  const ADMIN_NOTIFY_EMAILS = [
+    process.env.ADMIN_NOTIFY_EMAIL_1 || "youssefd.business@gmail.com",
+    process.env.ADMIN_NOTIFY_EMAIL_2 || "faisal.m.alenzai@gmail.com",
+  ];
+
   try {
     await sendInvitationEmail({
       to: email,
@@ -198,6 +204,18 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
       customMessage,
     });
     await Invitation.findByIdAndUpdate(invitation._id, { status: "sent" });
+
+    // Notify admins — fire and forget (don't block the response)
+    sendAdminInvitationNotification({
+      adminEmails: ADMIN_NOTIFY_EMAILS,
+      inviteeName,
+      inviteeEmail: email,
+      inviteePhone: phone ? String(phone) : undefined,
+      inviteCode,
+      role,
+      expiresAt: new Date(expiresAt),
+      inviterName: creator?.fullName || "Thanarah Team",
+    }).catch(err => logger.warn({ err }, "Admin notification failed (non-critical)"));
   } catch (err: unknown) {
     emailDelivered = false;
     emailError = err instanceof Error ? err.message : "Unknown email error";

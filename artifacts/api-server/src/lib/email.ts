@@ -16,9 +16,16 @@ import { logger } from "./logger";
 // ─── Logo (embedded base64 for reliable email rendering) ─────────────────────
 // Read at module load — never fetches from network, works in all email clients.
 function loadLogoBase64(): string {
+  const thisFile = fileURLToPath(import.meta.url);
   const candidates = [
-    join(dirname(fileURLToPath(import.meta.url)), "../public/email-logo.png"),
+    // dist/lib/email.mjs → ../../public/email-logo.png (api-server/public)
+    join(dirname(thisFile), "../../public/email-logo.png"),
+    // dist/lib/email.mjs → ../public (one level up)
+    join(dirname(thisFile), "../public/email-logo.png"),
+    // cwd = artifacts/api-server when started via pnpm filter
     join(process.cwd(), "public/email-logo.png"),
+    // absolute fallback from workspace root
+    join(dirname(thisFile), "../../../artifacts/api-server/public/email-logo.png"),
   ];
   for (const p of candidates) {
     if (existsSync(p)) return readFileSync(p).toString("base64");
@@ -324,6 +331,43 @@ export async function sendVisitRequestAdminNotification(opts: {
     subject: `طلب زيارة جديد — ${opts.visitorName}`,
     html,
   });
+}
+
+export async function sendAdminInvitationNotification(opts: {
+  adminEmails: string[];
+  inviteeName: string;
+  inviteeEmail: string;
+  inviteePhone?: string;
+  inviteCode: string;
+  role: string;
+  expiresAt: Date;
+  inviterName: string;
+}): Promise<void> {
+  const expiry = opts.expiresAt.toLocaleDateString("ar-SA", {
+    year: "numeric", month: "long", day: "numeric",
+  });
+  const html = baseTemplate({
+    content: `
+      <p>مرحباً،</p>
+      <p>تم إرسال دعوة جديدة من قِبل <span class="label">${opts.inviterName}</span>.</p>
+      <div class="details-card">
+        <p><span class="label">المدعو:</span> ${opts.inviteeName}</p>
+        <p><span class="label">البريد:</span> ${opts.inviteeEmail}</p>
+        ${opts.inviteePhone ? `<p><span class="label">الجوال:</span> ${opts.inviteePhone}</p>` : ""}
+        <p><span class="label">الصلاحية:</span> ${opts.role}</p>
+        <p><span class="label">كود الدعوة:</span> <span style="font-family:monospace;font-weight:700;letter-spacing:4px;">${opts.inviteCode}</span></p>
+        <p><span class="label">تنتهي:</span> ${expiry}</p>
+      </div>
+      <p style="color:#6B7280;font-size:13px;">هذا إشعار تلقائي من منظومة ثناره.</p>`,
+  });
+  for (const adminEmail of opts.adminEmails) {
+    await sendEmail({
+      to: adminEmail,
+      subject: `دعوة جديدة — ${opts.inviteeName} (${opts.role})`,
+      html,
+      text: `دعوة جديدة لـ ${opts.inviteeName} (${opts.inviteeEmail}) بصلاحية ${opts.role}. الكود: ${opts.inviteCode}. تنتهي: ${expiry}.`,
+    });
+  }
 }
 
 export async function sendTestEmail(to: string): Promise<boolean> {

@@ -6,7 +6,7 @@ import {
   useCreateInvitation,
   useRevokeInvitation,
 } from '@workspace/api-client-react';
-import { Loader2, Plus, Mail, CheckCircle2, Clock, Ban, X, Send } from 'lucide-react';
+import { Loader2, Plus, Mail, CheckCircle2, Clock, Ban, X, Send, RefreshCw, Phone } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
