@@ -104,11 +104,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
-// ── Serve the React portal in production ──────────────────────────────────────
-// In development the Vite dev-server handles the frontend on a separate port.
-// On Render (production) there is only one process, so Express serves the
-// pre-built static files and falls back to index.html for SPA routing.
-if (process.env.NODE_ENV === "production" && fs.existsSync(PORTAL_DIR)) {
+// ── Serve the React portal when pre-built files exist ─────────────────────────
+// In development the Vite dev-server handles the frontend on a separate port
+// so PORTAL_DIR typically doesn't exist — the check below is a no-op.
+// On Render the build step always produces PORTAL_DIR, so this branch runs
+// regardless of how NODE_ENV is set in the dashboard.
+if (fs.existsSync(PORTAL_DIR)) {
   logger.info({ PORTAL_DIR }, "Serving portal static files");
 
   // Long-lived cache for hashed asset bundles (JS/CSS with content hash)
