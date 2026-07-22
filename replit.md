@@ -1,65 +1,47 @@
-# Thanarah Presentation Portal — بوابة ثناره التقديمية
+# Thanarah Presentation Portal
 
-A secure, invitation-only investor & partner presentation portal for Thanarah Medical-Tech. Built with React 19 + Vite (frontend), Express 5 (API), and MongoDB Atlas.
+A secure, invitation-only presentation portal for the medical sector. Features multi-role access control, dynamic watermarking, session tracking, RTL/LTR multilingual support (AR/EN/TR/UR), and audit logging.
 
-## Project Structure
+## Architecture
 
-```
-artifacts/
-  api-server/          — Express 5 API server (port 8080 in dev)
-  thanarah-portal/     — React 19 + Vite frontend (port from $PORT)
-  mockup-sandbox/      — Design mockup preview server
-lib/
-  db/                  — PostgreSQL schema + Drizzle ORM
-  api-client-react/    — Auto-generated React Query hooks
-  api-spec/            — OpenAPI spec + Orval codegen config
-  api-zod/             — Zod validators for API I/O
-```
+pnpm monorepo with two main services:
+
+| Package | Description | Dev port |
+|---------|-------------|----------|
+| `@workspace/thanarah-portal` | React 19 + Vite 7 + Tailwind v4 frontend | 21287 |
+| `@workspace/api-server` | Express 5 + Mongoose + JWT backend | 8080 |
+
+Shared libraries under `lib/`: `api-spec` (OpenAPI), `api-client-react` (generated hooks), `api-zod` (Zod schemas).
 
 ## How to Run
 
-The project uses pnpm workspaces. Both services start automatically via the configured workflows:
+Dependencies are installed automatically. Two workflows run simultaneously:
 
-- **API Server** — `PORT=8080 pnpm --filter @workspace/api-server run dev`
-- **Thanarah Portal** — `pnpm --filter @workspace/thanarah-portal run dev`
+- **API Server** (`artifacts/api-server: API Server`) — builds with esbuild then starts
+- **Portal** (`artifacts/thanarah-portal: web`) — Vite dev server, proxies `/api` → port 8080
 
-To install dependencies after a fresh clone:
-```bash
-pnpm install
-```
-
-## Required Secrets
-
-Set these in Replit Secrets (never commit them):
+## Required Secrets (Replit Secrets)
 
 | Secret | Purpose |
 |--------|---------|
-| `MONGODB_URI` | MongoDB Atlas connection string (`mongodb+srv://...`) |
-| `JWT_SECRET` | JWT signing key |
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `JWT_SECRET` | Signs JWT access tokens |
+| `OWNER_SETUP_KEY` | One-time key for `/api/auth/setup` to create first admin |
 | `SMTP_PASSWORD` | cPanel SMTP password for `noreply@thanarah.com` |
-| `SESSION_SECRET` | Express session secret |
-| `OWNER_SETUP_KEY` | One-time key for first owner account creation |
+| `SESSION_SECRET` | ✅ Already set |
 
-## Environment Variables (already configured)
+## Required Env Vars (already set)
 
-| Variable | Value |
-|----------|-------|
-| `SMTP_HOST` | business197.web-hosting.com |
-| `SMTP_PORT` | 465 |
-| `SMTP_SECURE` | true |
-| `SMTP_USERNAME` | noreply@thanarah.com |
-| `SMTP_FROM_EMAIL` | noreply@thanarah.com |
-| `SMTP_FROM_NAME` | Thanarah |
-| `MAIL_PROVIDER` | CPANEL |
-| `MONGODB_DATABASE_NAME` | thanarah_presentation |
-| `NODE_ENV` | development |
+`NODE_ENV`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`, `MONGODB_DATABASE_NAME`, `THANARAH_OWNER_EMAIL_1`, `THANARAH_OWNER_EMAIL_2`, `BASE_URL`, `FRONTEND_URL`
 
-## Access Model
+## Initial Setup (first run)
 
-The portal is invitation-only — no public registration. Roles: Owner → Super Admin → Admin → Presenter → Investor → Partner → Team Member → Viewer.
+After secrets are set:
+1. Visit `/setup` in the portal and use `OWNER_SETUP_KEY` to create the owner account
+2. Optionally seed demo data: `pnpm --filter @workspace/api-server run seed`
 
 ## User Preferences
 
-- Keep the existing monorepo structure (pnpm workspaces)
-- SMTP uses cPanel only (not SMTP2GO)
-- SMTP_PASSWORD stays in Replit Secrets only — never logged or committed
+- Splash screen replaced with simple centered icon spinner (LogoSpinner)
+- SMTP provider: cPanel (not SMTP2GO)
+- SMTP_PASSWORD must remain in Replit Secrets only

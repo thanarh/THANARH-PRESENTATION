@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -8,7 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthGuard, AdminGuard } from './components/Guards';
 import { PageTransition } from './components/PageTransition';
-import { SplashScreen } from './components/SplashScreen';
+import { LogoSpinner } from './components/LogoSpinner';
 
 // Public Pages
 import Login from './pages/Login';
@@ -100,8 +99,6 @@ function Router() {
 }
 
 function App() {
-  const [splash, setSplash] = useState(true);
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -109,13 +106,10 @@ function App() {
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
             <AuthProvider>
               <TooltipProvider>
-                {/* App renders underneath — auth check runs during splash */}
                 <PageTransition>
                   <Router />
                 </PageTransition>
                 <Toaster />
-                {/* Splash sits on top, unmounts after animation */}
-                {splash && <SplashScreen onDone={() => setSplash(false)} />}
               </TooltipProvider>
             </AuthProvider>
           </WouterRouter>
