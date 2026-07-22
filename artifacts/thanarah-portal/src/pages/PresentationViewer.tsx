@@ -79,7 +79,7 @@ export default function PresentationViewer() {
         <SlideRenderer
           slug={slug}
           titleAr={sectionData.titleAr}
-          descriptionAr={sectionData.descriptionAr}
+          descriptionAr={sectionData.descriptionAr ?? undefined}
           order={sectionData.order}
         />
       </motion.div>

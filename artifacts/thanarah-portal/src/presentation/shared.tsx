@@ -59,7 +59,7 @@ export function ChapterBadge({ ar, en }: { ar: string; en: string }) {
 }
 
 // Dark panel
-export function DarkPanel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function DarkPanel({ children, className = '', dir }: { children: React.ReactNode; className?: string; dir?: string }) {
   return (
     <div className={`rounded-2xl p-8 ${className}`} style={{ background: C.dark, color: C.white }}>
       {children}
