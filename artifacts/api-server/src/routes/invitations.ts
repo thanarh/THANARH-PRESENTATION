@@ -189,9 +189,9 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
   let emailError: string | null = null;
 
   const ADMIN_NOTIFY_EMAILS = [
-    process.env.ADMIN_NOTIFY_EMAIL_1 || "youssefd.business@gmail.com",
-    process.env.ADMIN_NOTIFY_EMAIL_2 || "faisal.m.alenzai@gmail.com",
-  ];
+    process.env.THANARAH_OWNER_EMAIL_1 || process.env.ADMIN_NOTIFY_EMAIL_1 || "youssefd.business@gmail.com",
+    process.env.THANARAH_OWNER_EMAIL_2 || process.env.ADMIN_NOTIFY_EMAIL_2 || "faisal.m.alenzai@gmail.com",
+  ].filter(Boolean) as string[];
 
   try {
     await sendInvitationEmail({

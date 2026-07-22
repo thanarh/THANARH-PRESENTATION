@@ -18,7 +18,9 @@ import { logger } from "./logger";
 function loadLogoBase64(): string {
   const thisFile = fileURLToPath(import.meta.url);
   const candidates = [
-    // dist/lib/email.mjs → ../../public/email-logo.png (api-server/public)
+    // build copies public/ → dist/public/ (most reliable in production)
+    join(dirname(thisFile), "public/email-logo.png"),
+    // dist/index.mjs → ../../public/email-logo.png (artifacts/api-server/public)
     join(dirname(thisFile), "../../public/email-logo.png"),
     // dist/lib/email.mjs → ../public (one level up)
     join(dirname(thisFile), "../public/email-logo.png"),
