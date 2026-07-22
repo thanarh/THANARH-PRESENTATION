@@ -66,41 +66,10 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // Manual chunk splitting — vendor libs cached independently from app code
-        manualChunks(id) {
-          // Core React runtime
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'react-core';
-          }
-          // Animation library
-          if (id.includes('node_modules/framer-motion')) {
-            return 'framer-motion';
-          }
-          // TanStack Query
-          if (id.includes('node_modules/@tanstack')) {
-            return 'tanstack';
-          }
-          // Radix UI / shadcn components
-          if (id.includes('node_modules/@radix-ui')) {
-            return 'radix-ui';
-          }
-          // Lucide icons
-          if (id.includes('node_modules/lucide-react')) {
-            return 'lucide';
-          }
-          // Router
-          if (id.includes('node_modules/wouter')) {
-            return 'router';
-          }
-          // Forms
-          if (id.includes('node_modules/react-hook-form') || id.includes('node_modules/zod') || id.includes('node_modules/@hookform')) {
-            return 'forms';
-          }
-          // Everything else from node_modules
-          if (id.includes('node_modules/')) {
-            return 'vendor';
-          }
-        },
+        // Let Rollup/Vite determine chunk boundaries automatically.
+        // Manual splits previously caused a circular chunk cycle
+        // (vendor ↔ react-core) that made the browser receive undefined
+        // exports at init time — resulting in a blank white page.
         // Deterministic filenames for better CDN caching
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
