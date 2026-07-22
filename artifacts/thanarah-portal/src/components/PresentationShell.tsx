@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -14,6 +14,12 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [screenshotWarning, setScreenshotWarning] = useState(false);
+
+  const showScreenshotWarning = useCallback(() => {
+    setScreenshotWarning(true);
+    setTimeout(() => setScreenshotWarning(false), 3000);
+  }, []);
 
   const { data: sections } = useListPresentationSections();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,6 +88,13 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
       const shift = e.shiftKey;
       const key   = e.key;
 
+      // Detect PrintScreen — show warning (browsers cannot fully block OS screenshots)
+      if (key === 'PrintScreen') {
+        e.preventDefault();
+        showScreenshotWarning();
+        return;
+      }
+
       const isDevTools  = key === 'F12'
                         || (ctrl && shift && ['I','i','J','j','C','c'].includes(key));
       const isViewSrc   = ctrl && !shift && ['U','u'].includes(key);
@@ -102,7 +115,7 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
       document.removeEventListener('dragstart', preventDefault);
       document.removeEventListener('keydown', blockKeys, { capture: true } as EventListenerOptions);
     };
-  }, []);
+  }, [showScreenshotWarning]);
 
   const completionPercent = progress?.completionPercent || 0;
 
@@ -135,6 +148,33 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
       `}</style>
       <Watermark />
       <SessionTimer />
+
+      {/* ── PrintScreen warning overlay ───────────────────────── */}
+      <AnimatePresence>
+        {screenshotWarning && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[99999] flex items-center justify-center pointer-events-none"
+          >
+            <div className="rounded-2xl px-8 py-6 text-center shadow-2xl max-w-sm mx-4"
+              style={{ background: '#1a1a1a', border: '1px solid #E53E3E' }}>
+              <div className="text-3xl mb-3">⛔</div>
+              <p dir="rtl" className="text-white font-bold text-lg mb-1">
+                تم تسجيل محاولة التقاط الشاشة
+              </p>
+              <p className="text-red-400 text-sm font-medium">
+                Screenshot attempt logged
+              </p>
+              <p dir="rtl" className="text-gray-400 text-xs mt-2">
+                هذا المحتوى محمي ومُسجَّل بهويتك
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Overlay */}
       <AnimatePresence>
@@ -256,9 +296,9 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
           <div className="pointer-events-auto">
             {prevSection && !prevSection.isLocked && (
               <Link href={`/presentation/${prevSection.slug}`}>
-                <button className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-card/90 backdrop-blur border border-border shadow-sm hover:bg-accent transition-all text-sm font-medium">
-                  {isRtl ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-                  <span>{isRtl ? prevSection.titleAr : prevSection.titleEn}</span>
+                <button className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 rounded-full bg-card/90 backdrop-blur border border-border shadow-sm hover:bg-accent transition-all text-sm font-medium">
+                  {isRtl ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
+                  <span className="max-w-[80px] sm:max-w-[140px] truncate">{isRtl ? prevSection.titleAr : prevSection.titleEn}</span>
                 </button>
               </Link>
             )}
@@ -268,20 +308,20 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
             {nextSection ? (
               !nextSection.isLocked ? (
                 <Link href={`/presentation/${nextSection.slug}`}>
-                  <button className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5 transition-all text-sm font-bold">
-                    <span>{isRtl ? nextSection.titleAr : nextSection.titleEn}</span>
-                    {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  <button className="flex items-center gap-1.5 px-3 sm:px-6 py-2.5 sm:py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5 transition-all text-sm font-bold">
+                    <span className="max-w-[80px] sm:max-w-[140px] truncate">{isRtl ? nextSection.titleAr : nextSection.titleEn}</span>
+                    {isRtl ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
                   </button>
                 </Link>
               ) : (
-                <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-card/50 backdrop-blur border border-border text-muted-foreground text-sm font-medium cursor-not-allowed">
-                  <Lock className="w-4 h-4" />
-                  <span>{isRtl ? nextSection.titleAr : nextSection.titleEn}</span>
+                <div className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 rounded-full bg-card/50 backdrop-blur border border-border text-muted-foreground text-sm font-medium cursor-not-allowed">
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <span className="max-w-[80px] sm:max-w-[140px] truncate">{isRtl ? nextSection.titleAr : nextSection.titleEn}</span>
                 </div>
               )
             ) : (
               <Link href="/dashboard">
-                <button className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5 transition-all text-sm font-bold">
+                <button className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5 transition-all text-sm font-bold">
                   <span>{t('dashboard')}</span>
                 </button>
               </Link>

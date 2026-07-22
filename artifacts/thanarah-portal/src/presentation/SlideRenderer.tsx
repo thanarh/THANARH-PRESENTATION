@@ -17,33 +17,42 @@ function SlideHero({ chapter, ar, en }: { chapter: string; ar: string; en?: stri
   return (
     <FadeIn>
       <ChapterBadge ar={chapter} en={chapter} />
-      <h1 dir="rtl" className="text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-4"
+      <h1 dir="rtl" className="text-3xl sm:text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-4"
         style={{ color: C.ink }}>
         {ar}
       </h1>
       {en && (
-        <p className="text-lg font-medium" style={{ color: C.muted }}>{en}</p>
+        <p className="text-base sm:text-lg font-medium" style={{ color: C.muted }}>{en}</p>
       )}
     </FadeIn>
   );
 }
 
+// Responsive grid classes — explicit strings so Tailwind v4 includes them
+const COL_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-2 md:grid-cols-3',
+  4: 'grid-cols-2 md:grid-cols-4',
+  5: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5',
+};
+
 function ItemGrid({ items, columns = 2 }: { items: { icon?: string; ar: string; sub?: string }[]; columns?: number }) {
+  const cls = COL_CLASS[columns] ?? 'grid-cols-2';
   return (
     <motion.div variants={stagger} initial="hidden" animate="show"
-      className={`grid gap-4 mt-8`}
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0,1fr))` }}>
+      className={`grid gap-3 md:gap-4 mt-6 md:mt-8 ${cls}`}>
       {items.map((item, i) => (
         <motion.div key={i} variants={fadeUp}
           dir="rtl"
-          className="rounded-2xl p-5 flex items-start gap-3"
+          className="rounded-2xl p-4 md:p-5 flex items-start gap-3"
           style={{ background: ACCENT, border: `1px solid ${C.soft}50` }}>
           {item.icon && (
-            <span className="text-xl mt-0.5 shrink-0">{item.icon}</span>
+            <span className="text-lg md:text-xl mt-0.5 shrink-0">{item.icon}</span>
           )}
           <div>
-            <div className="font-bold text-base" style={{ color: C.ink }}>{item.ar}</div>
-            {item.sub && <div className="text-sm mt-1" style={{ color: C.muted }}>{item.sub}</div>}
+            <div className="font-bold text-sm md:text-base" style={{ color: C.ink }}>{item.ar}</div>
+            {item.sub && <div className="text-xs md:text-sm mt-1" style={{ color: C.muted }}>{item.sub}</div>}
           </div>
         </motion.div>
       ))}
@@ -76,7 +85,7 @@ function FlowList({ steps }: { steps: string[] }) {
 function SplitComparison({ left, right, leftTitle, rightTitle }:
   { left: string[]; right: string[]; leftTitle: string; rightTitle: string }) {
   return (
-    <div className="grid grid-cols-2 gap-6 mt-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mt-8">
       <div className="rounded-2xl overflow-hidden">
         <div className="px-5 py-3 text-center font-bold text-sm"
           style={{ background: '#E53E3E', color: 'white' }}>{leftTitle}</div>
@@ -318,7 +327,7 @@ function SlidePlans() {
       <SlideHero chapter="الفصل الخامس — الباقات"
         ar="باقة لكل حجم\nولكل احتياج" />
       <FadeIn delay={0.1}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {plans.map((p, i) => (
             <motion.div key={i} variants={fadeUp}
               className="rounded-2xl p-6"
@@ -554,7 +563,7 @@ function SlideArchitecture() {
         </div>
       </FadeIn>
       <FadeIn delay={0.2}>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { value: 'Multi-Tenant', label: 'بيانات معزولة لكل منشأة' },
             { value: 'MongoDB', label: 'قاعدة بيانات مرنة وقابلة للتوسع' },
@@ -758,7 +767,7 @@ function SlideTimeline() {
       <SlideHero chapter="الخطة الزمنية"
         ar="ثلاثة أشهر\nمن الصفر إلى التشغيل" />
       <FadeIn delay={0.1}>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {phases.map((phase, i) => (
             <motion.div key={i} variants={fadeUp}
               className="rounded-2xl overflow-hidden shadow-sm"
@@ -812,7 +821,7 @@ function SlideSummary() {
       </FadeIn>
       <FadeIn delay={0.2}>
         <h2 dir="rtl" className="text-lg font-bold mb-6" style={{ color: C.primary }}>الخطوة التالية</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {nextSteps.map((ns, i) => (
             <motion.div key={i} variants={fadeUp}
               className="rounded-2xl overflow-hidden">
