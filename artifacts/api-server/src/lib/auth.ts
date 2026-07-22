@@ -4,7 +4,7 @@ import { type Request, type Response, type NextFunction } from "express";
 import { logger } from "./logger";
 
 const JWT_SECRET = process.env.JWT_SECRET || "thanarah-dev-secret-change-in-production";
-const JWT_EXPIRES_IN = "15m";
+const JWT_EXPIRES_IN = "8h";
 const REFRESH_EXPIRES_IN = "7d";
 
 export interface TokenPayload {
