@@ -26,9 +26,10 @@ services:
       pnpm install --frozen-lockfile &&
       BASE_PATH=/ NODE_ENV=production
       pnpm --filter @workspace/thanarah-portal run build &&
-      pnpm --filter @workspace/api-server run build &&
-      pnpm --filter @workspace/api-server run seed
-    startCommand: node --enable-source-maps ./artifacts/api-server/dist/index.mjs
+      pnpm --filter @workspace/api-server run build
+    startCommand: >-
+      pnpm --filter @workspace/api-server run seed ;
+      node --enable-source-maps ./artifacts/api-server/dist/index.mjs
     healthCheckPath: /api/healthz
     autoDeploy: true
     envVars:
@@ -65,3 +66,9 @@ services:
         sync: false
       - key: BASE_URL
         sync: false        # e.g. https://thanarah-portal.onrender.com
+      - key: FRONTEND_URL
+        sync: false        # same value as BASE_URL
+      - key: THANARAH_OWNER_EMAIL_1
+        sync: false
+      - key: THANARAH_OWNER_EMAIL_2
+        sync: false
