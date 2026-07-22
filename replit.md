@@ -1,6 +1,6 @@
 # Thanarah Presentation Portal — بوابة ثناره التقديمية
 
-A secure, invitation-only investor & partner presentation portal for Thanarah Medical-Tech. Built with React 19 + Vite (frontend), Express 5 (API), MongoDB (auth/sessions), and PostgreSQL via Drizzle ORM.
+A secure, invitation-only investor & partner presentation portal for Thanarah Medical-Tech. Built with React 19 + Vite (frontend), Express 5 (API), and MongoDB Atlas.
 
 ## Project Structure
 
@@ -34,12 +34,11 @@ Set these in Replit Secrets (never commit them):
 
 | Secret | Purpose |
 |--------|---------|
-| `MONGODB_URI` | MongoDB connection string |
+| `MONGODB_URI` | MongoDB Atlas connection string (`mongodb+srv://...`) |
 | `JWT_SECRET` | JWT signing key |
 | `SMTP_PASSWORD` | cPanel SMTP password for `noreply@thanarah.com` |
 | `SESSION_SECRET` | Express session secret |
-
-`DATABASE_URL` is provisioned automatically by Replit PostgreSQL.
+| `OWNER_SETUP_KEY` | One-time key for first owner account creation |
 
 ## Environment Variables (already configured)
 
