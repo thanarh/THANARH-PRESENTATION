@@ -13,10 +13,14 @@ import { Boom } from "@hapi/boom";
 import QRCode from "qrcode";
 import { EventEmitter } from "events";
 import path from "path";
-import os from "os";
 import fs from "fs/promises";
 import { logger } from "../lib/logger";
 import { generateWhatsAppReply, type ChatMessage } from "./moonshot";
+
+// Store WhatsApp auth in a persistent workspace directory (not /tmp).
+// process.cwd() is artifacts/api-server/ when started via pnpm, so
+// .wa-auth lives at artifacts/api-server/.wa-auth — survives restarts.
+const PERSISTENT_AUTH_DIR = path.resolve(process.cwd(), ".wa-auth");
 
 export type WAStatus = "disconnected" | "connecting" | "qr_ready" | "connected";
 
@@ -45,7 +49,7 @@ class WhatsAppService extends EventEmitter {
 
   constructor() {
     super();
-    this.authDir = path.join(os.tmpdir(), "thanarah-wa-auth");
+    this.authDir = PERSISTENT_AUTH_DIR;
   }
 
   get status(): WAStatus { return this._status; }
