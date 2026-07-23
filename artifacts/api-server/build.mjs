@@ -60,7 +60,6 @@ async function buildAll() {
       "handlebars",
       "knex",
       "typeorm",
-      "protobufjs",
       "onnxruntime-node",
       "@tensorflow/*",
       "@prisma/client",
