@@ -34,6 +34,7 @@ import ContentAdmin from './pages/admin/ContentAdmin';
 import VisitsAdmin from './pages/admin/VisitsAdmin';
 import SystemHealthAdmin from './pages/admin/SystemHealthAdmin';
 import SettingsAdmin from './pages/admin/SettingsAdmin';
+import WhatsAppAdmin from './pages/admin/WhatsAppAdmin';
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,9 @@ function Router() {
       </Route>
       <Route path="/admin/settings">
         <AdminGuard><SettingsAdmin /></AdminGuard>
+      </Route>
+      <Route path="/admin/whatsapp">
+        <AdminGuard><WhatsAppAdmin /></AdminGuard>
       </Route>
 
       <Route component={NotFound} />

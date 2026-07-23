@@ -7,7 +7,7 @@ import { useLogout } from '@workspace/api-client-react';
 import {
   LayoutDashboard, Users, UserPlus, Shield, Activity,
   FileText, LogOut, Settings, Key, Menu, X, ChevronRight,
-  Globe, Heart
+  Globe, Heart, MessageSquare
 } from 'lucide-react';
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -50,6 +50,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: '/admin/audit-logs',         icon: Key,             labelKey: 'auditLogs' },
     { href: '/admin/visits',             icon: Globe,           labelKey: 'visits' },
     { href: '/admin/system-health',      icon: Heart,           labelKey: 'systemHealth' },
+    { href: '/admin/whatsapp',           icon: MessageSquare,   labelKey: 'whatsapp' },
     { href: '/admin/settings',           icon: Settings,        labelKey: 'settings' },
   ] as const;
 
