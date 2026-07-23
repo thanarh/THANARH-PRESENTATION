@@ -17,6 +17,10 @@ import fs from "fs/promises";
 import { logger } from "../lib/logger";
 import { generateWhatsAppReply, type ChatMessage } from "./moonshot";
 import { isAdminPhone, handleAdminCommand } from "./waAdminCommands";
+import WhatsAppAccount, {
+  phoneFromJid,
+  type IWhatsAppAccount,
+} from "../models/whatsappAccount";
 
 // Store WhatsApp auth in a persistent workspace directory (not /tmp).
 // process.cwd() is artifacts/api-server/ when started via pnpm, so
@@ -58,6 +62,21 @@ class WhatsAppService extends EventEmitter {
   get status(): WAStatus { return this._status; }
   get qrBase64(): string | null { return this._qrBase64; }
   get phone(): string | null { return this._phone; }
+
+  private async getConnectedAccount(): Promise<IWhatsAppAccount | null> {
+    if (!this._phone) return null;
+    return WhatsAppAccount.findOne({ phone: this._phone, enabled: true }).exec();
+  }
+
+  private async getRoutingProfile(jid: string): Promise<IWhatsAppAccount | null> {
+    const account = await this.getConnectedAccount();
+    if (!account) return null;
+    const senderPhone = phoneFromJid(jid);
+    const isAdmin = account.adminUsers.some(
+      (admin) => admin.enabled && admin.phone === senderPhone,
+    );
+    return isAdmin ? account : null;
+  }
 
   private setStatus(s: WAStatus) {
     this._status = s;
@@ -158,10 +177,15 @@ class WhatsAppService extends EventEmitter {
         if (this.messages.length > 200) this.messages.length = 200;
         this.emit("message", waMsg);
 
-        logger.info({ from: jid, pushName, body, isAdmin: isAdminPhone(jid) }, "WhatsApp message received");
+        const configuredAccount = await this.getConnectedAccount().catch(() => null);
+        const adminProfile = await this.getRoutingProfile(jid).catch(() => null);
+        const legacyAdmin = !configuredAccount && isAdminPhone(jid);
+        const isAdmin = Boolean(adminProfile || legacyAdmin);
+
+        logger.info({ from: jid, pushName, body, isAdmin }, "WhatsApp message received");
 
         // ── Admin command routing ────────────────────────────────────────────
-        if (isAdminPhone(jid)) {
+        if (isAdmin) {
           waMsg.pending = false;
           try {
             const reply = await handleAdminCommand(body);
@@ -189,6 +213,10 @@ class WhatsAppService extends EventEmitter {
         }
 
         // ── AI auto-reply (non-admin contacts) ──────────────────────────────
+        if (configuredAccount && !configuredAccount.autoReplyEnabled) {
+          waMsg.pending = false;
+          continue;
+        }
         // Cancel any existing timer for this JID (new message resets it)
         const existing = this.pendingTimers.get(jid);
         if (existing) clearTimeout(existing);
@@ -199,7 +227,10 @@ class WhatsAppService extends EventEmitter {
 
           try {
             const history = this.conversationHistory.get(jid) ?? [];
-            const reply = await generateWhatsAppReply(body, history);
+            const reply = await generateWhatsAppReply(body, history, {
+              topics: configuredAccount?.responseTopics,
+              instructions: configuredAccount?.responseInstructions,
+            });
             await this.sock?.sendMessage(jid, { text: reply });
 
             // Update history
@@ -294,6 +325,7 @@ class WhatsAppService extends EventEmitter {
     return {
       status: this._status,
       phone: this._phone,
+      accountConfigured: Boolean(this._phone),
       qrBase64: this._qrBase64,
       pendingCount: this.pendingTimers.size,
       messageCount: this.messages.length,

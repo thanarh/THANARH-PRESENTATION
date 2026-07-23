@@ -6,6 +6,11 @@ import { Router, type Response, type Request } from "express";
 import { authenticate, type AuthRequest, ADMIN_ROLES } from "../lib/auth";
 import { whatsappService } from "../services/whatsapp";
 import { logger } from "../lib/logger";
+import { connectDb } from "../lib/db";
+import WhatsAppAccount, {
+  normalizeWhatsAppPhone,
+  serializeWhatsAppAccount,
+} from "../models/whatsappAccount";
 
 const router = Router();
 
@@ -19,13 +24,100 @@ router.use((req: AuthRequest, res: Response, next: any) => {
   }
   next();
 });
-router.use(authenticate as any);
-router.use((req: AuthRequest, res: Response, next: any) => {
+
+function requireAdmin(req: AuthRequest, res: Response): boolean {
   if (!ADMIN_ROLES.includes(req.userRole ?? "")) {
     res.status(403).json({ error: "Forbidden" });
+    return false;
+  }
+  return true;
+}
+
+router.use(authenticate as any);
+router.use((req: AuthRequest, res: Response, next: any) => requireAdmin(req, res) && next());
+
+// ── WhatsApp account routing configuration ──────────────────────────────────
+router.get("/accounts", async (_req: Request, res: Response) => {
+  await connectDb();
+  const accounts = await WhatsAppAccount.find().sort({ createdAt: 1 }).lean();
+  res.json({ accounts: accounts.map((account) => serializeWhatsAppAccount(account as any)) });
+});
+
+router.post("/accounts", async (req: AuthRequest, res: Response) => {
+  await connectDb();
+  const {
+    name,
+    phone,
+    enabled = true,
+    autoReplyEnabled = true,
+    responseTopics = [],
+    responseInstructions = "",
+    adminUsers = [],
+  } = req.body ?? {};
+
+  if (typeof name !== "string" || name.trim().length < 2) {
+    res.status(400).json({ error: "اسم الحساب مطلوب" });
     return;
   }
-  next();
+
+  const normalizedPhone = phone ? normalizeWhatsAppPhone(String(phone)) : undefined;
+  if (normalizedPhone && normalizedPhone.length < 7) {
+    res.status(400).json({ error: "رقم واتساب غير صحيح" });
+    return;
+  }
+
+  const account = await WhatsAppAccount.create({
+    name: name.trim(),
+    phone: normalizedPhone,
+    enabled: Boolean(enabled),
+    autoReplyEnabled: Boolean(autoReplyEnabled),
+    responseTopics: Array.isArray(responseTopics)
+      ? responseTopics.map((topic: unknown) => String(topic).trim()).filter(Boolean)
+      : [],
+    responseInstructions: typeof responseInstructions === "string" ? responseInstructions.trim() : "",
+    adminUsers: normalizeAdminUsers(adminUsers),
+    createdBy: req.userId,
+  });
+
+  res.status(201).json({ account: serializeWhatsAppAccount(account) });
+});
+
+router.patch("/accounts/:id", async (req: AuthRequest, res: Response) => {
+  await connectDb();
+  const updates: Record<string, unknown> = {};
+  const body = req.body ?? {};
+
+  if (body.name !== undefined) updates.name = String(body.name).trim();
+  if (body.phone !== undefined) updates.phone = body.phone ? normalizeWhatsAppPhone(String(body.phone)) : "";
+  if (body.enabled !== undefined) updates.enabled = Boolean(body.enabled);
+  if (body.autoReplyEnabled !== undefined) updates.autoReplyEnabled = Boolean(body.autoReplyEnabled);
+  if (body.responseInstructions !== undefined) updates.responseInstructions = String(body.responseInstructions).trim();
+  if (body.responseTopics !== undefined) {
+    updates.responseTopics = Array.isArray(body.responseTopics)
+      ? body.responseTopics.map((topic: unknown) => String(topic).trim()).filter(Boolean)
+      : [];
+  }
+  if (body.adminUsers !== undefined) updates.adminUsers = normalizeAdminUsers(body.adminUsers);
+
+  const account = await WhatsAppAccount.findByIdAndUpdate(req.params.id, updates, {
+    new: true,
+    runValidators: true,
+  });
+  if (!account) {
+    res.status(404).json({ error: "WhatsApp account not found" });
+    return;
+  }
+  res.json({ account: serializeWhatsAppAccount(account) });
+});
+
+router.delete("/accounts/:id", async (req: Request, res: Response) => {
+  await connectDb();
+  const deleted = await WhatsAppAccount.findByIdAndDelete(req.params.id);
+  if (!deleted) {
+    res.status(404).json({ error: "WhatsApp account not found" });
+    return;
+  }
+  res.json({ success: true });
 });
 
 // GET /api/whatsapp/state — connection state + recent messages
@@ -139,3 +231,19 @@ router.get("/events", (req: Request, res: Response) => {
 });
 
 export default router;
+
+function normalizeAdminUsers(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((item) => ({
+      name: String(item.name ?? "").trim(),
+      phone: normalizeWhatsAppPhone(String(item.phone ?? "")),
+      enabled: item.enabled !== false,
+      permissions: Array.isArray(item.permissions) ? item.permissions.map(String) : ["commands"],
+      topics: Array.isArray(item.topics)
+        ? item.topics.map(String).map((topic) => topic.trim()).filter(Boolean)
+        : [],
+    }))
+    .filter((item) => item.name.length >= 2 && item.phone.length >= 7);
+}

@@ -13,6 +13,11 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface WhatsAppReplyProfile {
+  topics?: string[];
+  instructions?: string;
+}
+
 // Thanarah system context — injected as the AI's knowledge base
 const THANARAH_CONTEXT = `
 أنت مساعد ثناره الذكي. ثناره هي منصة طبية سعودية متكاملة تربط العيادات بتقنيات الذكاء الاصطناعي.
@@ -71,13 +76,26 @@ ${THANARAH_CONTEXT}
 
 export async function generateWhatsAppReply(
   userMessage: string,
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
+  profile: WhatsAppReplyProfile = {},
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not set");
 
+  const profilePrompt = [
+    profile.topics?.length
+      ? `== النطاق المخصص لهذا الرقم ==\n${profile.topics.map((topic) => `- ${topic}`).join("\n")}`
+      : "",
+    profile.instructions?.trim()
+      ? `== تعليمات المسؤول ==\n${profile.instructions.trim()}`
+      : "",
+    profile.topics?.length
+      ? "إذا كان السؤال خارج النطاق المخصص، اذكر بلطف أن الفريق المختص سيتابع معه ولا تخمّن."
+      : "",
+  ].filter(Boolean).join("\n\n");
+
   const messages: ChatMessage[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: `${SYSTEM_PROMPT}\n\n${profilePrompt}`.trim() },
     ...history.slice(-6), // last 3 exchanges for context
     { role: "user", content: userMessage },
   ];

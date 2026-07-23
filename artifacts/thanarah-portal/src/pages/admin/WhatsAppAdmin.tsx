@@ -5,7 +5,8 @@ import { AdminShell } from '../../components/AdminShell';
 import {
   Wifi, WifiOff, QrCode, RefreshCw, Loader2, MessageSquare,
   Bot, User, XCircle, Send, PhoneCall, CheckCircle2, Clock,
-  Image, Link2, Hash, ChevronLeft, Search,
+  Image, Link2, Hash, ChevronLeft, Search, Plus, Trash2, Save,
+  UsersRound, SlidersHorizontal, Power, Pencil, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,6 +35,26 @@ interface Conversation {
   hasPending: boolean;
 }
 
+interface WhatsAppAdminUser {
+  id?: string;
+  name: string;
+  phone: string;
+  enabled: boolean;
+  permissions: string[];
+  topics: string[];
+}
+
+interface WhatsAppAccount {
+  id: string;
+  name: string;
+  phone: string;
+  enabled: boolean;
+  autoReplyEnabled: boolean;
+  responseTopics: string[];
+  responseInstructions: string;
+  adminUsers: WhatsAppAdminUser[];
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
 const getToken = () => localStorage.getItem('thanarah_access_token') ?? '';
@@ -52,6 +73,302 @@ function fmtTime(ts: number) {
 
 function initials(name: string) {
   return name.trim().charAt(0).toUpperCase();
+}
+
+function blankAccount(): Omit<WhatsAppAccount, 'id'> {
+  return {
+    name: '',
+    phone: '',
+    enabled: true,
+    autoReplyEnabled: true,
+    responseTopics: [],
+    responseInstructions: '',
+    adminUsers: [],
+  };
+}
+
+function AccountConfigPanel() {
+  const [accounts, setAccounts] = useState<WhatsAppAccount[]>([]);
+  const [form, setForm] = useState<Omit<WhatsAppAccount, 'id'>>(blankAccount());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [adminName, setAdminName] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  const [topicsText, setTopicsText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const loadAccounts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/whatsapp/accounts`, { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'تعذر تحميل الحسابات');
+      setAccounts(data.accounts ?? []);
+    } catch (err: any) {
+      setError(err.message || 'تعذر تحميل إعدادات واتساب');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
+
+  const startNew = () => {
+    setEditingId(null);
+    setForm(blankAccount());
+    setTopicsText('');
+    setAdminName('');
+    setAdminPhone('');
+    setError('');
+    setNotice('');
+  };
+
+  const startEdit = (account: WhatsAppAccount) => {
+    setEditingId(account.id);
+    setForm({
+      name: account.name,
+      phone: account.phone,
+      enabled: account.enabled,
+      autoReplyEnabled: account.autoReplyEnabled,
+      responseTopics: account.responseTopics ?? [],
+      responseInstructions: account.responseInstructions ?? '',
+      adminUsers: account.adminUsers ?? [],
+    });
+    setTopicsText((account.responseTopics ?? []).join('\n'));
+    setError('');
+    setNotice('');
+  };
+
+  const addAdminUser = () => {
+    if (!adminName.trim() || adminPhone.replace(/\D/g, '').length < 7) {
+      setError('أدخل اسم ورقم المستخدم المسؤول بشكل صحيح');
+      return;
+    }
+    setForm(prev => ({
+      ...prev,
+      adminUsers: [...prev.adminUsers, {
+        name: adminName.trim(),
+        phone: adminPhone,
+        enabled: true,
+        permissions: ['commands'],
+        topics: [],
+      }],
+    }));
+    setAdminName('');
+    setAdminPhone('');
+    setError('');
+  };
+
+  const saveAccount = async () => {
+    if (form.name.trim().length < 2) {
+      setError('اسم الحساب مطلوب');
+      return;
+    }
+    if (form.phone.replace(/\D/g, '').length < 7) {
+      setError('رقم واتساب المتصل مطلوب بصيغة دولية');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    setNotice('');
+    const payload = {
+      ...form,
+      responseTopics: topicsText.split('\n').map(topic => topic.trim()).filter(Boolean),
+    };
+    try {
+      const res = await fetch(
+        `${BASE}/api/whatsapp/accounts${editingId ? `/${editingId}` : ''}`,
+        {
+          method: editingId ? 'PATCH' : 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'تعذر حفظ الحساب');
+      await loadAccounts();
+      setNotice(editingId ? 'تم تحديث إعدادات الحساب' : 'تمت إضافة حساب واتساب');
+      setEditingId(data.account?.id ?? editingId);
+    } catch (err: any) {
+      setError(err.message || 'تعذر حفظ الحساب');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeAccount = async (id: string) => {
+    if (!window.confirm('حذف إعدادات هذا الرقم؟ لن يتم حذف جلسة واتساب الحالية.')) return;
+    try {
+      const res = await fetch(`${BASE}/api/whatsapp/accounts/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'تعذر الحذف');
+      }
+      await loadAccounts();
+      if (editingId === id) startNew();
+      setNotice('تم حذف إعدادات الحساب');
+    } catch (err: any) {
+      setError(err.message || 'تعذر حذف الحساب');
+    }
+  };
+
+  return (
+    <section className="mb-5 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+      <div className="p-5 border-b border-border bg-gradient-to-l from-emerald-50/70 to-background dark:from-emerald-950/20">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center">
+              <SlidersHorizontal className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-base">إدارة أرقام واتساب والردود</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                أضف أكثر من رقم، وحدد لكل رقم نطاق الرد والمستخدمين المسؤولين عنه.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={startNew}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
+          >
+            <Plus className="w-4 h-4" /> إضافة رقم
+          </button>
+        </div>
+      </div>
+
+      <div className="p-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(360px,1.15fr)] gap-5">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">الحسابات المضافة</p>
+            <span className="text-[11px] text-muted-foreground">{accounts.length} حساب</span>
+          </div>
+          {loading ? (
+            <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+          ) : accounts.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+              لا توجد أرقام مهيأة بعد. أضف الرقم المتصل من خلال QR ثم سجله هنا.
+            </div>
+          ) : accounts.map(account => (
+            <div key={account.id} className={`rounded-xl border p-4 ${editingId === account.id ? 'border-emerald-400 bg-emerald-50/40' : 'border-border'}`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${account.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+                  <PhoneCall className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm truncate">{account.name}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${account.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+                      {account.enabled ? 'نشط' : 'متوقف'}
+                    </span>
+                  </div>
+                  <p dir="ltr" className="text-xs text-muted-foreground mt-1">+{account.phone || '—'}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {(account.responseTopics ?? []).slice(0, 3).map(topic => (
+                      <span key={topic} className="text-[10px] rounded-full bg-violet-100 text-violet-700 px-2 py-0.5">{topic}</span>
+                    ))}
+                    <span className="text-[10px] rounded-full bg-muted text-muted-foreground px-2 py-0.5">
+                      {account.adminUsers?.length ?? 0} مسؤول
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => startEdit(account)} className="p-2 rounded-lg hover:bg-muted" title="تعديل">
+                    <Pencil className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  <button onClick={() => removeAccount(account.id)} className="p-2 rounded-lg hover:bg-destructive/10" title="حذف">
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-sm">{editingId ? 'تعديل إعدادات الرقم' : 'إضافة حساب جديد'}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">استخدم الرقم الدولي بدون علامة +.</p>
+            </div>
+            {editingId && (
+              <button onClick={startNew} className="p-1.5 rounded-lg hover:bg-muted" title="إلغاء التعديل">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold">اسم الحساب</span>
+              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="واتساب خدمة العملاء" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold">رقم واتساب المتصل</span>
+              <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="9665XXXXXXXX" dir="ltr" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button onClick={() => setForm({ ...form, enabled: !form.enabled })} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${form.enabled ? 'border-emerald-300 bg-emerald-50/60' : 'border-border'}`}>
+              <span className="flex items-center gap-2"><Power className="w-3.5 h-3.5" /> الحساب مفعّل</span>
+              <span className={form.enabled ? 'text-emerald-600' : 'text-muted-foreground'}>{form.enabled ? 'نعم' : 'لا'}</span>
+            </button>
+            <button onClick={() => setForm({ ...form, autoReplyEnabled: !form.autoReplyEnabled })} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${form.autoReplyEnabled ? 'border-violet-300 bg-violet-50/60' : 'border-border'}`}>
+              <span className="flex items-center gap-2"><Bot className="w-3.5 h-3.5" /> الرد الآلي</span>
+              <span className={form.autoReplyEnabled ? 'text-violet-600' : 'text-muted-foreground'}>{form.autoReplyEnabled ? 'نشط' : 'متوقف'}</span>
+            </button>
+          </div>
+
+          <label className="space-y-1.5 block">
+            <span className="text-xs font-semibold">النقاط التي يرد عليها هذا الرقم</span>
+            <textarea value={topicsText} onChange={e => setTopicsText(e.target.value)} rows={3} placeholder={'الحجوزات\nالأسعار والباقات\nالدعم الفني'} className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <span className="text-[10px] text-muted-foreground">اكتب نقطة في كل سطر.</span>
+          </label>
+
+          <label className="space-y-1.5 block">
+            <span className="text-xs font-semibold">تعليمات الرد الخاصة</span>
+            <textarea value={form.responseInstructions} onChange={e => setForm({ ...form, responseInstructions: e.target.value })} rows={3} placeholder="مثال: اجعل الرد مختصراً واطلب اسم العميل ورقم التواصل عند طلب حجز." className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </label>
+
+          <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <UsersRound className="w-4 h-4 text-primary" />
+              <p className="text-xs font-semibold">المستخدمون المسؤولون عن هذا الرقم</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+              <input value={adminName} onChange={e => setAdminName(e.target.value)} placeholder="اسم المستخدم" className="rounded-lg border border-border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <input value={adminPhone} onChange={e => setAdminPhone(e.target.value)} placeholder="9665XXXXXXXX" dir="ltr" className="rounded-lg border border-border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <button onClick={addAdminUser} className="px-3 py-2 rounded-lg border border-primary/30 text-primary text-xs font-semibold hover:bg-primary/5"><Plus className="w-3.5 h-3.5 inline me-1" />إضافة</button>
+            </div>
+            {form.adminUsers.length > 0 && (
+              <div className="space-y-1.5">
+                {form.adminUsers.map((admin, index) => (
+                  <div key={`${admin.phone}-${index}`} className="flex items-center gap-2 text-xs rounded-lg bg-muted/50 px-2.5 py-2">
+                    <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-medium">{admin.name}</span>
+                    <span dir="ltr" className="text-muted-foreground">+{admin.phone}</span>
+                    <button onClick={() => setForm({ ...form, adminUsers: form.adminUsers.filter((_, i) => i !== index) })} className="ms-auto text-destructive hover:bg-destructive/10 rounded p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          {notice && <p className="text-xs text-emerald-600">{notice}</p>}
+          <button onClick={saveAccount} disabled={saving} className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {editingId ? 'حفظ التعديلات' : 'حفظ الحساب'}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 // ── Status badge ─────────────────────────────────────────────────────────────
@@ -544,6 +861,8 @@ export default function WhatsAppAdmin() {
           </button>
         </div>
       </div>
+
+      <AccountConfigPanel />
 
       {/* Not connected */}
       {status !== 'connected' && status !== 'connecting' && (
