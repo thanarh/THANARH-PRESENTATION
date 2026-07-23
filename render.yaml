@@ -37,21 +37,8 @@ services:
         value: production
       - key: PORT
         value: 10000
-      # ── SMTP (cPanel) ────────────────────────────────────────
-      - key: SMTP_HOST
-        value: business197.web-hosting.com
-      - key: SMTP_PORT
-        value: 465
-      - key: SMTP_SECURE
-        value: true
-      - key: SMTP_USERNAME
-        value: noreply@thanarah.com
-      - key: SMTP_FROM_EMAIL
-        value: noreply@thanarah.com
-      - key: SMTP_FROM_NAME
-        value: Thanarah
-      - key: MAIL_PROVIDER
-        value: CPANEL
+      # ── SMTP (cPanel) — only the password is needed; all other
+      #    SMTP settings are hardcoded in artifacts/api-server/src/lib/email.ts
       # ── MongoDB ──────────────────────────────────────────────
       - key: MONGODB_DATABASE_NAME
         value: thanarah_presentation

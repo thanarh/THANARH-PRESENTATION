@@ -40,6 +40,14 @@ const LOGO_TAG = LOGO_B64
   ? `<img src="data:image/png;base64,${LOGO_B64}" alt="Thanarah" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;" />`
   : `<p style="color:#A9CBB5;font-size:24px;font-weight:700;margin:0;letter-spacing:1px;">ثناره</p>`;
 
+// ─── SMTP constants (hardcoded — only SMTP_PASSWORD comes from env) ──────────
+const SMTP_HOST     = "business197.web-hosting.com";
+const SMTP_PORT     = 465;
+const SMTP_SECURE   = true;           // SSL on port 465
+const SMTP_USER     = "noreply@thanarah.com";
+const FROM_EMAIL    = "noreply@thanarah.com";
+const FROM_NAME     = "Thanarah";
+
 // ─── SMTP state ──────────────────────────────────────────────────────────────
 
 type MailStatus = "ok" | "degraded" | "unchecked";
@@ -54,10 +62,10 @@ export function getMailStatus() {
   return {
     status: _status,
     provider: "cPanel SMTP",
-    host: process.env.SMTP_HOST || "business197.web-hosting.com",
-    port: Number(process.env.SMTP_PORT ?? 465),
-    secure: (process.env.SMTP_SECURE ?? "true") === "true",
-    sender: process.env.SMTP_FROM_EMAIL || "noreply@thanarah.com",
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    sender: FROM_EMAIL,
     lastVerified: _lastVerified,
     lastError: _lastError, // sanitized — no credentials
   };
@@ -68,11 +76,11 @@ function getTransporter(): Transporter {
   if (_transporter) return _transporter;
 
   _transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "business197.web-hosting.com",
-    port: Number(process.env.SMTP_PORT ?? 465),
-    secure: (process.env.SMTP_SECURE ?? "true") === "true",
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
     auth: {
-      user: process.env.SMTP_USERNAME || "noreply@thanarah.com",
+      user: SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
     connectionTimeout: 30_000,
@@ -111,8 +119,7 @@ export async function verifySmtpConnection(): Promise<void> {
 
 // ─── Sender identity ─────────────────────────────────────────────────────────
 
-const fromAddress = () =>
-  `${process.env.SMTP_FROM_NAME ?? "Thanarah"} <${process.env.SMTP_FROM_EMAIL ?? "noreply@thanarah.com"}>`;
+const fromAddress = () => `${FROM_NAME} <${FROM_EMAIL}>`;
 
 // ─── Core send helper ────────────────────────────────────────────────────────
 
@@ -378,8 +385,8 @@ export async function sendTestEmail(to: string): Promise<boolean> {
     content: `
       <p>هذا بريد تجريبي من نظام ثناره.</p>
       <div class="details-card">
-        <p><span class="label">الخادم:</span> ${process.env.SMTP_HOST ?? "business197.web-hosting.com"}</p>
-        <p><span class="label">المُرسِل:</span> ${process.env.SMTP_FROM_EMAIL ?? "noreply@thanarah.com"}</p>
+        <p><span class="label">الخادم:</span> ${SMTP_HOST}</p>
+        <p><span class="label">المُرسِل:</span> ${FROM_EMAIL}</p>
         <p><span class="label">الوقت:</span> ${new Date().toLocaleString("ar-SA")}</p>
       </div>
       <p style="color:#1E6B4D;font-weight:600;">✓ الاتصال بالبريد الإلكتروني يعمل بنجاح.</p>
