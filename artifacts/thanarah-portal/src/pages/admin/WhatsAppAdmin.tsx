@@ -188,7 +188,7 @@ function MessageBubble({ msg, onCancel }: { msg: WAMessage; onCancel: (jid: stri
           )}
           {msg.pending && (
             <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">
-              <Clock className="w-2.5 h-2.5" /> 60ث
+              <Clock className="w-2.5 h-2.5" /> قيد الرد
             </span>
           )}
         </div>

@@ -31,7 +31,7 @@ export interface WAMessage {
   pending: boolean;       // waiting for 60s timer
 }
 
-const AUTO_REPLY_DELAY_MS = 60_000; // 1 minute
+const AUTO_REPLY_DELAY_MS = 0; // immediate reply
 
 class WhatsAppService extends EventEmitter {
   private sock: WASocket | null = null;

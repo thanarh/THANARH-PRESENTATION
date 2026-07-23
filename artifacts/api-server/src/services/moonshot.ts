@@ -67,8 +67,8 @@ export async function generateWhatsAppReply(
   userMessage: string,
   history: ChatMessage[] = []
 ): Promise<string> {
-  const apiKey = process.env.MOONSHOTAI_API_KEY ?? process.env.MOONSHOT_API_KEY;
-  if (!apiKey) throw new Error("MOONSHOTAI_API_KEY not set");
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
 
   const messages: ChatMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
