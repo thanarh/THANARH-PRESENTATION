@@ -12,16 +12,14 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { Loader2, ArrowRight, AlertCircle, CheckCircle2, Mail, Fingerprint, KeyRound, ShieldCheck, X, Hash } from 'lucide-react';
+import { Loader2, ArrowRight, AlertCircle, CheckCircle2, Mail, Fingerprint, KeyRound, ShieldCheck, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   passkeySupported, hasStoredPasskey, getPasskeyDisplayName,
   registerPasskey, verifyPasskey,
 } from '../utils/passkey';
 import {
-  hasPinSet, verifyPin, setupPin, clearPin,
   storePasskeyRefresh, getPasskeyRefresh,
-  getPinAttempts, MAX_PIN_ATTEMPTS, clearAllQuickAuth,
 } from '../utils/pin';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -240,101 +238,29 @@ function PinPad({ onComplete, onCancel, isRtl }: {
 
 // ─── Quick-auth setup dialog (post-login) ─────────────────────────────────────
 
+// Quick biometric setup after first login
 function QuickAuthSetup({ open, onClose, refreshToken, userId, email, displayName }: {
-  open: boolean;
-  onClose: () => void;
-  refreshToken: string;
-  userId: string;
-  email: string;
-  displayName: string;
+  open: boolean; onClose: () => void; refreshToken: string;
+  userId: string; email: string; displayName: string;
 }) {
   const { isRtl } = useLanguage();
-  const [step, setStep] = useState<'choose' | 'pin' | 'done'>('choose');
-  const [pinDigits, setPinDigits] = useState<string[]>([]);
-  const [pinConfirm, setPinConfirm] = useState<string[]>([]);
-  const [pinPhase, setPinPhase] = useState<'enter' | 'confirm'>('enter');
-  const [pinError, setPinError] = useState('');
-  const [isBioLoading, setIsBioLoading] = useState(false);
+  const [done, setDone]         = useState(false);
+  const [loading, setLoading]   = useState(false);
   const supportsPasskey = passkeySupported();
-  const PIN_LENGTH = 4;
 
   const handleBiometric = async () => {
-    setIsBioLoading(true);
+    setLoading(true);
     const ok = await registerPasskey(userId, email, displayName);
-    if (ok) {
-      storePasskeyRefresh(refreshToken);
-      setStep('done');
-    }
-    setIsBioLoading(false);
-  };
-
-  const handlePinDigit = (d: string, phase: 'enter' | 'confirm') => {
-    const setter = phase === 'enter' ? setPinDigits : setPinConfirm;
-    setter(prev => {
-      const next = [...prev, d];
-      if (next.length === PIN_LENGTH && phase === 'enter') {
-        setTimeout(() => { setPinPhase('confirm'); }, 200);
-      }
-      if (next.length === PIN_LENGTH && phase === 'confirm') {
-        const entered = pinDigits.join('');
-        const confirmed = next.join('');
-        if (entered === confirmed) {
-          setupPin(confirmed, refreshToken).then(() => setStep('done'));
-        } else {
-          setPinError(isRtl ? 'الرقم غير متطابق، حاول مجدداً' : 'PIN does not match, try again');
-          setPinDigits([]); setPinConfirm([]); setPinPhase('enter');
-          setTimeout(() => setPinError(''), 2000);
-        }
-      }
-      return next;
-    });
-  };
-
-  const dots = (arr: string[]) => (
-    <div className="flex gap-3 justify-center my-2">
-      {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-        <motion.div key={i}
-          animate={{ scale: arr.length > i ? 1.15 : 1 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-          className={`w-3.5 h-3.5 rounded-full border-2 transition-colors ${arr.length > i ? 'bg-primary border-primary' : 'border-border'}`}
-        />
-      ))}
-    </div>
-  );
-
-  const numKeys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
-
-  const renderPad = (phase: 'enter' | 'confirm') => {
-    const arr = phase === 'enter' ? pinDigits : pinConfirm;
-    return (
-      <div className="grid grid-cols-3 gap-2.5 w-full max-w-[220px] mx-auto mt-2">
-        {numKeys.map((k, i) => {
-          if (k === '') return <div key={i} />;
-          if (k === '⌫') return (
-            <button key={i} onClick={() => { const s = phase === 'enter' ? setPinDigits : setPinConfirm; s(p => p.slice(0,-1)); }}
-              className="h-12 rounded-xl bg-muted hover:bg-muted/80 active:scale-95 transition-all flex items-center justify-center text-muted-foreground">
-              <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="currentColor" strokeWidth={2}>
-                <path d="M21 6H9l-7 6 7 6h12V6z"/>
-              </svg>
-            </button>
-          );
-          return (
-            <button key={i} onClick={() => { if (arr.length < PIN_LENGTH) handlePinDigit(k, phase); }}
-              className="h-12 rounded-xl bg-card border border-border hover:bg-accent active:scale-95 transition-all font-semibold text-lg text-foreground shadow-sm">
-              {k}
-            </button>
-          );
-        })}
-      </div>
-    );
+    if (ok) { storePasskeyRefresh(refreshToken); setDone(true); }
+    setLoading(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-sm" dir={isRtl ? 'rtl' : 'ltr'}>
         <AnimatePresence mode="wait">
-          {step === 'choose' && (
-            <motion.div key="choose" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+          {!done ? (
+            <motion.div key="setup" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
               <DialogHeader>
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
                   <ShieldCheck className="w-6 h-6 text-primary" />
@@ -343,70 +269,36 @@ function QuickAuthSetup({ open, onClose, refreshToken, userId, email, displayNam
                   {isRtl ? 'تسريع الدخول القادم' : 'Speed up future logins'}
                 </DialogTitle>
                 <DialogDescription className="text-center text-sm text-muted-foreground">
-                  {isRtl ? 'ادخل بدون كلمة مرور في المرات القادمة' : 'Skip the password next time'}
+                  {isRtl ? 'ادخل ببصمتك أو Face ID بدون كلمة مرور' : 'Sign in with biometrics next time'}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-2.5 pt-1">
-                {supportsPasskey && (
-                  <button onClick={handleBiometric} disabled={isBioLoading}
-                    className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:bg-accent transition-all group">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                      {isBioLoading ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <Fingerprint className="w-5 h-5 text-primary" />}
-                    </div>
-                    <div className="text-start">
-                      <p className="font-semibold text-sm text-foreground">{isRtl ? 'البصمة / Face ID' : 'Fingerprint / Face ID'}</p>
-                      <p className="text-xs text-muted-foreground">{isRtl ? 'استخدم قفل الجهاز للدخول' : 'Use device biometrics to sign in'}</p>
-                    </div>
-                  </button>
-                )}
-                <button onClick={() => setStep('pin')}
+              {supportsPasskey ? (
+                <button onClick={handleBiometric} disabled={loading}
                   className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:bg-accent transition-all group">
-                  <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center shrink-0 group-hover:bg-secondary/30 transition-colors">
-                    <Hash className="w-5 h-5 text-primary" />
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    {loading ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <Fingerprint className="w-5 h-5 text-primary" />}
                   </div>
                   <div className="text-start">
-                    <p className="font-semibold text-sm text-foreground">{isRtl ? 'رمز PIN' : 'PIN Code'}</p>
-                    <p className="text-xs text-muted-foreground">{isRtl ? 'رمز مكوّن من 4 أرقام' : '4-digit code for quick access'}</p>
+                    <p className="font-semibold text-sm text-foreground">{isRtl ? 'البصمة / Face ID' : 'Fingerprint / Face ID'}</p>
+                    <p className="text-xs text-muted-foreground">{isRtl ? 'استخدم قفل الجهاز للدخول' : 'Use device biometrics'}</p>
                   </div>
                 </button>
-              </div>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground py-2">
+                  {isRtl ? 'جهازك لا يدعم البصمة' : 'Your device does not support biometrics'}
+                </p>
+              )}
               <button onClick={onClose} className="w-full text-center text-xs text-muted-foreground hover:text-foreground py-1 transition-colors">
                 {isRtl ? 'لاحقاً' : 'Maybe later'}
               </button>
             </motion.div>
-          )}
-
-          {step === 'pin' && (
-            <motion.div key="pin" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-3" dir="ltr">
-              <DialogHeader>
-                <DialogTitle className="text-center text-lg font-bold" dir={isRtl ? 'rtl' : 'ltr'}>
-                  {pinPhase === 'enter'
-                    ? (isRtl ? 'اختر رمز PIN' : 'Choose a PIN')
-                    : (isRtl ? 'أكّد رمز PIN' : 'Confirm your PIN')}
-                </DialogTitle>
-                <DialogDescription className="text-center text-sm text-muted-foreground" dir={isRtl ? 'rtl' : 'ltr'}>
-                  {pinPhase === 'enter'
-                    ? (isRtl ? 'أدخل 4 أرقام' : 'Enter 4 digits')
-                    : (isRtl ? 'أدخل الرمز مرة أخرى للتأكيد' : 'Re-enter your PIN to confirm')}
-                </DialogDescription>
-              </DialogHeader>
-              {dots(pinPhase === 'enter' ? pinDigits : pinConfirm)}
-              {pinError && (
-                <p className="text-center text-xs text-destructive font-medium">{pinError}</p>
-              )}
-              {renderPad(pinPhase)}
-            </motion.div>
-          )}
-
-          {step === 'done' && (
+          ) : (
             <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-4 space-y-3">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8 text-primary" />
               </div>
-              <p className="font-bold text-foreground">{isRtl ? 'تم الإعداد بنجاح!' : 'All set!'}</p>
-              <p className="text-sm text-muted-foreground">
-                {isRtl ? 'يمكنك الدخول بسرعة في المرة القادمة' : 'Quick login enabled for next time'}
-              </p>
+              <p className="font-bold text-foreground">{isRtl ? 'تم تفعيل البصمة!' : 'Biometric enabled!'}</p>
+              <p className="text-sm text-muted-foreground">{isRtl ? 'يمكنك الدخول ببصمتك في المرات القادمة' : 'Quick login enabled for next time'}</p>
               <Button className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={onClose}>
                 {isRtl ? 'متابعة' : 'Continue'}
               </Button>
@@ -420,46 +312,43 @@ function QuickAuthSetup({ open, onClose, refreshToken, userId, email, displayNam
 
 // ─── Main Login page ──────────────────────────────────────────────────────────
 
-type LoginMode = 'email' | 'pin' | 'biometric';
+type LoginMode = 'email' | 'invite' | 'biometric' | 'mfa';
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login: authLogin, user, isLoading: authLoading } = useAuth();
   const { isRtl } = useLanguage();
 
-  // Detect stored quick-auth options
-  const hasPin      = hasPinSet();
   const hasPasskey  = hasStoredPasskey();
-  const pinAttempts = getPinAttempts();
   const passkeyName = getPasskeyDisplayName();
 
-  // Auto-pick best login mode
-  const defaultMode: LoginMode = hasPasskey ? 'biometric' : hasPin ? 'pin' : 'email';
+  const defaultMode: LoginMode = hasPasskey ? 'biometric' : 'email';
   const [mode, setMode] = useState<LoginMode>(defaultMode);
 
-  const [errorMsg, setErrorMsg]       = useState('');
-  const [forgotOpen, setForgotOpen]   = useState(false);
-  const [setupOpen, setSetupOpen]     = useState(false);
-  const [pinLoading, setPinLoading]   = useState(false);
-  const [bioLoading, setBioLoading]   = useState(false);
+  const [errorMsg, setErrorMsg]           = useState('');
+  const [forgotOpen, setForgotOpen]       = useState(false);
+  const [setupOpen, setSetupOpen]         = useState(false);
+  const [bioLoading, setBioLoading]       = useState(false);
+  const [inviteCode, setInviteCode]       = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [mfaCode, setMfaCode]             = useState('');
+  const [mfaToken, setMfaToken]           = useState('');
+  const [mfaLoading, setMfaLoading]       = useState(false);
   const [pendingTokens, setPendingTokens] = useState<{ accessToken: string; refreshToken: string; userId: string; email: string; displayName: string } | null>(null);
-  const [pendingUser, setPendingUser] = useState<any>(null);
-  const [pendingRole, setPendingRole] = useState('');
+  const [pendingUser, setPendingUser]     = useState<any>(null);
+  const [pendingRole, setPendingRole]     = useState('');
 
-  // ── Redirect if already logged in ──────────────────────────────────────────
+  // ── Redirect if already logged in ─────────────────────────────────────────
   useEffect(() => {
     if (!authLoading && user) {
-      if (['admin', 'owner', 'super_admin'].includes(user.role)) {
-        setLocation('/admin');
-      } else {
-        setLocation('/dashboard');
-      }
+      if (['admin', 'owner', 'super_admin'].includes(user.role)) setLocation('/admin');
+      else setLocation('/dashboard');
     }
   }, [user, authLoading, setLocation]);
 
-  // ── Auto-trigger biometric on mount ──────────────────────────────────────
+  // ── Auto-trigger biometric on mount ───────────────────────────────────────
   useEffect(() => {
-    if (mode === 'biometric') handleBiometric();
+    if (mode === 'biometric' && hasPasskey) handleBiometric();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -467,30 +356,40 @@ export default function Login() {
     defaultValues: { email: '', password: '' },
   });
 
+  // ── After successful email+password login ──────────────────────────────────
+  const afterEmailLogin = useCallback((data: any) => {
+    // 1. 2FA required
+    if (data.requiresMfa && data.mfaSessionToken) {
+      setMfaToken(data.mfaSessionToken);
+      setMfaCode('');
+      setMode('mfa');
+      return;
+    }
+    // 2. Offer biometric setup (first time)
+    const needsSetup = !hasPasskey && passkeySupported();
+    if (needsSetup) {
+      setPendingUser(data.user);
+      setPendingRole(data.user.role);
+      setPendingTokens({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        userId: data.user.id || data.user._id || '',
+        email: data.user.email,
+        displayName: data.user.displayName || data.user.fullName || data.user.email,
+      });
+      authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+      setSetupOpen(true);
+    } else {
+      authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+      doRedirect(data.user.role);
+    }
+  }, [hasPasskey, authLogin]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { mutate: loginMutate, isPending: loginPending } = useLogin({
     mutation: {
-      onSuccess: (data: any) => {
-        const needsSetup = !hasPin && !hasPasskey && passkeySupported();
-        if (needsSetup) {
-          setPendingUser(data.user);
-          setPendingRole(data.user.role);
-          setPendingTokens({
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-            userId: data.user.id || data.user._id || '',
-            email: data.user.email,
-            displayName: data.user.displayName || data.user.name || data.user.email,
-          });
-          authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
-          setSetupOpen(true);
-        } else {
-          authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
-          doRedirect(data.user.role);
-        }
-      },
+      onSuccess: afterEmailLogin,
       onError: (err: any) => {
-        const msg = err?.data?.error || err?.message || 'Login failed';
-        setErrorMsg(msg);
+        setErrorMsg(err?.data?.error || err?.message || 'Login failed');
       },
     },
   });
@@ -505,47 +404,51 @@ export default function Login() {
     loginMutate({ data: values });
   };
 
-  // ── PIN verify ─────────────────────────────────────────────────────────────
-  const handlePinComplete = async (pin: string) => {
-    setPinLoading(true);
+  // ── Invite code validate ───────────────────────────────────────────────────
+  const handleInviteSubmit = async () => {
+    const clean = inviteCode.trim().toUpperCase().replace(/\s/g, '');
+    if (!clean) { setErrorMsg(isRtl ? 'أدخل كود الدعوة' : 'Enter your invite code'); return; }
     setErrorMsg('');
+    setInviteLoading(true);
     try {
-      const refreshToken = await verifyPin(pin);
-      if (!refreshToken) {
-        const remaining = MAX_PIN_ATTEMPTS - getPinAttempts();
-        if (remaining <= 0) {
-          setErrorMsg(isRtl ? 'تم حذف رمز PIN بسبب كثرة المحاولات' : 'PIN cleared after too many attempts');
-          setMode('email');
-        } else {
-          setErrorMsg(isRtl ? `رمز خاطئ (${remaining} محاولة متبقية)` : `Wrong PIN (${remaining} attempts left)`);
-        }
-        setPinLoading(false);
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
+      const res  = await fetch(`${base}/api/invitations/validate-code/${encodeURIComponent(clean)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || (isRtl ? 'كود غير صحيح أو منتهي الصلاحية' : 'Invalid or expired invite code'));
         return;
       }
-      // Use refresh token to get fresh tokens
+      // Valid — go to invite acceptance page with code pre-filled
+      setLocation(`/invite?code=${encodeURIComponent(clean)}`);
+    } catch {
+      setErrorMsg(isRtl ? 'حدث خطأ، حاول مرة أخرى' : 'Error occurred, please try again');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  // ── 2FA verify ────────────────────────────────────────────────────────────
+  const handleMfaSubmit = async () => {
+    const code = mfaCode.replace(/\s/g, '');
+    if (code.length < 6) { setErrorMsg(isRtl ? 'أدخل الرمز المكوّن من 6 أرقام' : 'Enter the 6-digit code'); return; }
+    setErrorMsg('');
+    setMfaLoading(true);
+    try {
       const base = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
-      const res  = await fetch(`${base}/api/auth/refresh`, {
+      const res  = await fetch(`${base}/api/auth/mfa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ mfaSessionToken: mfaToken, code }),
       });
-      if (!res.ok) throw new Error('refresh failed');
       const data = await res.json();
-      if (!data.accessToken || !data.refreshToken) throw new Error('no tokens');
-      // Get user profile
-      const meRes = await fetch(`${base}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${data.accessToken}` },
-      });
-      if (!meRes.ok) throw new Error('me failed');
-      const userProfile = await meRes.json();
-      authLogin(userProfile, { accessToken: data.accessToken, refreshToken: data.refreshToken });
-      doRedirect(userProfile.role);
+      if (!res.ok) { setErrorMsg(data.error || (isRtl ? 'رمز خاطئ' : 'Wrong code')); return; }
+      authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+      doRedirect(data.user.role);
     } catch {
-      setErrorMsg(isRtl ? 'انتهت الجلسة، أعد تسجيل الدخول' : 'Session expired, please use your password');
-      clearPin();
-      setMode('email');
+      setErrorMsg(isRtl ? 'حدث خطأ، حاول مرة أخرى' : 'Error occurred, please try again');
+    } finally {
+      setMfaLoading(false);
     }
-    setPinLoading(false);
   };
 
   // ── Biometric verify ───────────────────────────────────────────────────────
@@ -565,16 +468,12 @@ export default function Login() {
       });
       if (!res.ok) throw new Error('refresh failed');
       const data = await res.json();
-      if (!data.accessToken || !data.refreshToken) throw new Error('no tokens');
-      const meRes = await fetch(`${base}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${data.accessToken}` },
-      });
+      const meRes = await fetch(`${base}/api/auth/me`, { headers: { Authorization: `Bearer ${data.accessToken}` } });
       if (!meRes.ok) throw new Error('me failed');
       const userProfile = await meRes.json();
       authLogin(userProfile, { accessToken: data.accessToken, refreshToken: data.refreshToken });
       doRedirect(userProfile.role);
     } catch (e: any) {
-      // User cancelled biometric or session expired
       if (!String(e).includes('biometric failed')) {
         setErrorMsg(isRtl ? 'انتهت الجلسة، أعد تسجيل الدخول بكلمة المرور' : 'Session expired. Use your password.');
         setMode('email');
@@ -586,7 +485,10 @@ export default function Login() {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (authLoading) return null; // prevent flash before redirect
+  if (authLoading) return null;
+
+  // Hide tabs during MFA challenge
+  const showTabs = mode !== 'mfa';
 
   return (
     <div className="min-h-screen flex" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -597,13 +499,11 @@ export default function Login() {
 
       {/* Login panel */}
       <div className="flex-1 min-h-screen bg-background flex flex-col relative overflow-hidden">
-        {/* Decorative blobs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute -top-[20%] -right-[10%] w-[70%] h-[70%] rounded-full bg-primary/5 blur-[120px]" />
           <div className="absolute top-[40%] -left-[20%] w-[60%] h-[60%] rounded-full bg-secondary/10 blur-[100px]" />
         </div>
 
-        {/* Header */}
         <header className="p-6 flex justify-between items-center relative z-10">
           <img src={`${import.meta.env.BASE_URL}logo-horizontal.png`} alt="Thanarah"
             className="h-7 object-contain lg:hidden"
@@ -612,7 +512,6 @@ export default function Login() {
           <LanguageSwitcher />
         </header>
 
-        {/* Form area */}
         <main className="flex-1 flex items-center justify-center p-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -621,10 +520,9 @@ export default function Login() {
             className="w-full max-w-md"
           >
             <div className="bg-card border border-border rounded-2xl shadow-xl shadow-black/5 p-8 md:p-10 relative overflow-hidden">
-              {/* Accent line */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-medium-green to-secondary" />
 
-              {/* Logo */}
+              {/* Logo + title */}
               <div className="mb-6 text-center">
                 <div className="flex items-center justify-center mx-auto mb-4">
                   <img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Thanarah"
@@ -632,41 +530,43 @@ export default function Login() {
                     onError={(e) => (e.currentTarget.style.display = 'none')} />
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-1">
-                  {isRtl ? 'تسجيل الدخول' : 'Sign in'}
+                  {mode === 'mfa'
+                    ? (isRtl ? 'التحقق الثنائي' : 'Two-Factor Verification')
+                    : (isRtl ? 'تسجيل الدخول' : 'Sign in')}
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  {isRtl ? 'سجّل دخولك للوصول إلى البوابة التقديمية.' : 'Sign in to access the presentation portal.'}
+                  {mode === 'mfa'
+                    ? (isRtl ? 'أدخل رمز التحقق من تطبيق المصادقة' : 'Enter the code from your authenticator app')
+                    : (isRtl ? 'سجّل دخولك للوصول إلى البوابة التقديمية.' : 'Sign in to access the presentation portal.')}
                 </p>
               </div>
 
-              {/* Mode tabs — always visible */}
-              <div className="flex gap-1 mb-5 p-1 bg-muted rounded-xl">
-                <button
-                  onClick={() => {
-                    setErrorMsg('');
-                    if (hasPasskey) { setMode('biometric'); handleBiometric(); }
-                    else setMode('biometric');
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Fingerprint className="w-3.5 h-3.5" />
-                  {isRtl ? 'البصمة' : 'Biometric'}
-                </button>
-                <button
-                  onClick={() => { setErrorMsg(''); setMode('pin'); }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'pin' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  PIN
-                </button>
-                <button
-                  onClick={() => { setErrorMsg(''); setMode('email'); }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  {isRtl ? 'كلمة مرور' : 'Password'}
-                </button>
-              </div>
+              {/* Mode tabs — hidden during MFA challenge */}
+              {showTabs && (
+                <div className="flex gap-1 mb-5 p-1 bg-muted rounded-xl">
+                  <button
+                    onClick={() => { setErrorMsg(''); if (hasPasskey) { setMode('biometric'); handleBiometric(); } else setMode('biometric'); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <Fingerprint className="w-3.5 h-3.5" />
+                    {isRtl ? 'البصمة' : 'Biometric'}
+                  </button>
+                  <button
+                    onClick={() => { setErrorMsg(''); setMode('invite'); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'invite' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                    {isRtl ? 'كود الدعوة' : 'Invite Code'}
+                  </button>
+                  <button
+                    onClick={() => { setErrorMsg(''); setMode('email'); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    {isRtl ? 'كلمة مرور' : 'Password'}
+                  </button>
+                </div>
+              )}
 
               {/* Error */}
               <AnimatePresence>
@@ -681,8 +581,9 @@ export default function Login() {
                 )}
               </AnimatePresence>
 
-              {/* ── Email/password mode ──────────────────────────────── */}
               <AnimatePresence mode="wait">
+
+                {/* ── Email/password ────────────────────────────────── */}
                 {mode === 'email' && (
                   <motion.div key="email" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                     <Form {...form}>
@@ -691,7 +592,7 @@ export default function Login() {
                           <FormItem>
                             <Label className="text-foreground font-medium">{isRtl ? 'البريد الإلكتروني' : 'Email'}</Label>
                             <FormControl>
-                              <Input placeholder="name@example.com" className="h-12 bg-background/50" dir="ltr" data-testid="input-email" {...field} />
+                              <Input placeholder="name@example.com" className="h-12 bg-background/50" dir="ltr" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -705,14 +606,14 @@ export default function Login() {
                               </button>
                             </div>
                             <FormControl>
-                              <Input type="password" placeholder="••••••••" className="h-12 bg-background/50" data-testid="input-password" {...field} />
+                              <Input type="password" placeholder="••••••••" className="h-12 bg-background/50" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <Button type="submit"
                           className="w-full h-12 text-base font-semibold mt-2 bg-primary hover:bg-primary/90 text-primary-foreground group"
-                          disabled={loginPending} data-testid="button-submit-login">
+                          disabled={loginPending}>
                           {loginPending ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                             <span className="flex items-center gap-2">
                               {isRtl ? 'تسجيل الدخول' : 'Sign in'}
@@ -725,51 +626,87 @@ export default function Login() {
                   </motion.div>
                 )}
 
-                {/* ── PIN mode ────────────────────────────────────────── */}
-                {mode === 'pin' && (
-                  <motion.div key="pin" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                    {!hasPin ? (
-                      /* Not set up yet */
-                      <div className="flex flex-col items-center gap-4 py-6">
-                        <div className="w-20 h-20 rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
-                          <KeyRound className="w-9 h-9 text-muted-foreground/50" />
-                        </div>
-                        <div className="text-center space-y-1">
-                          <p className="font-semibold text-foreground text-sm">
-                            {isRtl ? 'رمز PIN غير مُفعَّل' : 'PIN not enabled'}
-                          </p>
-                          <p className="text-xs text-muted-foreground max-w-[220px]">
-                            {isRtl
-                              ? 'سجّل دخولك بكلمة المرور أولاً لإعداد رمز PIN'
-                              : 'Sign in with password first to set up your PIN'}
-                          </p>
-                        </div>
-                        <button onClick={() => { setErrorMsg(''); setMode('email'); }}
-                          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
-                          {isRtl ? 'تسجيل الدخول بكلمة المرور' : 'Use password instead'}
-                        </button>
+                {/* ── Invite code ───────────────────────────────────── */}
+                {mode === 'invite' && (
+                  <motion.div key="invite" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                    className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/15">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <KeyRound className="w-4 h-4 text-primary" />
                       </div>
-                    ) : pinLoading ? (
-                      <div className="flex flex-col items-center gap-3 py-8">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                        <p className="text-sm text-muted-foreground">{isRtl ? 'جاري التحقق…' : 'Verifying…'}</p>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{isRtl ? 'كود الدعوة' : 'Invite Code'}</p>
+                        <p className="text-xs text-muted-foreground">{isRtl ? 'مثال: ABCD-1234' : 'e.g. ABCD-1234'}</p>
                       </div>
-                    ) : (
-                      <PinPad
-                        onComplete={handlePinComplete}
-                        onCancel={() => { setErrorMsg(''); setMode('email'); }}
-                        isRtl={isRtl}
-                      />
-                    )}
+                    </div>
+                    <Input
+                      dir="ltr"
+                      placeholder="ABCD-1234"
+                      className="h-14 text-center text-xl font-mono tracking-widest uppercase bg-background/50"
+                      value={inviteCode}
+                      onChange={e => setInviteCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === 'Enter' && handleInviteSubmit()}
+                    />
+                    <Button
+                      onClick={handleInviteSubmit}
+                      disabled={inviteLoading || !inviteCode.trim()}
+                      className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {inviteLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                        <span className="flex items-center gap-2">
+                          <ArrowRight className="w-4 h-4" />
+                          {isRtl ? 'تفعيل الدعوة' : 'Activate Invite'}
+                        </span>
+                      )}
+                    </Button>
                   </motion.div>
                 )}
 
-                {/* ── Biometric mode ───────────────────────────────────── */}
+                {/* ── 2FA / MFA ─────────────────────────────────────── */}
+                {mode === 'mfa' && (
+                  <motion.div key="mfa" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                    className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <Shield className="w-8 h-8 text-primary" />
+                      </div>
+                    </div>
+                    <Input
+                      dir="ltr"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={mfaCode}
+                      onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrorMsg(''); }}
+                      className="h-16 text-center text-3xl font-mono tracking-[0.4em] bg-background/50"
+                      onKeyDown={e => e.key === 'Enter' && handleMfaSubmit()}
+                      autoFocus
+                    />
+                    <Button
+                      onClick={handleMfaSubmit}
+                      disabled={mfaLoading || mfaCode.length < 6}
+                      className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {mfaLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4" />
+                          {isRtl ? 'تحقق والدخول' : 'Verify & Sign in'}
+                        </span>
+                      )}
+                    </Button>
+                    <button onClick={() => { setMode('email'); setErrorMsg(''); }}
+                      className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      {isRtl ? 'رجوع لتسجيل الدخول' : 'Back to sign in'}
+                    </button>
+                  </motion.div>
+                )}
+
+                {/* ── Biometric ─────────────────────────────────────── */}
                 {mode === 'biometric' && (
                   <motion.div key="biometric" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                     className="flex flex-col items-center gap-4 py-6">
                     {!hasPasskey ? (
-                      /* Not set up yet */
                       <>
                         <div className="w-20 h-20 rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
                           <Fingerprint className="w-9 h-9 text-muted-foreground/50" />
@@ -779,9 +716,7 @@ export default function Login() {
                             {isRtl ? 'البصمة غير مُفعَّلة' : 'Biometric not enabled'}
                           </p>
                           <p className="text-xs text-muted-foreground max-w-[220px]">
-                            {isRtl
-                              ? 'سجّل دخولك بكلمة المرور أولاً لتفعيل البصمة'
-                              : 'Sign in with password first to enable biometric login'}
+                            {isRtl ? 'سجّل دخولك بكلمة المرور أولاً لتفعيل البصمة' : 'Sign in with password first to enable biometric'}
                           </p>
                         </div>
                         <button onClick={() => { setErrorMsg(''); setMode('email'); }}
@@ -790,27 +725,16 @@ export default function Login() {
                         </button>
                       </>
                     ) : (
-                      /* Set up — ready to authenticate */
                       <>
-                        <motion.button
-                          onClick={handleBiometric}
-                          whileTap={{ scale: 0.95 }}
-                          disabled={bioLoading}
-                          className="w-20 h-20 rounded-full bg-primary/10 hover:bg-primary/20 border-2 border-primary/20 flex items-center justify-center transition-colors"
-                        >
-                          {bioLoading
-                            ? <Loader2 className="w-9 h-9 text-primary animate-spin" />
-                            : <Fingerprint className="w-9 h-9 text-primary" />}
+                        <motion.button onClick={handleBiometric} whileTap={{ scale: 0.95 }} disabled={bioLoading}
+                          className="w-20 h-20 rounded-full bg-primary/10 hover:bg-primary/20 border-2 border-primary/20 flex items-center justify-center transition-colors">
+                          {bioLoading ? <Loader2 className="w-9 h-9 text-primary animate-spin" /> : <Fingerprint className="w-9 h-9 text-primary" />}
                         </motion.button>
                         <div className="text-center">
                           <p className="font-semibold text-foreground text-sm">
-                            {bioLoading
-                              ? (isRtl ? 'في انتظار المصادقة…' : 'Waiting for authentication…')
-                              : (isRtl ? 'المس المستشعر أو انظر إلى الكاميرا' : 'Touch sensor or look at camera')}
+                            {bioLoading ? (isRtl ? 'في انتظار المصادقة…' : 'Waiting…') : (isRtl ? 'المس المستشعر أو انظر إلى الكاميرا' : 'Touch sensor or look at camera')}
                           </p>
-                          {passkeyName && (
-                            <p className="text-xs text-muted-foreground mt-1">{passkeyName}</p>
-                          )}
+                          {passkeyName && <p className="text-xs text-muted-foreground mt-1">{passkeyName}</p>}
                         </div>
                         <button onClick={() => { setErrorMsg(''); setMode('email'); }}
                           className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -820,6 +744,7 @@ export default function Login() {
                     )}
                   </motion.div>
                 )}
+
               </AnimatePresence>
             </div>
 
@@ -839,10 +764,7 @@ export default function Login() {
       {pendingTokens && pendingUser && (
         <QuickAuthSetup
           open={setupOpen}
-          onClose={() => {
-            setSetupOpen(false);
-            doRedirect(pendingRole);
-          }}
+          onClose={() => { setSetupOpen(false); doRedirect(pendingRole); }}
           refreshToken={pendingTokens.refreshToken}
           userId={pendingTokens.userId}
           email={pendingTokens.email}

@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { generateSecret, generateSync, verifySync, generateURI } from "otplib";
 import User from "../models/user";
 import Session from "../models/session";
 import SystemSettings from "../models/systemSettings";
@@ -22,6 +24,20 @@ import {
 } from "../lib/email";
 import { connectDb } from "../lib/db";
 import { logger } from "../lib/logger";
+
+const JWT_SECRET = process.env.JWT_SECRET || "thanarah-dev-secret-change-in-production";
+
+/** Sign a short-lived (5 min) MFA session token */
+function signMfaToken(userId: string): string {
+  return jwt.sign({ userId, purpose: "mfa" }, JWT_SECRET, { expiresIn: "5m" });
+}
+
+/** Verify and decode an MFA session token — throws if invalid/expired */
+function verifyMfaToken(token: string): { userId: string } {
+  const payload = jwt.verify(token, JWT_SECRET) as { userId: string; purpose: string };
+  if (payload.purpose !== "mfa") throw new Error("wrong purpose");
+  return { userId: payload.userId };
+}
 
 const router = Router();
 
@@ -130,11 +146,11 @@ router.post("/login", async (req: Request, res: Response) => {
   await user.save();
 
   if (user.mfaEnabled) {
-    const mfaToken = generateSecureToken(16);
+    const mfaSessionToken = signMfaToken(user.id);
     res.status(200).json({
-      user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, permissions: user.permissions, allowedSections: user.allowedSections, preferredLanguage: user.preferredLanguage, mfaEnabled: true },
+      user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, preferredLanguage: user.preferredLanguage, mfaEnabled: true },
       requiresMfa: true,
-      mfaSessionToken: mfaToken,
+      mfaSessionToken,
     });
     return;
   }
@@ -327,10 +343,128 @@ router.post("/reset-password", async (req: Request, res: Response) => {
   res.json({ success: true, message: "Password reset successfully" });
 });
 
-// POST /api/auth/mfa/verify
+// POST /api/auth/mfa/verify  — step 2 of login when MFA is required
 router.post("/mfa/verify", async (req: Request, res: Response) => {
-  // Simplified MFA — in production integrate with a TOTP library
-  res.status(501).json({ error: "MFA not fully implemented yet" });
+  await connectDb();
+  const { mfaSessionToken, code } = req.body;
+  if (!mfaSessionToken || !code) {
+    res.status(400).json({ error: "Missing mfaSessionToken or code" });
+    return;
+  }
+  let userId: string;
+  try {
+    ({ userId } = verifyMfaToken(mfaSessionToken));
+  } catch {
+    res.status(401).json({ error: "MFA session expired or invalid. Please log in again." });
+    return;
+  }
+
+  const user = await User.findById(userId);
+  if (!user || !user.mfaEnabled || !user.mfaSecret) {
+    res.status(401).json({ error: "Invalid MFA state" });
+    return;
+  }
+
+  const result = verifySync({ token: code.replace(/\s/g, ""), secret: user.mfaSecret });
+  const valid = result && (typeof result === 'boolean' ? result : result.valid);
+  if (!valid) {
+    res.status(401).json({ error: "رمز التحقق غير صحيح أو منتهي الصلاحية" });
+    return;
+  }
+
+  const ip = getIp(req);
+  const ua = req.headers["user-agent"] || "";
+  const sessionCode = generateSessionCode();
+  const sessionToken = generateSecureToken();
+  const refreshToken = generateSecureToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  const session = await Session.create({
+    userId: user._id,
+    sessionTokenHash: hashToken(sessionToken),
+    refreshTokenHash: hashToken(refreshToken),
+    sessionCode,
+    ipAddress: ip,
+    userAgent: ua,
+    deviceType: getDeviceType(ua),
+    expiresAt,
+  });
+
+  const accessToken = signAccessToken({ userId: user.id, sessionId: session.id, role: user.role });
+  const refreshJwt  = signRefreshToken({ userId: user.id, sessionId: session.id, role: user.role });
+
+  await logAudit({ actor: user.fullName, actorId: user._id as any, action: "login.mfa.success", result: "success", riskScore: "low", ipAddress: ip, sessionId: session.id, timestamp: new Date() });
+
+  res.json({
+    accessToken,
+    refreshToken: refreshJwt,
+    user: {
+      id: user.id, fullName: user.fullName, email: user.email,
+      role: user.role, permissions: user.permissions,
+      allowedSections: user.allowedSections,
+      preferredLanguage: user.preferredLanguage,
+      mfaEnabled: true, lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      sessionExpiresAt: expiresAt.toISOString(),
+    },
+  });
+});
+
+// POST /api/auth/mfa/setup  — generate TOTP secret for authenticated user
+router.post("/mfa/setup", authenticate, async (req: AuthRequest, res: Response) => {
+  await connectDb();
+  const user = await User.findById(req.userId);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  // Generate a fresh secret (not saved yet — only saved on /mfa/enable after verification)
+  const secret = generateSecret();
+  const otpauthUrl = generateURI({ strategy: "totp", issuer: "Thanarah", label: user.email, secret });
+
+  res.json({ secret, otpauthUrl });
+});
+
+// POST /api/auth/mfa/enable  — verify TOTP and save secret
+router.post("/mfa/enable", authenticate, async (req: AuthRequest, res: Response) => {
+  await connectDb();
+  const { secret, code } = req.body;
+  if (!secret || !code) { res.status(400).json({ error: "Missing secret or code" }); return; }
+
+  const r2 = verifySync({ token: String(code).replace(/\s/g, ""), secret });
+  const valid2 = r2 && (typeof r2 === 'boolean' ? r2 : r2.valid);
+  if (!valid2) { res.status(400).json({ error: "رمز التحقق غير صحيح" }); return; }
+
+  await User.findByIdAndUpdate(req.userId, { mfaEnabled: true, mfaSecret: secret });
+  await logAudit({ actor: req.userId!, action: "mfa.enabled", result: "success", riskScore: "low", ipAddress: getIp(req), timestamp: new Date() });
+
+  res.json({ success: true });
+});
+
+// POST /api/auth/mfa/disable  — disable MFA (requires current TOTP code or password)
+router.post("/mfa/disable", authenticate, async (req: AuthRequest, res: Response) => {
+  await connectDb();
+  const { code, password } = req.body;
+  const user = await User.findById(req.userId);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  // Require either valid TOTP or password to disable
+  let authorized = false;
+  if (code && user.mfaSecret) {
+    const r3 = verifySync({ token: String(code).replace(/\s/g, ""), secret: user.mfaSecret });
+    authorized = !!(r3 && (typeof r3 === 'boolean' ? r3 : r3.valid));
+  }
+  if (!authorized && password) {
+    authorized = await bcrypt.compare(password, user.passwordHash);
+  }
+  if (!authorized) {
+    res.status(401).json({ error: "رمز التحقق أو كلمة المرور غير صحيحة" });
+    return;
+  }
+
+  user.mfaEnabled = false;
+  user.mfaSecret  = undefined;
+  await user.save();
+  await logAudit({ actor: user.fullName, actorId: user._id as any, action: "mfa.disabled", result: "success", riskScore: "medium", ipAddress: getIp(req), timestamp: new Date() });
+
+  res.json({ success: true });
 });
 
 export default router;
