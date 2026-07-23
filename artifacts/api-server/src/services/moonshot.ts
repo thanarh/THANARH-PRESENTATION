@@ -5,7 +5,7 @@
 
 import { logger } from "../lib/logger";
 
-const MOONSHOT_BASE = "https://api.moonshot.cn/v1";
+const MOONSHOT_BASE = "https://api.moonshot.ai/v1";
 const MODEL         = "moonshot-v1-8k";
 
 export interface ChatMessage {
@@ -67,8 +67,8 @@ export async function generateWhatsAppReply(
   userMessage: string,
   history: ChatMessage[] = []
 ): Promise<string> {
-  const apiKey = process.env.MOONSHOT_API_KEY;
-  if (!apiKey) throw new Error("MOONSHOT_API_KEY not set");
+  const apiKey = process.env.MOONSHOTAI_API_KEY ?? process.env.MOONSHOT_API_KEY;
+  if (!apiKey) throw new Error("MOONSHOTAI_API_KEY not set");
 
   const messages: ChatMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },

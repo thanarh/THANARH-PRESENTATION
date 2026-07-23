@@ -1,1 +1,2 @@
 - [SMTP Configuration](smtp-config.md) — cPanel SMTP only (not SMTP2GO); SMTP_PASSWORD must stay in Replit Secrets only.
+- [Moonshot AI Configuration](moonshot-config.md) — API is api.moonshot.ai/v1; secret key is MOONSHOTAI_API_KEY.

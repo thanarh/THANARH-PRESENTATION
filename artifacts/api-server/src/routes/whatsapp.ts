@@ -10,6 +10,15 @@ import { logger } from "../lib/logger";
 const router = Router();
 
 // ── Auth middleware for all routes ──────────────────────────────────────────
+// SSE clients can't set headers, so we also accept ?token= as a query param
+router.use((req: AuthRequest, res: Response, next: any) => {
+  // Inject query token into Authorization header if not already present
+  const queryToken = req.query?.token as string | undefined;
+  if (queryToken && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${queryToken}`;
+  }
+  next();
+});
 router.use(authenticate as any);
 router.use((req: AuthRequest, res: Response, next: any) => {
   if (!ADMIN_ROLES.includes(req.userRole ?? "")) {
