@@ -1,8 +1,85 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminShell } from '../../components/AdminShell';
 import { useGetAdminDashboard } from '@workspace/api-client-react';
-import { Users, UserPlus, Activity, Shield, Key, Server, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Activity, Shield, Key, Server, Loader2, Clock, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+interface SectionStat {
+  slug: string;
+  totalDurationSeconds: number;
+  visitCount: number;
+  avgDurationSeconds: number;
+}
+
+function fmtDuration(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+function SectionAnalytics() {
+  const [data, setData] = useState<SectionStat[] | null>(null);
+  const base = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') || '';
+
+  useEffect(() => {
+    const token = localStorage.getItem('thanarah_access_token');
+    if (!token) return;
+    fetch(`${base}/api/presentation/analytics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setData(d))
+      .catch(() => {});
+  }, [base]);
+
+  if (!data) return null;
+  if (data.length === 0) return (
+    <div className="mt-8 bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">
+      لا توجد بيانات تحليلية بعد — ستظهر بعد أول زيارة للعرض
+    </div>
+  );
+
+  const top = data.slice(0, 12);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+      className="mt-8 bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+        <Clock className="w-5 h-5 text-primary" />
+        <div>
+          <h2 className="font-bold text-foreground">أكثر الأقسام مشاهدةً</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">مرتّبة حسب إجمالي وقت المشاهدة — أعلى تركيز = أهم للزوار</p>
+        </div>
+      </div>
+      <div className="divide-y divide-border">
+        {top.map((s, i) => {
+          const maxDur = top[0]?.totalDurationSeconds || 1;
+          const pct = Math.round((s.totalDurationSeconds / maxDur) * 100);
+          return (
+            <div key={s.slug} className="px-6 py-3 flex items-center gap-4">
+              <span className="w-6 text-xs font-bold text-muted-foreground text-center shrink-0">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-foreground truncate">{s.slug}</span>
+                  <div className="flex items-center gap-3 shrink-0 ms-4">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Eye className="w-3 h-3" />{s.visitCount}
+                    </span>
+                    <span className="text-xs font-semibold text-primary">{fmtDuration(s.totalDurationSeconds)}</span>
+                  </div>
+                </div>
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function AdminDashboard() {
   const { data: dashboard, isLoading } = useGetAdminDashboard();
@@ -63,6 +140,8 @@ export default function AdminDashboard() {
           </motion.div>
         ))}
       </div>
+
+      <SectionAnalytics />
     </AdminShell>
   );
 }

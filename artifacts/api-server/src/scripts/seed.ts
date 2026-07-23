@@ -15,27 +15,32 @@ import bcrypt from "bcryptjs";
 
 // ─── Presentation sections ────────────────────────────────────────────────────
 
+// Order: vision → problem → solution → ecosystem → 🔥 cool features → journey → business → details
 const sections = [
   { slug: "introduction",          titleAr: "مقدمة — ما هي ثناره؟",    titleEn: "Introduction — What is Thanarah?",  order: 1 },
   { slug: "problem",               titleAr: "المشكلة",                  titleEn: "The Problem",                       order: 2 },
   { slug: "solution",              titleAr: "الحل",                     titleEn: "The Solution",                      order: 3 },
   { slug: "ecosystem",             titleAr: "منظومة ثناره",             titleEn: "Thanarah Ecosystem",                order: 4 },
-  { slug: "customer-journey",      titleAr: "رحلة العميل",              titleEn: "Customer Journey",                  order: 5 },
-  { slug: "plans",                 titleAr: "الباقات",                  titleEn: "Plans & Pricing",                   order: 6 },
-  { slug: "smart-clinic",          titleAr: "العيادة الذكية",           titleEn: "Smart Clinic",                      order: 7 },
-  { slug: "website-builder",       titleAr: "منشئ المواقع",             titleEn: "Website Builder",                   order: 8 },
-  { slug: "whatsapp-ai",           titleAr: "واتساب AI",                titleEn: "WhatsApp AI",                       order: 9 },
-  { slug: "apps",                  titleAr: "التطبيقات",                titleEn: "Mobile Applications",               order: 10 },
-  { slug: "internal-operations",   titleAr: "نظام موظفي ثناره",         titleEn: "Internal Operations",               order: 11 },
-  { slug: "architecture",          titleAr: "البنية التقنية",           titleEn: "Technical Architecture",            order: 12 },
-  { slug: "security",              titleAr: "الأمان والحماية",          titleEn: "Security",                          order: 13 },
-  { slug: "business-model",        titleAr: "نموذج الأعمال",            titleEn: "Business Model",                    order: 14 },
-  { slug: "market",                titleAr: "السوق والتوسع",            titleEn: "Market & Expansion",                order: 15 },
-  { slug: "competitive-advantages",titleAr: "المميزات التنافسية",       titleEn: "Competitive Advantages",            order: 16 },
-  { slug: "roadmap",               titleAr: "خارطة الطريق",             titleEn: "Roadmap",                           order: 17 },
-  { slug: "timeline",              titleAr: "الخطة الزمنية",            titleEn: "Timeline",                          order: 18 },
-  { slug: "team",                  titleAr: "الفريق",                   titleEn: "The Team",                          order: 19 },
-  { slug: "investment",            titleAr: "الاستثمار",                titleEn: "Investment",                        order: 20, requiredPermission: "presentation.view_financials" },
+  // Cool features first 🔥
+  { slug: "smart-clinic",          titleAr: "العيادة الذكية",           titleEn: "Smart Clinic",                      order: 5 },
+  { slug: "whatsapp-ai",           titleAr: "واتساب AI",                titleEn: "WhatsApp AI",                       order: 6 },
+  { slug: "website-builder",       titleAr: "منشئ المواقع",             titleEn: "Website Builder",                   order: 7 },
+  { slug: "apps",                  titleAr: "التطبيقات",                titleEn: "Mobile Applications",               order: 8 },
+  // Business story
+  { slug: "customer-journey",      titleAr: "رحلة العميل",              titleEn: "Customer Journey",                  order: 9 },
+  { slug: "plans",                 titleAr: "الباقات",                  titleEn: "Plans & Pricing",                   order: 10 },
+  { slug: "business-model",        titleAr: "نموذج الأعمال",            titleEn: "Business Model",                    order: 11 },
+  { slug: "market",                titleAr: "السوق والتوسع",            titleEn: "Market & Expansion",                order: 12 },
+  { slug: "competitive-advantages",titleAr: "المميزات التنافسية",       titleEn: "Competitive Advantages",            order: 13 },
+  { slug: "investment",            titleAr: "الاستثمار",                titleEn: "Investment",                        order: 14, requiredPermission: "presentation.view_financials" },
+  // Future & team
+  { slug: "roadmap",               titleAr: "خارطة الطريق",             titleEn: "Roadmap",                           order: 15 },
+  { slug: "team",                  titleAr: "الفريق",                   titleEn: "The Team",                          order: 16 },
+  { slug: "timeline",              titleAr: "الخطة الزمنية",            titleEn: "Timeline",                          order: 17 },
+  // Technical depth (for tech-savvy audiences)
+  { slug: "internal-operations",   titleAr: "نظام موظفي ثناره",         titleEn: "Internal Operations",               order: 18 },
+  { slug: "architecture",          titleAr: "البنية التقنية",           titleEn: "Technical Architecture",            order: 19 },
+  { slug: "security",              titleAr: "الأمان والحماية",          titleEn: "Security",                          order: 20 },
   { slug: "risks",                 titleAr: "المخاطر",                  titleEn: "Risks & Mitigation",                order: 21 },
   { slug: "summary",               titleAr: "الخلاصة",                  titleEn: "Summary",                           order: 22 },
 ];

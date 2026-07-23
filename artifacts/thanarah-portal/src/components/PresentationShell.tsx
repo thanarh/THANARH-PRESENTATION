@@ -15,6 +15,7 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [screenshotWarning, setScreenshotWarning] = useState(false);
+  const [contentBlurred, setContentBlurred] = useState(false);
 
   const showScreenshotWarning = useCallback(() => {
     setScreenshotWarning(true);
@@ -67,6 +68,21 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRtl, nextSection, prevSection, setLocation]);
+
+  // ── Blur content when user switches tab / window ────────────
+  useEffect(() => {
+    const handleVisibility = () => setContentBlurred(document.hidden);
+    const handleBlur = () => setContentBlurred(true);
+    const handleFocus = () => setContentBlurred(false);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   // ── Content-protection layer ────────────────────────────────
   useEffect(() => {
@@ -148,6 +164,26 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
       `}</style>
       <Watermark />
       <SessionTimer />
+
+      {/* ── Blur overlay — hides content when tab is switched ─── */}
+      <AnimatePresence>
+        {contentBlurred && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[99998] flex items-center justify-center"
+            style={{ backdropFilter: 'blur(40px)', background: 'rgba(4,12,8,0.85)' }}
+          >
+            <div className="text-center space-y-3">
+              <div className="text-4xl">🔒</div>
+              <p dir="rtl" className="text-white font-bold text-lg">المحتوى مخفي أثناء غيابك</p>
+              <p className="text-sm" style={{ color: '#A9CBB5' }}>Content hidden while away</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── PrintScreen warning overlay ───────────────────────── */}
       <AnimatePresence>
@@ -285,8 +321,8 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden relative pt-20 pb-24 lg:pt-24 px-6 lg:px-16 xl:px-24">
-          <div className="max-w-5xl mx-auto h-full flex flex-col justify-center min-h-full">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden relative pt-16 pb-20 lg:pt-20 px-4 lg:px-8 xl:px-12">
+          <div className="max-w-4xl mx-auto h-full flex flex-col justify-center min-h-full">
             {children}
           </div>
         </div>

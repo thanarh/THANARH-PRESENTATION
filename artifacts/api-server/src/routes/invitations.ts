@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { authenticate, type AuthRequest, ADMIN_ROLES } from "../lib/auth";
+import { authenticate, type AuthRequest, ADMIN_ROLES, signAccessToken, signRefreshToken, generateSessionCode } from "../lib/auth";
 import { generateSecureToken, hashToken } from "../lib/auth";
 import crypto from "crypto";
 
@@ -15,6 +15,7 @@ function generateInviteCode(): string {
   return code;
 }
 import Invitation from "../models/invitation";
+import Session from "../models/session";
 import User from "../models/user";
 import { logAudit } from "../models/auditLog";
 import { sendInvitationEmail, sendAdminInvitationNotification } from "../lib/email";
@@ -75,6 +76,111 @@ router.get("/stats", authenticate, async (req: AuthRequest, res: Response) => {
   ]);
 
   res.json({ active, expired, revoked, unopened, failedAttempts, total });
+});
+
+// POST /api/invitations/enter — code-only direct login (no password required)
+router.post("/enter", async (req: any, res: Response) => {
+  await connectDb();
+  const { inviteCode } = req.body;
+  if (!inviteCode) {
+    res.status(400).json({ error: "كود الدعوة مطلوب" });
+    return;
+  }
+
+  const code = (inviteCode as string).toUpperCase().replace(/\s/g, "");
+  const invitation = await Invitation.findOne({ inviteCode: code });
+
+  if (!invitation || invitation.status === "revoked") {
+    res.status(400).json({ error: "كود الدعوة غير صحيح أو ملغى" });
+    return;
+  }
+  if (new Date() > invitation.expiresAt) {
+    await Invitation.findByIdAndUpdate(invitation._id, { status: "expired" });
+    res.status(400).json({ error: "انتهت صلاحية كود الدعوة" });
+    return;
+  }
+  if (!["sent", "active", "draft"].includes(invitation.status)) {
+    res.status(400).json({ error: "هذه الدعوة غير صالحة للدخول" });
+    return;
+  }
+
+  // Find or auto-create user (no password needed)
+  let user = await User.findOne({ email: invitation.email });
+  if (!user) {
+    const randomPassword = crypto.randomBytes(32).toString("hex");
+    const passwordHash = await bcrypt.hash(randomPassword, 12);
+    user = await User.create({
+      fullName: invitation.inviteeName,
+      email: invitation.email,
+      passwordHash,
+      role: invitation.role as any,
+      status: "active",
+      emailVerified: true,
+      permissions: invitation.permissions || [],
+      allowedSections: invitation.allowedSections || [],
+      invitationId: invitation._id,
+    });
+    logger.info({ email: invitation.email, role: invitation.role }, "Auto-created user from invite code");
+  }
+
+  // Issue session + JWT
+  const ua = req.headers?.["user-agent"] || "";
+  const ip = (req.headers?.["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+  const deviceType = /mobile|android|iphone|ipad/i.test(ua) ? "mobile" : "desktop";
+  const durationMinutes = invitation.sessionDurationMinutes || 120;
+  const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+
+  const sessionCode = generateSessionCode();
+  const sessionToken = generateSecureToken();
+  const refreshToken = generateSecureToken();
+
+  const session = await Session.create({
+    userId: user._id,
+    invitationId: invitation._id,
+    sessionTokenHash: hashToken(sessionToken),
+    refreshTokenHash: hashToken(refreshToken),
+    sessionCode,
+    ipAddress: ip,
+    userAgent: ua,
+    deviceType,
+    expiresAt,
+  });
+
+  const accessToken = signAccessToken({ userId: user.id, sessionId: session.id, role: user.role });
+  const refreshJwt = signRefreshToken({ userId: user.id, sessionId: session.id, role: user.role });
+
+  await Invitation.findByIdAndUpdate(invitation._id, {
+    status: "active",
+    $inc: { usedCount: 1 },
+  });
+
+  await logAudit({
+    actor: invitation.inviteeName,
+    actorId: user._id as any,
+    action: "login.invite_code",
+    result: "success",
+    riskScore: "low",
+    ipAddress: ip,
+    sessionId: session.id,
+    timestamp: new Date(),
+  });
+
+  res.json({
+    accessToken,
+    refreshToken: refreshJwt,
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions,
+      allowedSections: user.allowedSections,
+      preferredLanguage: (user as any).preferredLanguage || "ar",
+      mfaEnabled: (user as any).mfaEnabled || false,
+      lastLoginAt: (user as any).lastLoginAt?.toISOString() ?? null,
+      sessionExpiresAt: expiresAt.toISOString(),
+    },
+  });
 });
 
 // GET /api/invitations/validate-code/:code  (public — used by the invite page)

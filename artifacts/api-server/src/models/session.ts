@@ -22,6 +22,7 @@ export interface ISession extends Document {
   riskScore: RiskScore;
   status: SessionStatus;
   visitedSections: string[];
+  sectionDurations: Map<string, number>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +47,7 @@ const sessionSchema = new mongoose.Schema<ISession>(
     riskScore: { type: String, enum: ["low","medium","high","critical"], default: "low" },
     status: { type: String, enum: ["active","expired","revoked","idle_timeout"], default: "active" },
     visitedSections: [{ type: String }],
+    sectionDurations: { type: Map, of: Number, default: {} },
   },
   { timestamps: true },
 );

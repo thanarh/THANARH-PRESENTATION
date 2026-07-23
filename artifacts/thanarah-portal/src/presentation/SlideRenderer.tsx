@@ -17,12 +17,12 @@ function SlideHero({ chapter, ar, en }: { chapter: string; ar: string; en?: stri
   return (
     <FadeIn>
       <ChapterBadge ar={chapter} en={chapter} />
-      <h1 dir="rtl" className="text-3xl sm:text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-4"
-        style={{ color: C.ink }}>
+      <h1 dir="rtl" className="text-xl sm:text-2xl md:text-3xl xl:text-4xl font-bold leading-[1.25] tracking-tight mb-3"
+        style={{ color: C.ink, whiteSpace: 'pre-line' }}>
         {ar}
       </h1>
       {en && (
-        <p className="text-base sm:text-lg font-medium" style={{ color: C.muted }}>{en}</p>
+        <p className="text-sm sm:text-base font-medium" style={{ color: C.muted }}>{en}</p>
       )}
     </FadeIn>
   );
@@ -41,18 +41,18 @@ function ItemGrid({ items, columns = 2 }: { items: { icon?: string; ar: string; 
   const cls = COL_CLASS[columns] ?? 'grid-cols-2';
   return (
     <motion.div variants={stagger} initial="hidden" animate="show"
-      className={`grid gap-3 md:gap-4 mt-6 md:mt-8 ${cls}`}>
+      className={`grid gap-2 md:gap-3 mt-4 md:mt-5 ${cls}`}>
       {items.map((item, i) => (
         <motion.div key={i} variants={fadeUp}
           dir="rtl"
-          className="rounded-2xl p-4 md:p-5 flex items-start gap-3"
+          className="rounded-xl p-3 md:p-4 flex items-start gap-2"
           style={{ background: ACCENT, border: `1px solid ${C.soft}50` }}>
           {item.icon && (
             <span className="text-lg md:text-xl mt-0.5 shrink-0">{item.icon}</span>
           )}
           <div>
-            <div className="font-bold text-sm md:text-base" style={{ color: C.ink }}>{item.ar}</div>
-            {item.sub && <div className="text-xs md:text-sm mt-1" style={{ color: C.muted }}>{item.sub}</div>}
+            <div className="font-bold text-xs md:text-sm" style={{ color: C.ink }}>{item.ar}</div>
+            {item.sub && <div className="text-xs mt-0.5" style={{ color: C.muted }}>{item.sub}</div>}
           </div>
         </motion.div>
       ))}
@@ -139,7 +139,7 @@ function SlideIntroduction() {
     { ar: 'النمو',      sub: 'Growth',          icon: '📈' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الأول — البداية والتهيئة"
         ar={'ثناره —\nمستقبل الرعاية\nمن منظومة واحدة'} />
       <FadeIn delay={0.15}>
@@ -179,7 +179,7 @@ function SlideProblem() {
     { ar: 'خسارة القرار',          sub: 'الإدارة لا ترى الصورة الكاملة لحظيًا',            icon: '📉' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الثاني — لماذا وُجدت ثناره؟"
         ar="المنشأة الطبية الحديثة\nتعمل عبر أنظمة كثيرة…\nلكنها لا تعمل كمنظومة واحدة."
         en="Too many systems. Zero integration." />
@@ -205,7 +205,7 @@ function SlideSolution() {
     'أدر منشأتك وراقب النمو',
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الثالث — ما هي ثناره؟"
         ar="ثناره — البنية الرقمية\nالكاملة للمنشأة الطبية"
         en="The complete digital operating system for healthcare." />
@@ -262,7 +262,7 @@ function SlideEcosystem() {
     { ar: 'اليوم الواحد', icon: '🏃' }, { ar: 'شركات التشغيل', icon: '⚙️' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الثالث — المنظومة"
         ar="Thanarah Core\nوحوله كل ما تحتاجه" />
       <FadeIn delay={0.1}>
@@ -290,7 +290,7 @@ function SlideCustomerJourney() {
     { ar: 'الدعم والتطوير المستمر',    sub: 'طلبات تعديل، تذاكر، فريق داخلي' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الخامس — رحلة العميل"
         ar="من أول نقرة\nإلى منشأة طبية رقمية متكاملة" />
       <FadeIn delay={0.1}>
@@ -323,7 +323,7 @@ function SlidePlans() {
     { ar: 'تدريب موظفين', icon: '🎓' }, { ar: 'تطوير مخصص', icon: '⚙️' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الخامس — الباقات"
         ar="باقة لكل حجم\nولكل احتياج" />
       <FadeIn delay={0.1}>
@@ -360,7 +360,7 @@ function SlideSmartClinic() {
     { ar: 'الموظفون والحضور',     sub: 'QR Login، Wallet Pass، ورديات',          icon: '👥' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل السادس — النظام الطبي"
         ar="العيادة الذكية —\nكل شيء في منظومة واحدة" />
       <FadeIn delay={0.1}>
@@ -383,7 +383,7 @@ function SlideWebsiteBuilder() {
     { ar: 'بريد مؤسسي مدمج',       icon: '✉️' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل السابع — الموقع الذكي"
         ar="موقعك الطبي\nيُنشأ خلال دقائق" />
       <FadeIn delay={0.1}>
@@ -426,7 +426,7 @@ function SlideWhatsappAI() {
     { ar: 'متاح 24/7', icon: '🕐' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الثامن — WhatsApp AI"
         ar="مساعد واتساب\nيحجز ويدفع ويخدم" />
       <FadeIn delay={0.1}>
@@ -477,7 +477,7 @@ function SlideApps() {
   ];
   const pipeline = ['اسم التطبيق وشعاره', 'الألوان والصفحات', 'Build تلقائي', 'Submission لمتاجر', 'Publish'];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل التاسع — التطبيقات"
         ar="مصنع التطبيقات —\nمن الموقع إلى iOS وAndroid" />
       <FadeIn delay={0.1}>
@@ -502,7 +502,7 @@ function SlideInternalOperations() {
     { ar: 'الموارد البشرية',   icon: '👥' }, { ar: 'الأمان',        icon: '🛡' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل العاشر — إدارة شركة ثناره"
         ar="منصة الإدارة المركزية —\nCommand Center" />
       <FadeIn delay={0.1}>
@@ -536,7 +536,7 @@ function SlideArchitecture() {
     { ar: 'Monitoring · Audit · Backup',  icon: '📊' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الثاني عشر — المعمارية التقنية"
         ar="بنية تقنية طبقية\nمحكمة وقابلة للتوسع" />
       <FadeIn delay={0.1}>
@@ -588,7 +588,7 @@ function SlideSecurity() {
     { ar: 'Risk Scoring',                sub: 'تقييم آلي لسلوك المستخدم',             icon: '📊' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الثالث عشر — الأمان"
         ar="طبقات حماية\nلا تراها — لكنها دائمًا موجودة" />
       <FadeIn delay={0.1}>
@@ -620,7 +620,7 @@ function SlideBusinessModel() {
   ];
   const growth = ['Lite', 'Pro', 'فروع إضافية', 'AI', 'تطبيق', 'تقارير متقدمة', 'Enterprise'];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الرابع عشر — نموذج الأعمال"
         ar="منصة تحقق الإيراد\nمن أكثر من مسار" />
       <FadeIn delay={0.1}>
@@ -667,7 +667,7 @@ function SlideMarket() {
     { ar: 'بيئة دفع وتطبيقات ناضجة', icon: '💳' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الخامس عشر — السوق والتوسع"
         ar="السوق السعودي\nنقطة الانطلاق لعالم أكبر" />
       <FadeIn delay={0.1}>
@@ -696,7 +696,7 @@ function SlideMarket() {
 // ─── Section: Competitive Advantages ─────────────────────────────────────────
 function SlideCompetitiveAdvantages() {
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الفصل الرابع — الفرق عن السوق"
         ar="لماذا يصعب\nتقليد ثناره؟" />
       <FadeIn delay={0.1}>
@@ -736,7 +736,7 @@ function SlideRoadmap() {
     { ar: 'Global Expansion', icon: '🌐' },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="خارطة الطريق"
         ar="المستقبل مبني\nعلى نفس الأساس" />
       <FadeIn delay={0.1}>
@@ -763,7 +763,7 @@ function SlideTimeline() {
     },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <SlideHero chapter="الخطة الزمنية"
         ar="ثلاثة أشهر\nمن الصفر إلى التشغيل" />
       <FadeIn delay={0.1}>
@@ -800,11 +800,11 @@ function SlideSummary() {
     { role: 'للعميل',   items: ['طلب تجربة', 'اختيار باقة', 'حجز عرض توضيحي'], icon: '🏥', color: C.dark },
   ];
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       <FadeIn>
-        <div className="text-center space-y-6">
-          <ThanarahIcon size={64} />
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight" style={{ color: C.ink }}>
+        <div className="text-center space-y-4">
+          <ThanarahIcon size={48} />
+          <h1 className="text-2xl md:text-3xl xl:text-4xl font-bold leading-tight" style={{ color: C.ink }}>
             نحن لا نبني نظامًا<br />
             <span style={{ color: C.primary }}>لإدارة العيادات.</span>
           </h1>

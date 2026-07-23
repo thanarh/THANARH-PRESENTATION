@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { authenticate, type AuthRequest } from "../lib/auth";
+import { authenticate, type AuthRequest, ADMIN_ROLES } from "../lib/auth";
 import PresentationSection from "../models/presentationSection";
 import Session from "../models/session";
 import { logAudit } from "../models/auditLog";
@@ -83,15 +83,56 @@ router.get("/progress", authenticate, async (req: AuthRequest, res: Response) =>
 // POST /api/presentation/progress
 router.post("/progress", authenticate, async (req: AuthRequest, res: Response) => {
   await connectDb();
-  const { sectionSlug } = req.body;
+  const { sectionSlug, duration } = req.body;
   if (!sectionSlug) {
     res.status(400).json({ error: "sectionSlug required" });
     return;
   }
 
-  await Session.findByIdAndUpdate(req.sessionId, { $addToSet: { visitedSections: sectionSlug }, lastActivityAt: new Date() });
+  const updateOp: any = { $addToSet: { visitedSections: sectionSlug }, lastActivityAt: new Date() };
+  if (duration && typeof duration === "number" && duration > 0 && duration < 7200) {
+    updateOp.$inc = { [`sectionDurations.${sectionSlug}`]: Math.round(duration) };
+  }
 
+  await Session.findByIdAndUpdate(req.sessionId, updateOp);
   res.json({ success: true, message: "Progress saved" });
+});
+
+// GET /api/presentation/analytics — admin: section engagement stats
+router.get("/analytics", authenticate, async (req: AuthRequest, res: Response) => {
+  await connectDb();
+  if (!ADMIN_ROLES.includes(req.userRole!)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const sessions = await Session.find({}, { sectionDurations: 1, visitedSections: 1, userId: 1 }).lean();
+
+  const durationMap: Record<string, number> = {};
+  const visitMap: Record<string, number> = {};
+
+  for (const s of sessions) {
+    for (const slug of s.visitedSections || []) {
+      visitMap[slug] = (visitMap[slug] || 0) + 1;
+    }
+    if (s.sectionDurations) {
+      for (const [slug, dur] of Object.entries(s.sectionDurations as any)) {
+        durationMap[slug] = (durationMap[slug] || 0) + (Number(dur) || 0);
+      }
+    }
+  }
+
+  const slugs = new Set([...Object.keys(durationMap), ...Object.keys(visitMap)]);
+  const result = Array.from(slugs)
+    .map(slug => ({
+      slug,
+      totalDurationSeconds: durationMap[slug] || 0,
+      visitCount: visitMap[slug] || 0,
+      avgDurationSeconds: visitMap[slug] ? Math.round((durationMap[slug] || 0) / visitMap[slug]) : 0,
+    }))
+    .sort((a, b) => b.totalDurationSeconds - a.totalDurationSeconds);
+
+  res.json(result);
 });
 
 export default router;

@@ -75,9 +75,10 @@ function getTransporter(): Transporter {
       user: process.env.SMTP_USERNAME || "noreply@thanarah.com",
       pass: process.env.SMTP_PASSWORD,
     },
-    connectionTimeout: 10_000,
-    greetingTimeout: 8_000,
-    socketTimeout: 15_000,
+    connectionTimeout: 30_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 30_000,
+    tls: { rejectUnauthorized: false },
   });
 
   return _transporter;

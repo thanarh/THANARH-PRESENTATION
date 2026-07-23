@@ -16,7 +16,7 @@ import { Loader2, ArrowRight, AlertCircle, CheckCircle2, Mail, Fingerprint, KeyR
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   passkeySupported, hasStoredPasskey, getPasskeyDisplayName,
-  registerPasskey, verifyPasskey,
+  registerPasskey, verifyPasskey, clearPasskey,
 } from '../utils/passkey';
 import {
   storePasskeyRefresh, getPasskeyRefresh,
@@ -404,7 +404,7 @@ export default function Login() {
     loginMutate({ data: values });
   };
 
-  // ── Invite code validate ───────────────────────────────────────────────────
+  // ── Invite code — direct login, no password needed ────────────────────────
   const handleInviteSubmit = async () => {
     const clean = inviteCode.trim().toUpperCase().replace(/\s/g, '');
     if (!clean) { setErrorMsg(isRtl ? 'أدخل كود الدعوة' : 'Enter your invite code'); return; }
@@ -412,14 +412,19 @@ export default function Login() {
     setInviteLoading(true);
     try {
       const base = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
-      const res  = await fetch(`${base}/api/invitations/validate-code/${encodeURIComponent(clean)}`);
+      const res  = await fetch(`${base}/api/invitations/enter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode: clean }),
+      });
       const data = await res.json();
       if (!res.ok) {
         setErrorMsg(data.error || (isRtl ? 'كود غير صحيح أو منتهي الصلاحية' : 'Invalid or expired invite code'));
         return;
       }
-      // Valid — go to invite acceptance page with code pre-filled
-      setLocation(`/invite?code=${encodeURIComponent(clean)}`);
+      // Direct login — no password step needed
+      authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
+      doRedirect(data.user.role);
     } catch {
       setErrorMsg(isRtl ? 'حدث خطأ، حاول مرة أخرى' : 'Error occurred, please try again');
     } finally {
@@ -466,7 +471,11 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!res.ok) throw new Error('refresh failed');
+      if (!res.ok) {
+        // Session expired — clear stored passkey so next visit shows clean state
+        clearPasskey();
+        throw new Error('session expired');
+      }
       const data = await res.json();
       const meRes = await fetch(`${base}/api/auth/me`, { headers: { Authorization: `Bearer ${data.accessToken}` } });
       if (!meRes.ok) throw new Error('me failed');
@@ -474,8 +483,12 @@ export default function Login() {
       authLogin(userProfile, { accessToken: data.accessToken, refreshToken: data.refreshToken });
       doRedirect(userProfile.role);
     } catch (e: any) {
-      if (!String(e).includes('biometric failed')) {
-        setErrorMsg(isRtl ? 'انتهت الجلسة، أعد تسجيل الدخول بكلمة المرور' : 'Session expired. Use your password.');
+      const msg = String(e);
+      if (msg.includes('session expired')) {
+        setErrorMsg(isRtl ? 'انتهت جلستك، سجّل دخولك بكلمة المرور مجدداً' : 'Session expired. Sign in with password.');
+        setMode('email');
+      } else if (!msg.includes('biometric failed')) {
+        setErrorMsg(isRtl ? 'تعذّر التحقق، أعد المحاولة' : 'Verification failed. Try again.');
         setMode('email');
       } else {
         setErrorMsg('');

@@ -247,6 +247,7 @@ export function MobilePresentationShell({
   const [screenshotWarn, setScreenshotWarn] = useState(false);
   const [playing, setPlaying]               = useState(true);
   const [countdown, setCountdown]           = useState(AUTO_ADVANCE_SECONDS);
+  const [contentBlurred, setContentBlurred] = useState(false);
 
   const { data: sections } = useListPresentationSections();
   const { data: progress } = useGetPresentationProgress({ query: { enabled: !!user } as any });
@@ -281,6 +282,21 @@ export function MobilePresentationShell({
     const id = setInterval(() => setCountdown(c => c - 1), 1000);
     return () => clearInterval(id);
   }, [playing, countdown, nextSection, setLocation]);
+
+  // ── Blur content when tab is switched ────────────────────────────────────
+  useEffect(() => {
+    const handleVisibility = () => setContentBlurred(document.hidden);
+    const handleBlur = () => setContentBlurred(true);
+    const handleFocus = () => setContentBlurred(false);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   // ── Screenshot deterrent ──────────────────────────────────────────────────
   const showScreenshotWarning = useCallback(() => {
@@ -353,6 +369,23 @@ export function MobilePresentationShell({
 
       <Watermark />
       <SessionTimer />
+
+      {/* ── Blur overlay ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {contentBlurred && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[99998] flex items-center justify-center"
+            style={{ backdropFilter: 'blur(40px)', background: 'rgba(4,12,8,0.88)' }}
+          >
+            <div className="text-center space-y-2">
+              <div className="text-4xl">🔒</div>
+              <p dir="rtl" className="text-white font-bold">المحتوى مخفي أثناء غيابك</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Screenshot warning ────────────────────────────────────── */}
       <AnimatePresence>
