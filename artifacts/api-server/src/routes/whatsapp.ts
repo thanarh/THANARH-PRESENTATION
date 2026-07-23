@@ -80,12 +80,24 @@ router.post("/cancel-reply", (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// POST /api/whatsapp/send — send a manual message
+// POST /api/whatsapp/send — send a manual text message
 router.post("/send", async (req: Request, res: Response) => {
   const { jid, text } = req.body;
   if (!jid || !text) { res.status(400).json({ error: "jid and text required" }); return; }
   try {
     await whatsappService.sendMessage(jid, text);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/whatsapp/send-image — send an image by URL with optional caption
+router.post("/send-image", async (req: Request, res: Response) => {
+  const { jid, imageUrl, caption } = req.body;
+  if (!jid || !imageUrl) { res.status(400).json({ error: "jid and imageUrl required" }); return; }
+  try {
+    await whatsappService.sendImage(jid, imageUrl, caption ?? "");
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

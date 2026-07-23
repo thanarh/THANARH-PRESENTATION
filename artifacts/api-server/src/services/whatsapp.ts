@@ -32,7 +32,9 @@ export interface WAMessage {
   timestamp: number;
   direction: "in" | "out";
   aiReplied: boolean;
-  pending: boolean;       // waiting for 60s timer
+  pending: boolean;       // waiting for auto-reply timer
+  mediaUrl?: string;
+  mediaType?: "image";
 }
 
 const AUTO_REPLY_DELAY_MS = 0; // immediate reply
@@ -214,7 +216,7 @@ class WhatsAppService extends EventEmitter {
     if (!this.sock || this._status !== "connected") throw new Error("Not connected");
     await this.sock.sendMessage(jid, { text });
     this.cancelPendingReply(jid);
-    this.messages.unshift({
+    const outMsg: WAMessage = {
       id: `manual-${Date.now()}`,
       from: jid,
       fromName: "الفريق",
@@ -223,7 +225,29 @@ class WhatsAppService extends EventEmitter {
       direction: "out",
       aiReplied: false,
       pending: false,
-    });
+    };
+    this.messages.unshift(outMsg);
+    this.emit("message", outMsg);
+  }
+
+  async sendImage(jid: string, imageUrl: string, caption = "") {
+    if (!this.sock || this._status !== "connected") throw new Error("Not connected");
+    await this.sock.sendMessage(jid, { image: { url: imageUrl }, caption });
+    this.cancelPendingReply(jid);
+    const outMsg: WAMessage = {
+      id: `img-${Date.now()}`,
+      from: jid,
+      fromName: "الفريق",
+      body: caption ? `🖼️ ${caption}` : "🖼️ صورة",
+      timestamp: Date.now(),
+      direction: "out",
+      aiReplied: false,
+      pending: false,
+      mediaUrl: imageUrl,
+      mediaType: "image",
+    };
+    this.messages.unshift(outMsg);
+    this.emit("message", outMsg);
   }
 
   async disconnect() {
