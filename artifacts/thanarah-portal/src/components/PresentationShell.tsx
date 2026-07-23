@@ -248,12 +248,12 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
         <div className="p-4 border-b border-sidebar-border bg-sidebar-accent/30">
           <div className="flex justify-between items-end mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('presentation')}</span>
-            <span className="text-xs font-bold text-primary">{completionPercent}%</span>
+            <span className="text-xs font-bold" style={{ color: '#B8960C' }}>{completionPercent}%</span>
           </div>
           <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-1000 ease-out"
-              style={{ width: `${completionPercent}%` }}
+            <div
+              className="h-full transition-all duration-1000 ease-out"
+              style={{ width: `${completionPercent}%`, background: '#B8960C' }}
             />
           </div>
         </div>
@@ -275,17 +275,24 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
                     </div>
                   ) : (
                     <Link href={`/presentation/${section.slug}`}>
-                      <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
-                        isActive 
-                          ? 'bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20' 
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                      }`}>
-                        <div className={`w-6 flex justify-center text-xs font-medium ${isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                          {idx + 1}
+                      <div
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all"
+                        style={isActive ? {
+                          background: '#1C1915',
+                          color: '#F7F5F1',
+                          fontWeight: 600,
+                          boxShadow: '0 2px 10px rgba(28,25,21,0.18)',
+                        } : {}}
+                      >
+                        <div
+                          className="w-6 flex justify-center text-xs font-medium"
+                          style={{ color: isActive ? 'rgba(247,245,241,0.7)' : '#B8960C' }}
+                        >
+                          {String(idx + 1).padStart(2, '0')}
                         </div>
                         <span className="flex-1 text-sm truncate">{isRtl ? section.titleAr : section.titleEn}</span>
                         {!isActive && hasViewed && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#B8960C', opacity: 0.6 }} />
                         )}
                       </div>
                     </Link>
@@ -344,7 +351,10 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
             {nextSection ? (
               !nextSection.isLocked ? (
                 <Link href={`/presentation/${nextSection.slug}`}>
-                  <button className="flex items-center gap-1.5 px-3 sm:px-6 py-2.5 sm:py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5 transition-all text-sm font-bold">
+                  <button
+                    className="flex items-center gap-1.5 px-3 sm:px-6 py-2.5 sm:py-3 rounded-full text-sm font-bold transition-all hover:brightness-110 hover:-translate-y-0.5"
+                    style={{ background: '#1C1915', color: '#F7F5F1', boxShadow: '0 4px 16px rgba(28,25,21,0.22)' }}
+                  >
                     <span className="max-w-[80px] sm:max-w-[140px] truncate">{isRtl ? nextSection.titleAr : nextSection.titleEn}</span>
                     {isRtl ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
                   </button>
@@ -357,7 +367,10 @@ export function PresentationShell({ children, currentSlug }: { children: React.R
               )
             ) : (
               <Link href="/dashboard">
-                <button className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5 transition-all text-sm font-bold">
+                <button
+                  className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-sm font-bold transition-all hover:brightness-110 hover:-translate-y-0.5"
+                  style={{ background: '#1C1915', color: '#F7F5F1', boxShadow: '0 4px 16px rgba(28,25,21,0.22)' }}
+                >
                   <span>{t('dashboard')}</span>
                 </button>
               </Link>
