@@ -639,30 +639,34 @@ export default function Login() {
                 </p>
               </div>
 
-              {/* Mode tabs — only shown when quick auth is available */}
-              {(hasPin || hasPasskey) && (
-                <div className="flex gap-1 mb-5 p-1 bg-muted rounded-xl">
-                  {hasPasskey && (
-                    <button onClick={() => { setErrorMsg(''); setMode('biometric'); handleBiometric(); }}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                      <Fingerprint className="w-3.5 h-3.5" />
-                      {isRtl ? 'البصمة' : 'Biometric'}
-                    </button>
-                  )}
-                  {hasPin && (
-                    <button onClick={() => { setErrorMsg(''); setMode('pin'); }}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'pin' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                      <KeyRound className="w-3.5 h-3.5" />
-                      PIN
-                    </button>
-                  )}
-                  <button onClick={() => { setErrorMsg(''); setMode('email'); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                    <Mail className="w-3.5 h-3.5" />
-                    {isRtl ? 'كلمة مرور' : 'Password'}
-                  </button>
-                </div>
-              )}
+              {/* Mode tabs — always visible */}
+              <div className="flex gap-1 mb-5 p-1 bg-muted rounded-xl">
+                <button
+                  onClick={() => {
+                    setErrorMsg('');
+                    if (hasPasskey) { setMode('biometric'); handleBiometric(); }
+                    else setMode('biometric');
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Fingerprint className="w-3.5 h-3.5" />
+                  {isRtl ? 'البصمة' : 'Biometric'}
+                </button>
+                <button
+                  onClick={() => { setErrorMsg(''); setMode('pin'); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'pin' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  PIN
+                </button>
+                <button
+                  onClick={() => { setErrorMsg(''); setMode('email'); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  {isRtl ? 'كلمة مرور' : 'Password'}
+                </button>
+              </div>
 
               {/* Error */}
               <AnimatePresence>
@@ -724,7 +728,28 @@ export default function Login() {
                 {/* ── PIN mode ────────────────────────────────────────── */}
                 {mode === 'pin' && (
                   <motion.div key="pin" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                    {pinLoading ? (
+                    {!hasPin ? (
+                      /* Not set up yet */
+                      <div className="flex flex-col items-center gap-4 py-6">
+                        <div className="w-20 h-20 rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
+                          <KeyRound className="w-9 h-9 text-muted-foreground/50" />
+                        </div>
+                        <div className="text-center space-y-1">
+                          <p className="font-semibold text-foreground text-sm">
+                            {isRtl ? 'رمز PIN غير مُفعَّل' : 'PIN not enabled'}
+                          </p>
+                          <p className="text-xs text-muted-foreground max-w-[220px]">
+                            {isRtl
+                              ? 'سجّل دخولك بكلمة المرور أولاً لإعداد رمز PIN'
+                              : 'Sign in with password first to set up your PIN'}
+                          </p>
+                        </div>
+                        <button onClick={() => { setErrorMsg(''); setMode('email'); }}
+                          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
+                          {isRtl ? 'تسجيل الدخول بكلمة المرور' : 'Use password instead'}
+                        </button>
+                      </div>
+                    ) : pinLoading ? (
                       <div className="flex flex-col items-center gap-3 py-8">
                         <Loader2 className="w-8 h-8 text-primary animate-spin" />
                         <p className="text-sm text-muted-foreground">{isRtl ? 'جاري التحقق…' : 'Verifying…'}</p>
@@ -743,30 +768,56 @@ export default function Login() {
                 {mode === 'biometric' && (
                   <motion.div key="biometric" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                     className="flex flex-col items-center gap-4 py-6">
-                    <motion.button
-                      onClick={handleBiometric}
-                      whileTap={{ scale: 0.95 }}
-                      disabled={bioLoading}
-                      className="w-20 h-20 rounded-full bg-primary/10 hover:bg-primary/20 border-2 border-primary/20 flex items-center justify-center transition-colors"
-                    >
-                      {bioLoading
-                        ? <Loader2 className="w-9 h-9 text-primary animate-spin" />
-                        : <Fingerprint className="w-9 h-9 text-primary" />}
-                    </motion.button>
-                    <div className="text-center">
-                      <p className="font-semibold text-foreground text-sm">
-                        {bioLoading
-                          ? (isRtl ? 'في انتظار المصادقة…' : 'Waiting for authentication…')
-                          : (isRtl ? 'المس المستشعر أو انظر إلى الكاميرا' : 'Touch sensor or look at camera')}
-                      </p>
-                      {passkeyName && (
-                        <p className="text-xs text-muted-foreground mt-1">{passkeyName}</p>
-                      )}
-                    </div>
-                    <button onClick={() => { setErrorMsg(''); setMode('email'); }}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      {isRtl ? 'استخدام كلمة المرور' : 'Use password instead'}
-                    </button>
+                    {!hasPasskey ? (
+                      /* Not set up yet */
+                      <>
+                        <div className="w-20 h-20 rounded-full bg-muted border-2 border-dashed border-border flex items-center justify-center">
+                          <Fingerprint className="w-9 h-9 text-muted-foreground/50" />
+                        </div>
+                        <div className="text-center space-y-1">
+                          <p className="font-semibold text-foreground text-sm">
+                            {isRtl ? 'البصمة غير مُفعَّلة' : 'Biometric not enabled'}
+                          </p>
+                          <p className="text-xs text-muted-foreground max-w-[220px]">
+                            {isRtl
+                              ? 'سجّل دخولك بكلمة المرور أولاً لتفعيل البصمة'
+                              : 'Sign in with password first to enable biometric login'}
+                          </p>
+                        </div>
+                        <button onClick={() => { setErrorMsg(''); setMode('email'); }}
+                          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
+                          {isRtl ? 'تسجيل الدخول بكلمة المرور' : 'Use password instead'}
+                        </button>
+                      </>
+                    ) : (
+                      /* Set up — ready to authenticate */
+                      <>
+                        <motion.button
+                          onClick={handleBiometric}
+                          whileTap={{ scale: 0.95 }}
+                          disabled={bioLoading}
+                          className="w-20 h-20 rounded-full bg-primary/10 hover:bg-primary/20 border-2 border-primary/20 flex items-center justify-center transition-colors"
+                        >
+                          {bioLoading
+                            ? <Loader2 className="w-9 h-9 text-primary animate-spin" />
+                            : <Fingerprint className="w-9 h-9 text-primary" />}
+                        </motion.button>
+                        <div className="text-center">
+                          <p className="font-semibold text-foreground text-sm">
+                            {bioLoading
+                              ? (isRtl ? 'في انتظار المصادقة…' : 'Waiting for authentication…')
+                              : (isRtl ? 'المس المستشعر أو انظر إلى الكاميرا' : 'Touch sensor or look at camera')}
+                          </p>
+                          {passkeyName && (
+                            <p className="text-xs text-muted-foreground mt-1">{passkeyName}</p>
+                          )}
+                        </div>
+                        <button onClick={() => { setErrorMsg(''); setMode('email'); }}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          {isRtl ? 'استخدام كلمة المرور' : 'Use password instead'}
+                        </button>
+                      </>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
