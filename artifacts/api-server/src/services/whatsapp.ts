@@ -16,6 +16,7 @@ import path from "path";
 import fs from "fs/promises";
 import { logger } from "../lib/logger";
 import { generateWhatsAppReply, type ChatMessage } from "./moonshot";
+import { isAdminPhone, handleAdminCommand } from "./waAdminCommands";
 
 // Store WhatsApp auth in a persistent workspace directory (not /tmp).
 // process.cwd() is artifacts/api-server/ when started via pnpm, so
@@ -157,13 +158,41 @@ class WhatsAppService extends EventEmitter {
         if (this.messages.length > 200) this.messages.length = 200;
         this.emit("message", waMsg);
 
-        logger.info({ from: jid, pushName, body }, "WhatsApp message received");
+        logger.info({ from: jid, pushName, body, isAdmin: isAdminPhone(jid) }, "WhatsApp message received");
 
+        // ── Admin command routing ────────────────────────────────────────────
+        if (isAdminPhone(jid)) {
+          waMsg.pending = false;
+          try {
+            const reply = await handleAdminCommand(body);
+            await this.sock?.sendMessage(jid, { text: reply });
+
+            const outMsg: WAMessage = {
+              id: `cmd-${Date.now()}`,
+              from: jid,
+              fromName: "⚙️ بوت ثناره",
+              body: reply,
+              timestamp: Date.now(),
+              direction: "out",
+              aiReplied: false,
+              pending: false,
+            };
+            this.messages.unshift(outMsg);
+            if (this.messages.length > 200) this.messages.length = 200;
+            this.emit("message", outMsg);
+            logger.info({ jid, cmd: body.split(" ")[0] }, "Admin command executed via WhatsApp");
+          } catch (err) {
+            logger.error({ err, jid }, "Admin command failed");
+            await this.sock?.sendMessage(jid, { text: "❌ حدث خطأ أثناء تنفيذ الأمر. راجع سجلات الخادم." }).catch(() => {});
+          }
+          continue; // Skip AI auto-reply for admin numbers
+        }
+
+        // ── AI auto-reply (non-admin contacts) ──────────────────────────────
         // Cancel any existing timer for this JID (new message resets it)
         const existing = this.pendingTimers.get(jid);
         if (existing) clearTimeout(existing);
 
-        // 60-second auto-reply timer
         const timer = setTimeout(async () => {
           this.pendingTimers.delete(jid);
           waMsg.pending = false;
