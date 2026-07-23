@@ -532,8 +532,8 @@ export default function Login() {
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="w-full max-w-md"
           >
-            <div className="bg-card border border-border rounded-2xl shadow-xl shadow-black/5 p-8 md:p-10 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-medium-green to-secondary" />
+            <div className="bg-card border border-border rounded-2xl shadow-xl shadow-black/5 p-5 sm:p-8 md:p-10 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-0.5" style={{ background: 'linear-gradient(to right, #1C1915, #B8960C, #1C1915)' }} />
 
               {/* Logo + title */}
               <div className="mb-6 text-center">
@@ -557,27 +557,39 @@ export default function Login() {
               {/* Mode tabs — hidden during MFA challenge */}
               {showTabs && (
                 <div className="flex gap-1 mb-5 p-1 bg-muted rounded-xl">
-                  <button
-                    onClick={() => { setErrorMsg(''); if (hasPasskey) { setMode('biometric'); handleBiometric(); } else setMode('biometric'); }}
-                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap overflow-hidden ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <Fingerprint className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{isRtl ? 'البصمة' : 'Biometric'}</span>
-                  </button>
-                  <button
-                    onClick={() => { setErrorMsg(''); setMode('invite'); }}
-                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap overflow-hidden ${mode === 'invite' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <KeyRound className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{isRtl ? 'الدعوة' : 'Invite'}</span>
-                  </button>
-                  <button
-                    onClick={() => { setErrorMsg(''); setMode('email'); }}
-                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap overflow-hidden ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <Mail className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{isRtl ? 'كلمة مرور' : 'Password'}</span>
-                  </button>
+                  {[
+                    {
+                      key: 'biometric' as const,
+                      icon: <Fingerprint className="w-4 h-4 shrink-0" />,
+                      label: isRtl ? 'بصمة' : 'Biometric',
+                      onClick: () => { setErrorMsg(''); setMode('biometric'); if (hasPasskey) handleBiometric(); },
+                    },
+                    {
+                      key: 'invite' as const,
+                      icon: <KeyRound className="w-4 h-4 shrink-0" />,
+                      label: isRtl ? 'دعوة' : 'Invite',
+                      onClick: () => { setErrorMsg(''); setMode('invite'); },
+                    },
+                    {
+                      key: 'email' as const,
+                      icon: <Mail className="w-4 h-4 shrink-0" />,
+                      label: isRtl ? 'دخول' : 'Login',
+                      onClick: () => { setErrorMsg(''); setMode('email'); },
+                    },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={tab.onClick}
+                      className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
+                        mode === tab.key
+                          ? 'bg-card shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {tab.icon}
+                      <span className="leading-tight">{tab.label}</span>
+                    </button>
+                  ))}
                 </div>
               )}
 

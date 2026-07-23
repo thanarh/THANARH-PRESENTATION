@@ -144,6 +144,9 @@ ${SEP}
   ← إرسال رسالة مخصصة فورياً
   _مثال: بريد ahmed@co.com موعدك غداً الساعة 10_
 
+*📱 إعدادات واتساب*
+▸ \`حسابات\` — عرض الأرقام والمسؤولين من قاعدة البيانات
+
 ${SEP}
 _🌐 كل الأوامر تعمل بالعربية والإنجليزية_
 _🕒 ${now()}_
@@ -510,6 +513,43 @@ async function cmdSendEmail(args: string[]): Promise<string> {
   }
 }
 
+// ── حسابات واتساب من قاعدة البيانات ──────────────────────────────────────────
+
+async function cmdWaAccounts(): Promise<string> {
+  await connectDb();
+
+  // Avoid circular import — dynamic import of the model only when called
+  const { default: WhatsAppAccount } = await import("../models/whatsappAccount.js");
+
+  const accounts = await (WhatsAppAccount as any)
+    .find()
+    .select("name phone enabled autoReplyEnabled responseTopics adminUsers")
+    .lean();
+
+  if (!accounts || accounts.length === 0) {
+    return `📱 لا توجد أرقام واتساب مهيأة في قاعدة البيانات بعد.\nأضفها من لوحة التحكم ← واتساب.`;
+  }
+
+  const lines = accounts.map((acc: any) => {
+    const status  = acc.enabled ? "🟢 مفعّل" : "🔴 موقوف";
+    const ai      = acc.autoReplyEnabled ? "🤖 رد تلقائي: نعم" : "✋ رد تلقائي: لا";
+    const topics  = acc.responseTopics?.length ? `📌 ${acc.responseTopics.join("، ")}` : "";
+    const admins  = acc.adminUsers?.length
+      ? acc.adminUsers.map((u: any) => `   👤 ${u.name} (+${u.phone}) ${u.enabled ? "✅" : "⛔"}`).join("\n")
+      : "   لا يوجد أدمن محدد";
+    return [
+      `*${acc.name}*`,
+      `📞 +${acc.phone || "غير محدد"}`,
+      status,
+      ai,
+      topics,
+      `*المستخدمون المسؤولون:*\n${admins}`,
+    ].filter(Boolean).join("\n");
+  }).join(`\n${SEP}\n`);
+
+  return `*📱 حسابات واتساب المهيأة (${accounts.length})*\n${SEP}\n\n${lines}\n${SEP}\n_🕒 ${now()}_`;
+}
+
 // ─── Main dispatcher ──────────────────────────────────────────────────────────
 
 /**
@@ -561,6 +601,10 @@ export async function handleAdminCommand(body: string): Promise<string> {
     // Send custom email
     if (["بريد", "email", "ايميل", "إيميل", "mail"].includes(cmd)) {
       return cmdSendEmail(args);
+    }
+    // WhatsApp accounts from DB
+    if (["حسابات", "ارقام", "أرقام", "accounts", "phones"].includes(cmd)) {
+      return cmdWaAccounts();
     }
     // Ping
     if (["ping", "بينق", "اختبار", "test"].includes(cmd)) {

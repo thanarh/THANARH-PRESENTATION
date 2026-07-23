@@ -53,6 +53,7 @@ const FROM_NAME     = "Thanarah";
 type MailStatus = "ok" | "degraded" | "unchecked";
 
 let _transporter: Transporter | null = null;
+let _transporterPass: string | undefined;   // track which password the cached transport was built with
 let _status: MailStatus = "unchecked";
 let _lastVerified: Date | null = null;
 let _lastError: string | null = null;
@@ -71,9 +72,13 @@ export function getMailStatus() {
   };
 }
 
-/** Lazy-initialise the shared Nodemailer transporter. */
+/** Lazy-initialise the shared Nodemailer transporter.
+ *  Recreates it whenever SMTP_PASSWORD changes (e.g. late-set via env) so a
+ *  server that started without the secret picks it up on the next send attempt.
+ */
 function getTransporter(): Transporter {
-  if (_transporter) return _transporter;
+  const currentPass = process.env.SMTP_PASSWORD;
+  if (_transporter && _transporterPass === currentPass) return _transporter;
 
   _transporter = nodemailer.createTransport({
     host: SMTP_HOST,
@@ -81,13 +86,14 @@ function getTransporter(): Transporter {
     secure: SMTP_SECURE,
     auth: {
       user: SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
+      pass: currentPass,
     },
     connectionTimeout: 30_000,
     greetingTimeout: 20_000,
     socketTimeout: 30_000,
     tls: { rejectUnauthorized: false },
   });
+  _transporterPass = currentPass;
 
   return _transporter;
 }
