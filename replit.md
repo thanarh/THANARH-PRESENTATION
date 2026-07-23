@@ -1,47 +1,72 @@
 # Thanarah Presentation Portal
 
-A secure, invitation-only presentation portal for the medical sector. Features multi-role access control, dynamic watermarking, session tracking, RTL/LTR multilingual support (AR/EN/TR/UR), and audit logging.
+A secure, invitation-only investor and partner presentation portal for Thanarah Medical-Tech.
 
-## Architecture
+## Stack
 
-pnpm monorepo with two main services:
+- **Frontend:** React 19, TypeScript, Vite 7, Tailwind CSS 4, shadcn/ui, Framer Motion, TanStack Query v5, Wouter
+- **Backend:** Express 5, Node.js 22+, Mongoose 9 (MongoDB Atlas)
+- **Tooling:** Orval (API client codegen from OpenAPI), esbuild, pnpm workspaces
+- **Auth:** JWT + httpOnly cookies, 8-tier RBAC (Owner → Viewer)
+- **Languages:** Arabic, English, Turkish, Urdu (RTL support)
 
-| Package | Description | Dev port |
-|---------|-------------|----------|
-| `@workspace/thanarah-portal` | React 19 + Vite 7 + Tailwind v4 frontend | 21287 |
-| `@workspace/api-server` | Express 5 + Mongoose + JWT backend | 8080 |
+## Running locally on Replit
 
-Shared libraries under `lib/`: `api-spec` (OpenAPI), `api-client-react` (generated hooks), `api-zod` (Zod schemas).
+Both workflows start automatically:
 
-## How to Run
+| Workflow | Service | Port |
+|---|---|---|
+| `artifacts/api-server: API Server` | Express API | 8080 |
+| `artifacts/thanarah-portal: web` | Vite frontend | 21287 |
 
-Dependencies are installed automatically. Two workflows run simultaneously:
+The API server builds via esbuild before starting (`pnpm run build && pnpm run start`).
 
-- **API Server** (`artifacts/api-server: API Server`) — builds with esbuild then starts
-- **Portal** (`artifacts/thanarah-portal: web`) — Vite dev server, proxies `/api` → port 8080
+## Seeding presentation content
 
-## Required Secrets (Replit Secrets)
+After the API server is running:
 
-| Secret | Purpose |
-|--------|---------|
+```bash
+pnpm --filter @workspace/api-server run seed
+```
+
+## Environment Variables
+
+All configured in Replit Secrets / Env Vars:
+
+| Variable | Purpose |
+|---|---|
 | `MONGODB_URI` | MongoDB Atlas connection string |
-| `JWT_SECRET` | Signs JWT access tokens |
-| `OWNER_SETUP_KEY` | One-time key for `/api/auth/setup` to create first admin |
-| `SMTP_PASSWORD` | cPanel SMTP password for `noreply@thanarah.com` |
-| `SESSION_SECRET` | ✅ Already set |
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+| `SESSION_SECRET` | Session tracking secret |
+| `OWNER_SETUP_KEY` | One-time key for initial owner creation |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` | cPanel SMTP (noreply@thanarah.com) |
+| `SMTP_FROM_EMAIL` / `SMTP_FROM_NAME` | Email sender identity |
+| `MAIL_PROVIDER` | Set to `CPANEL` |
+| `BASE_URL` / `FRONTEND_URL` | Public URL for links in emails |
+| `THANARAH_OWNER_EMAIL_1` / `THANARAH_OWNER_EMAIL_2` | Owner notification addresses |
+| `MONGODB_DATABASE_NAME` | `thanarah_presentation` |
 
-## Required Env Vars (already set)
+## Workspace structure
 
-`NODE_ENV`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`, `MONGODB_DATABASE_NAME`, `THANARAH_OWNER_EMAIL_1`, `THANARAH_OWNER_EMAIL_2`, `BASE_URL`, `FRONTEND_URL`
+```
+artifacts/
+  api-server/      — Express backend
+  thanarah-portal/ — React frontend
+lib/
+  api-spec/        — OpenAPI 3.1 specs
+  api-client-react/— Auto-generated TanStack Query hooks
+  api-zod/         — Auto-generated Zod schemas
+  db/              — Mongoose schemas and DB config
+```
 
-## Initial Setup (first run)
+## Regenerating API client
 
-After secrets are set:
-1. Visit `/setup` in the portal and use `OWNER_SETUP_KEY` to create the owner account
-2. Optionally seed demo data: `pnpm --filter @workspace/api-server run seed`
+After editing `lib/api-spec/openapi.yaml`:
+
+```bash
+pnpm run --filter @workspace/api-spec codegen
+```
 
 ## User Preferences
 
-- Splash screen replaced with simple centered icon spinner (LogoSpinner)
-- SMTP provider: cPanel (not SMTP2GO)
-- SMTP_PASSWORD must remain in Replit Secrets only
+- SMTP provider is cPanel (not SMTP2GO); SMTP_PASSWORD stored as Replit Secret

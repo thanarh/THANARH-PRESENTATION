@@ -11,6 +11,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@types/hapi__boom": "^9.0.1",
     "@whiskeysockets/baileys": "7.0.0-rc13",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
