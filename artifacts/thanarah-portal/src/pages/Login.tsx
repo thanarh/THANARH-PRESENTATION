@@ -823,7 +823,11 @@ export default function Login() {
               </AnimatePresence>
             </div>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            <div className="mt-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-4">
+              <a href="/visit-request" className="hover:text-primary transition-colors font-medium border-b border-transparent hover:border-primary pb-0.5">
+                {isRtl ? 'طلب زيارة' : 'Request a Visit'}
+              </a>
+              <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
               <span className="opacity-60">v1.0.0</span>
             </div>
           </motion.div>
