@@ -96,12 +96,14 @@ export default function InviteAccept() {
     defaultValues: { code: '' },
   });
 
+  const apiBase = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
+
   const onValidateCode = async (values: z.infer<typeof codeSchema>) => {
     setCodeError('');
     setCodeLoading(true);
     try {
       const clean = values.code.toUpperCase().replace(/\s/g, '');
-      const res = await fetch(`/api/invitations/validate-code/${encodeURIComponent(clean)}`);
+      const res = await fetch(`${apiBase}/api/invitations/validate-code/${encodeURIComponent(clean)}`);
       const data = await res.json();
       if (!res.ok) {
         setCodeError(data.error || 'كود غير صحيح');
@@ -127,7 +129,7 @@ export default function InviteAccept() {
     setAcceptError('');
     setAcceptLoading(true);
     try {
-      const res = await fetch('/api/invitations/accept', {
+      const res = await fetch(`${apiBase}/api/invitations/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

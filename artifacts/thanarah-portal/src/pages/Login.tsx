@@ -559,24 +559,24 @@ export default function Login() {
                 <div className="flex gap-1 mb-5 p-1 bg-muted rounded-xl">
                   <button
                     onClick={() => { setErrorMsg(''); if (hasPasskey) { setMode('biometric'); handleBiometric(); } else setMode('biometric'); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap overflow-hidden ${mode === 'biometric' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                   >
-                    <Fingerprint className="w-3.5 h-3.5" />
-                    {isRtl ? 'البصمة' : 'Biometric'}
+                    <Fingerprint className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{isRtl ? 'البصمة' : 'Biometric'}</span>
                   </button>
                   <button
                     onClick={() => { setErrorMsg(''); setMode('invite'); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'invite' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap overflow-hidden ${mode === 'invite' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                   >
-                    <KeyRound className="w-3.5 h-3.5" />
-                    {isRtl ? 'كود الدعوة' : 'Invite Code'}
+                    <KeyRound className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{isRtl ? 'الدعوة' : 'Invite'}</span>
                   </button>
                   <button
                     onClick={() => { setErrorMsg(''); setMode('email'); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap overflow-hidden ${mode === 'email' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                   >
-                    <Mail className="w-3.5 h-3.5" />
-                    {isRtl ? 'كلمة مرور' : 'Password'}
+                    <Mail className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{isRtl ? 'كلمة مرور' : 'Password'}</span>
                   </button>
                 </div>
               )}

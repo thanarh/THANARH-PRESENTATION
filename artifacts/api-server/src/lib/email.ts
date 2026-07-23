@@ -143,8 +143,16 @@ export async function sendEmail(opts: {
     return true;
   } catch (err: any) {
     logger.error(
-      { to: opts.to, subject: opts.subject, code: err?.code },
-      "Failed to send email",
+      {
+        to: opts.to,
+        subject: opts.subject,
+        smtpCode: err?.code,
+        smtpResponseCode: err?.responseCode,
+        smtpResponse: err?.response,
+        smtpCommand: err?.command,
+        errMessage: err?.message,
+      },
+      "Failed to send email — SMTP error details",
     );
     return false;
   }
