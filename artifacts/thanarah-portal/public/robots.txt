@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# This portal is private and not intended for public indexing.

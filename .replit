@@ -1,0 +1,79 @@
+modules = ["nodejs-20", "web", "bash"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+MONGODB_DATABASE_NAME = "thanarah_presentation"
+NODE_ENV = "development"
+SMTP2GO_HOST = "mail.smtp2go.com"
+SMTP2GO_PORT = "587"
+SMTP_FROM_EMAIL = "noreply@thanarah.com"
+SMTP_FROM_NAME = "Thanarah"
+THANARAH_OWNER_EMAIL_1 = "youssefd.business@gmail.com"
+THANARAH_OWNER_EMAIL_2 = "faisal.m.alenzai@gmail.com"
+MAIL_PROVIDER = "CPANEL"
+SMTP_HOST = "business197.web-hosting.com"
+SMTP_PORT = "465"
+SMTP_SECURE = "true"
+SMTP_USERNAME = "noreply@thanarah.com"
+BASE_URL = "https://c29fdafc-62cb-45e2-979f-b4881840009a-00-2umynhr2afvye.pike.replit.dev"
+FRONTEND_URL = "https://c29fdafc-62cb-45e2-979f-b4881840009a-00-2umynhr2afvye.pike.replit.dev"
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/api-server: API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/thanarah-portal: web"
+
+[[workflows.workflow]]
+name = "artifacts/api-server: API Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=8080 pnpm --filter @workspace/api-server run dev"
+waitForPort = 8080
+
+[[workflows.workflow]]
+name = "artifacts/thanarah-portal: web"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=21287 BASE_PATH=/ pnpm --filter @workspace/thanarah-portal run dev"
+waitForPort = 21287

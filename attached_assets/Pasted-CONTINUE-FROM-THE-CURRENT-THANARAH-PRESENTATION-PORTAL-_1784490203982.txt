@@ -1,0 +1,703 @@
+CONTINUE FROM THE CURRENT THANARAH PRESENTATION PORTAL CODEBASE.
+
+This is an incremental update only.
+
+Do not recreate the project.
+Do not reset MongoDB.
+Do not remove existing working pages.
+Do not replace the existing architecture.
+Review the current implementation, fix the issues below, and continue development carefully.
+
+All changes, comments, metadata and copyright must belong to:
+
+Thanarah Team
+فريق ثناره
+
+Do not mention Replit anywhere in the user interface, emails, metadata, README, comments, generated assets or footer.
+
+======================================================
+A. REPLACE THE CURRENT EMAIL CONFIGURATION
+======================================================
+
+Stop using SMTP2GO for this Presentation Portal.
+
+Use the official Thanarah cPanel business email through SMTP.
+
+Production sender:
+
+noreply@thanarah.com
+
+SMTP server:
+
+business197.web-hosting.com
+
+SMTP port:
+
+465
+
+Connection security:
+
+SSL/TLS
+
+secure: true
+
+The SMTP password must NEVER be written inside source code, README, GitHub, logs, database, client-side JavaScript or documentation.
+
+Read all credentials exclusively from server-side environment variables.
+
+Add these variables to .env.example without real values:
+
+MAIL_PROVIDER=CPANEL
+SMTP_HOST=business197.web-hosting.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USERNAME=noreply@thanarah.com
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=noreply@thanarah.com
+SMTP_FROM_NAME=Thanarah
+SMTP_REPLY_TO=
+EMAIL_QUEUE_ENABLED=true
+EMAIL_MAX_RETRIES=3
+EMAIL_RETRY_DELAY_MS=5000
+
+The real SMTP_PASSWORD will be added manually through Replit Secrets after changing the exposed password.
+
+Use Nodemailer with a reusable centralized transporter.
+
+Create a server-only mail module such as:
+
+src/server/mail/
+  mail-client.ts
+  mail-service.ts
+  mail-queue.ts
+  mail-types.ts
+  templates/
+  components/
+  localization/
+
+Do not create a new SMTP connection unnecessarily for every email.
+
+Verify the SMTP connection during startup, but do not crash the entire portal if SMTP is temporarily unavailable.
+
+If SMTP verification fails:
+
+- Keep the website running.
+- Mark the email service as degraded.
+- Record a sanitized internal error.
+- Do not log the SMTP password.
+- Retry safely.
+- Show the email service status only to authorized admins.
+- Allow an admin to send a test email.
+
+Implement:
+
+- Connection timeout.
+- Greeting timeout.
+- Socket timeout.
+- Retry with exponential backoff.
+- Email queue.
+- Delivery logging.
+- Duplicate-send protection.
+- Idempotency keys.
+- Rate limiting.
+- Sanitized errors.
+- Secure HTML escaping.
+
+Test the connection using:
+
+host: business197.web-hosting.com
+port: 465
+secure: true
+auth.user: SMTP_USERNAME
+auth.pass: SMTP_PASSWORD
+
+Do not use IMAP or POP3 because the portal needs outbound transactional email only.
+
+======================================================
+B. EMAIL DESIGN SYSTEM
+======================================================
+
+Redesign every system email to look premium, handcrafted and consistent with the Thanarah identity.
+
+The email must not look like a generic authentication email.
+
+Brand colors:
+
+Dark green:
+#0F3D33
+
+Primary green:
+#1E6B4D
+
+Soft green:
+#A9CBB5
+
+Off-white:
+#F7F5F1
+
+White:
+#FFFFFF
+
+Main text:
+#1A1A1A
+
+Muted text:
+#6B7280
+
+Every email must include:
+
+- Official Thanarah logo.
+- Off-white outer background.
+- White or softly tinted content card.
+- Refined green header.
+- Clear Arabic RTL support.
+- Correct English, Turkish and Urdu versions.
+- Responsive design.
+- Rounded content card.
+- Strong primary CTA.
+- Plain-text fallback.
+- Accessible alt text.
+- Safe system fonts.
+- No external company branding.
+- No Replit reference.
+- No SMTP provider reference.
+- No exposed technical information.
+- No password sent in email.
+- No sensitive token written as visible plain text unless absolutely required.
+
+Email footer:
+
+ثناره — تقنية تخدم الإنسان  
+Thanarah — Technology Serving People
+
+© 2026 Thanarah Team. All rights reserved.
+
+Add a confidentiality note to invitation and presentation emails:
+
+هذه الدعوة شخصية ومخصصة للمستلم فقط. يرجى عدم مشاركتها أو إعادة توجيهها.
+
+This invitation is personal and intended only for its recipient. Do not share or forward it.
+
+======================================================
+C. USE THE SPLASH VIDEO AS THE EMAIL VISUAL BANNER
+======================================================
+
+Use the same approved Thanarah intro video used by the website splash screen as the visual concept for the email banner.
+
+Important technical limitation:
+
+Most email clients do not reliably support autoplay video or embedded HTML5 video.
+
+Therefore, do not depend on an embedded video element as the only email banner.
+
+Implement a reliable multi-format solution:
+
+1. Create an animated email banner derived from the approved splash video:
+   - Optimized animated GIF when file size is acceptable.
+   - Short duration.
+   - Smooth loop.
+   - High visual quality.
+   - No audio.
+   - Thanarah logo clearly visible.
+   - No flashing.
+   - Keep the file reasonably small for email delivery.
+
+2. Create a static poster fallback:
+   - PNG or JPG.
+   - Same first or strongest frame from the splash video.
+   - Thanarah logo included.
+   - Premium off-white and green appearance.
+
+3. The banner must be clickable:
+   - It opens the secure portal or the invitation URL.
+   - Never expose a raw private media URL.
+   - Invitation emails link to the secure invitation page.
+
+4. Use safe email markup:
+   - Display the animated GIF for compatible clients.
+   - Use the static poster as a fallback.
+   - Do not assume embedded video works in Gmail, Outlook or all mobile clients.
+
+5. Do not attach the full video to every email.
+
+6. Host the email banner through a secure public brand-assets route or trusted CDN.
+
+7. The splash video itself remains protected in the application where required.
+
+Create brand assets:
+
+public/brand/email/
+  thanarah-email-banner.gif
+  thanarah-email-banner-poster.webp
+  thanarah-email-header-logo.png
+  thanarah-email-footer-symbol.png
+
+If the approved video file already exists in the current project, reuse it as the source.
+
+Do not invent another video.
+
+If the video is not found, create a clearly named placeholder reference and report exactly which path is required instead of silently using a random asset.
+
+======================================================
+D. EMAIL TEMPLATE STRUCTURE
+======================================================
+
+Create shared reusable email components:
+
+EmailShell
+EmailHeader
+AnimatedBanner
+StaticBannerFallback
+EmailTitle
+EmailParagraph
+EmailDetailsCard
+EmailSecurityNotice
+EmailPrimaryButton
+EmailSecondaryLink
+EmailFooter
+
+Create templates for:
+
+- Presentation invitation.
+- Invitation reminder.
+- Invitation expiration warning.
+- Invitation extended.
+- Invitation revoked.
+- Account setup.
+- Welcome.
+- Email verification.
+- Password reset.
+- Password changed.
+- New-device login.
+- Suspicious login.
+- MFA enabled.
+- MFA disabled.
+- Session revoked.
+- Presentation opened.
+- Unauthorized access attempt.
+- Administrator security alert.
+- Visit request received.
+- Visit request confirmation.
+- Test email.
+
+Each template must have:
+
+- Arabic.
+- English.
+- Turkish.
+- Urdu.
+- Subject.
+- Preheader.
+- HTML version.
+- Plain-text version.
+- Correct RTL or LTR direction.
+- Localized date and time.
+- Localized button text.
+- Secure expiration details.
+
+======================================================
+E. INVITATION EMAIL EXPERIENCE
+======================================================
+
+The invitation email must feel like the beginning of the Thanarah presentation experience.
+
+Arabic subject:
+
+دعوة خاصة للدخول إلى تجربة ثناره
+
+English subject:
+
+Your Private Invitation to the Thanarah Experience
+
+Arabic preheader:
+
+رحلة خاصة نحو مستقبل طبي أكثر ذكاءً وتكاملًا.
+
+Layout:
+
+1. Thanarah logo.
+2. Animated splash-inspired banner.
+3. Personalized greeting.
+4. Short introduction.
+5. Invitation details card.
+6. Main CTA.
+7. Security and confidentiality notice.
+8. Expiration date.
+9. Footer.
+
+Arabic content concept:
+
+مرحبًا {{inviteeName}}،
+
+تمت دعوتك للدخول إلى تجربة ثناره الخاصة، حيث نعرض رؤيتنا نحو مستقبل طبي أكثر ذكاءً وتكاملًا وإنسانية.
+
+هذه الدعوة مرتبطة ببريدك وجلسة دخول آمنة، وهي مخصصة لك فقط.
+
+صلاحية الدعوة:
+{{expiresAt}}
+
+زر الدعوة:
+
+دخول تجربة ثناره
+
+Do not include confidential project details inside the email.
+
+The email should invite the recipient into the secure portal, not explain the whole project.
+
+======================================================
+F. PASSWORD RESET AND AUTHENTICATION EMAIL FIXES
+======================================================
+
+The current forgot-password and reset-password flows are not working correctly.
+
+Audit and repair the entire flow:
+
+1. User enters their email.
+2. Always show a generic response to prevent email enumeration.
+3. Generate a cryptographically secure reset token.
+4. Store only its hash in MongoDB.
+5. Add a short expiration time.
+6. Invalidate previous unused reset tokens.
+7. Send the reset link using the new cPanel SMTP service.
+8. Open the localized reset-password page.
+9. Validate the token server-side.
+10. Validate password requirements.
+11. Hash the new password using Argon2id.
+12. Invalidate all active reset tokens.
+13. Optionally revoke existing sessions.
+14. Send password-change confirmation.
+15. Record an Audit Log.
+16. Record suspicious repeated attempts as Security Events.
+
+Password requirements:
+
+- At least 12 characters.
+- One uppercase letter.
+- One lowercase letter.
+- One number.
+- One special character.
+- Confirm-password matching.
+- Localized live feedback.
+- Password-strength meter.
+- Server-side validation identical to client validation.
+- No password value in logs.
+- No token in analytics.
+
+Test:
+
+- Valid request.
+- Unknown email.
+- Expired token.
+- Reused token.
+- Invalid token.
+- Weak password.
+- Mismatching password.
+- Successful reset.
+- Login with new password.
+- Old password rejection.
+
+======================================================
+G. SPLASH SCREEN VIDEO
+======================================================
+
+The approved video must appear as a full-screen splash experience when opening the portal.
+
+Use the exact uploaded or existing approved Thanarah video.
+
+Do not replace it with a random generated animation.
+
+Splash behavior:
+
+- Full viewport.
+- Off-white fallback background.
+- Autoplay.
+- Muted.
+- playsInline.
+- No browser controls.
+- preserveAspectRatio: cover.
+- Correct on desktop and mobile.
+- Logo poster displayed while loading.
+- Smooth fade-in.
+- Smooth fade-out.
+- Skip button appears after a configurable delay.
+- Continue automatically when playback ends.
+- Continue safely if video playback fails.
+- Do not trap the user on loading errors.
+- Respect prefers-reduced-motion.
+- Record only a basic completed/skipped state, not unnecessary private tracking.
+
+Playback policy:
+
+- Show on the first unauthenticated visit.
+- Show after explicit logout if configured.
+- Do not replay on every refresh.
+- Add an admin-controlled setting to enable, disable or force replay.
+- Store only non-sensitive display preference locally.
+- Do not use local storage for authentication.
+
+Expected asset paths:
+
+public/brand/splash/thanarah-intro.mp4
+public/brand/splash/thanarah-intro.webm
+public/brand/splash/thanarah-intro-poster.webp
+
+If the current project contains the video under another name:
+
+- Locate it.
+- Move or copy it to the standardized path.
+- Preserve the original.
+- Optimize an additional web version.
+- Do not reduce the master asset quality.
+
+======================================================
+H. FAVICON AND DOMAIN LOGO
+======================================================
+
+The Thanarah icon still does not appear beside the domain in the browser tab.
+
+Fix the complete favicon chain using the official icon only.
+
+Create or verify:
+
+public/favicon.ico
+public/favicon-16x16.png
+public/favicon-32x32.png
+public/apple-touch-icon.png
+public/android-chrome-192x192.png
+public/android-chrome-512x512.png
+public/maskable-icon-512x512.png
+public/safari-pinned-tab.svg
+public/site.webmanifest
+
+Update Next.js metadata and manifest references.
+
+Add cache-busting or versioned metadata if the old favicon remains cached.
+
+Verify:
+
+- Desktop Chrome.
+- Safari.
+- Mobile Chrome.
+- iOS home screen.
+- Installed PWA.
+- Production domain.
+- Development preview.
+
+The icon must not contain excessive empty margins and must remain recognizable at 16×16.
+
+======================================================
+I. ADMIN LOGIN AND INITIAL ADMIN SETUP
+======================================================
+
+Admin login currently fails.
+
+Do not create another duplicate authentication system.
+
+Inspect and fix the current implementation.
+
+Validate:
+
+- MongoDB connection.
+- User schema.
+- Email normalization.
+- Password hashing algorithm.
+- Password verification.
+- Cookie domain.
+- Cookie secure setting.
+- SameSite policy.
+- Session persistence.
+- API base URL.
+- CORS where applicable.
+- Role assignment.
+- Permission loading.
+- Redirect after login.
+- Client/server environment mismatch.
+- Expired session handling.
+- Production HTTPS behavior.
+
+Create a safe recovery process for the two initial administrator accounts defined through:
+
+THANARAH_OWNER_EMAIL
+THANARAH_ADMIN_EMAIL
+
+Do not expose either address publicly.
+
+If an administrator record exists but has no usable password:
+
+- Create a one-time account setup token.
+- Store only the hash.
+- Send the setup email through the new official SMTP account.
+- Require MFA setup.
+- Expire the token.
+- Invalidate it after use.
+
+Do not use a fixed public setup key.
+
+Remove or disable any previously hardcoded setup key such as:
+
+THANARH-IS-THE-TOP-HEALTH-SYSTEM
+
+The setup route must return 404 or 410 after successful initialization.
+
+======================================================
+J. LANGUAGE COMPLETION
+======================================================
+
+The current portal does not work fully in every advertised language.
+
+Audit every page and every string.
+
+Supported languages:
+
+ar
+en
+tr
+ur
+
+Arabic and Urdu:
+RTL
+
+English and Turkish:
+LTR
+
+Translate:
+
+- Authentication.
+- Dashboard.
+- Presentation.
+- Admin.
+- Invitations.
+- Sessions.
+- Security center.
+- CMS.
+- Form validation.
+- Errors.
+- Empty states.
+- Loading states.
+- Email templates.
+- Metadata.
+- Dates.
+- Relative time.
+- Notifications.
+- Confirmation dialogs.
+
+Do not display translation keys to users.
+
+Add a development check that detects missing translations.
+
+Arabic remains the default language.
+
+======================================================
+K. EMAIL ADMIN SETTINGS
+======================================================
+
+Add an authorized admin-only email settings page.
+
+Route:
+
+/admin/email-settings
+
+Display only safe configuration:
+
+- Provider: cPanel SMTP.
+- Sender: noreply@thanarah.com.
+- Host status.
+- Port.
+- TLS status.
+- Last successful verification.
+- Last email attempt.
+- Delivery statistics.
+- Queue status.
+- Failed emails.
+- Retry action.
+- Send test email action.
+
+Never display:
+
+- SMTP password.
+- MongoDB URI.
+- Environment secrets.
+- Full reset tokens.
+- Full invitation tokens.
+
+Allow admins to preview every localized email template.
+
+Allow banner preview:
+
+- Animated version.
+- Static fallback.
+- Mobile preview.
+- Desktop preview.
+- Dark-mode client preview where possible.
+
+======================================================
+L. SECURITY REQUIREMENTS
+======================================================
+
+Because SMTP credentials were previously exposed, treat the old password as compromised.
+
+Do not use the old password.
+
+Use only the newly rotated password from Replit Secrets.
+
+Add secret scanning prevention:
+
+- Ensure .env files are ignored.
+- Ensure email credentials are absent from Git history.
+- Search the repository for the previously exposed password and remove it.
+- If it was committed, rotate the password and clean Git history where appropriate.
+- Do not print secrets in deployment output.
+- Redact credentials from errors.
+- Never send secrets to the browser.
+
+======================================================
+M. REQUIRED TESTING BEFORE COMPLETION
+======================================================
+
+Do not report completion until the following are tested:
+
+1. SMTP connection succeeds with the new rotated password.
+2. Test email arrives from noreply@thanarah.com.
+3. Logo appears correctly in the email.
+4. Animated banner works where supported.
+5. Static poster fallback appears where animation is unsupported.
+6. Invitation email opens the correct secure invitation.
+7. Password-reset email arrives.
+8. Password-reset token works once.
+9. Admin setup email arrives.
+10. Admin login succeeds.
+11. Owner login succeeds.
+12. Logout works.
+13. Splash video plays.
+14. Splash skip works.
+15. Splash failure fallback works.
+16. Favicon appears beside the domain.
+17. Arabic is complete and RTL.
+18. English is complete and LTR.
+19. Turkish is complete and LTR.
+20. Urdu is complete and RTL.
+21. No Replit branding appears.
+22. No credentials appear in GitHub.
+23. No broken images or placeholder text remain.
+24. Production build passes.
+25. TypeScript passes without suppressing real errors.
+
+======================================================
+N. FINAL REPORT
+======================================================
+
+After implementation, provide a factual report containing:
+
+- Files changed.
+- Bugs fixed.
+- Environment variables required.
+- SMTP test result.
+- Authentication test result.
+- Splash video path used.
+- Email banner assets created.
+- Favicon assets created.
+- Languages completed.
+- Remaining limitations.
+- Exact manual actions still required from the owner.
+
+Do not claim that something works unless it was actually tested.

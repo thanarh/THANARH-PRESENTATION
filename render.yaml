@@ -1,0 +1,61 @@
+###############################################################
+# render.yaml — Thanarah Presentation Portal
+#
+# Single service: the Express API server builds the Vite SPA
+# and serves it as static files.  No separate static-site
+# service is needed — everything runs from one Node.js process.
+#
+# Required env vars (set in the Render dashboard):
+#   MONGODB_URI, SESSION_SECRET, JWT_SECRET
+#   SMTP_PASSWORD        — cPanel SMTP password
+#   BASE_URL             — public URL of this service, e.g.
+#                          https://thanarah-portal.onrender.com
+#                          (used in password-reset links)
+###############################################################
+
+services:
+  - type: web
+    name: thanarah-portal
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: .
+    buildCommand: >
+      corepack enable &&
+      corepack prepare pnpm@latest --activate &&
+      pnpm install --frozen-lockfile &&
+      BASE_PATH=/ NODE_ENV=production
+      pnpm --filter @workspace/thanarah-portal run build &&
+      pnpm --filter @workspace/api-server run build
+    startCommand: >-
+      pnpm --filter @workspace/api-server run seed ;
+      node --enable-source-maps ./artifacts/api-server/dist/index.mjs
+    healthCheckPath: /api/healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # ── SMTP (cPanel) — only the password is needed; all other
+      #    SMTP settings are hardcoded in artifacts/api-server/src/lib/email.ts
+      # ── MongoDB ──────────────────────────────────────────────
+      - key: MONGODB_DATABASE_NAME
+        value: thanarah_presentation
+      # ── Secrets (set in Render dashboard, not here) ──────────
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: BASE_URL
+        sync: false        # e.g. https://thanarah-portal.onrender.com
+      - key: FRONTEND_URL
+        sync: false        # same value as BASE_URL
+      - key: THANARAH_OWNER_EMAIL_1
+        sync: false
+      - key: THANARAH_OWNER_EMAIL_2
+        sync: false

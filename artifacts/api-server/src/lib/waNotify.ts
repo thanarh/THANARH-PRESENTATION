@@ -1,0 +1,99 @@
+/**
+ * waNotify — fire-and-forget WhatsApp notification helpers.
+ *
+ * All functions are safe to call regardless of whether WhatsApp is connected;
+ * failures are logged as warnings and never propagate to the caller.
+ */
+import { whatsappService } from "../services/whatsapp";
+import { logger } from "./logger";
+
+/** Convert a digits-only phone number to a WhatsApp JID */
+function toJid(phone: string): string {
+  const clean = phone.replace(/\D/g, "");
+  return `${clean}@s.whatsapp.net`;
+}
+
+/** Send a raw text message — silent on failure */
+export async function notifyWa(phone: string, message: string): Promise<void> {
+  try {
+    await whatsappService.sendMessage(toJid(phone), message);
+  } catch (err) {
+    logger.warn({ phone, err }, "WA notification skipped (non-fatal)");
+  }
+}
+
+// ── Pre-built notification templates ─────────────────────────────────────────
+
+export async function notifyWaOtp(phone: string, code: string, lang: "ar" | "en" = "ar"): Promise<void> {
+  const msg =
+    lang === "ar"
+      ? `🔐 *ثناية — رمز التحقق*\n\nرمزك لتسجيل الدخول:\n\n*${code}*\n\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
+      : `🔐 *Thanarah — Verification Code*\n\nYour sign-in code:\n\n*${code}*\n\nValid for 5 minutes. Do not share it.`;
+  await notifyWa(phone, msg);
+}
+
+export async function notifyWaLoginAlert(
+  phone: string,
+  name: string,
+  ip: string,
+  device: string,
+  lang: "ar" | "en" = "ar"
+): Promise<void> {
+  const msg =
+    lang === "ar"
+      ? `⚠️ *تنبيه دخول — ثناية*\n\nمرحباً ${name}،\nتم تسجيل دخول جديد إلى حسابك.\n\n📱 الجهاز: ${device}\n🌐 IP: ${ip}\n\nإذا لم تكن أنت، غيّر كلمة مرورك فوراً.`
+      : `⚠️ *Login Alert — Thanarah*\n\nHello ${name},\nA new sign-in was detected on your account.\n\n📱 Device: ${device}\n🌐 IP: ${ip}\n\nIf this wasn't you, change your password immediately.`;
+  await notifyWa(phone, msg);
+}
+
+export async function notifyWaPasswordReset(
+  phone: string,
+  name: string,
+  lang: "ar" | "en" = "ar"
+): Promise<void> {
+  const msg =
+    lang === "ar"
+      ? `🔑 *إعادة تعيين كلمة المرور — ثناية*\n\nمرحباً ${name}،\nتم طلب إعادة تعيين كلمة مرور حسابك.\n\nإذا لم تطلب ذلك، تجاهل هذا الإشعار.`
+      : `🔑 *Password Reset — Thanarah*\n\nHello ${name},\nA password reset was requested for your account.\n\nIf you didn't request this, you can ignore this message.`;
+  await notifyWa(phone, msg);
+}
+
+export async function notifyWaInvitationSent(
+  adminPhone: string,
+  inviteeName: string,
+  role: string,
+  lang: "ar" | "en" = "ar"
+): Promise<void> {
+  const msg =
+    lang === "ar"
+      ? `📨 *دعوة جديدة — ثناية*\n\nتم إرسال دعوة إلى *${inviteeName}*\nالدور: ${role}\n\nيمكنك متابعة الدعوات من لوحة الإدارة.`
+      : `📨 *New Invitation — Thanarah*\n\nAn invitation was sent to *${inviteeName}*\nRole: ${role}\n\nTrack invitations from the admin panel.`;
+  await notifyWa(adminPhone, msg);
+}
+
+export async function notifyWaInvitationReceived(
+  userPhone: string,
+  inviteeName: string,
+  inviteCode: string,
+  portalUrl: string,
+  lang: "ar" | "en" = "ar"
+): Promise<void> {
+  const msg =
+    lang === "ar"
+      ? `🌟 *دعوة إلى بوابة ثناية*\n\nأهلاً ${inviteeName}،\nتمت دعوتك للوصول إلى البوابة التقديمية لثناية.\n\n🔑 كود الدعوة: *${inviteCode}*\n🔗 الرابط: ${portalUrl}\n\nاستخدم الكود أو الرابط لتفعيل حسابك.`
+      : `🌟 *Invitation to Thanarah Portal*\n\nHello ${inviteeName},\nYou've been invited to access the Thanarah presentation portal.\n\n🔑 Invite Code: *${inviteCode}*\n🔗 Portal: ${portalUrl}\n\nUse the code or link to activate your account.`;
+  await notifyWa(userPhone, msg);
+}
+
+export async function notifyWaSystemUpdate(
+  phone: string,
+  title: string,
+  body: string,
+  lang: "ar" | "en" = "ar"
+): Promise<void> {
+  const msg =
+    lang === "ar"
+      ? `📢 *${title} — ثناية*\n\n${body}`
+      : `📢 *${title} — Thanarah*\n\n${body}`;
+  await notifyWa(phone, msg);
+}
