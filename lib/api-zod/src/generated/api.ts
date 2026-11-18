@@ -29,10 +29,13 @@ export const LoginBody = zod.object({
 })
 
 export const LoginResponse = zod.object({
+  "accessToken": zod.string().optional(),
+  "refreshToken": zod.string().optional(),
   "user": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "permissions": zod.array(zod.string()),
   "allowedSections": zod.array(zod.string()),
@@ -59,10 +62,13 @@ export const LogoutResponse = zod.object({
  * @summary Refresh access token
  */
 export const RefreshTokenResponse = zod.object({
+  "accessToken": zod.string().optional(),
+  "refreshToken": zod.string().optional(),
   "user": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "permissions": zod.array(zod.string()),
   "allowedSections": zod.array(zod.string()),
@@ -99,10 +105,13 @@ export const VerifyMfaBody = zod.object({
 })
 
 export const VerifyMfaResponse = zod.object({
+  "accessToken": zod.string().optional(),
+  "refreshToken": zod.string().optional(),
   "user": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "permissions": zod.array(zod.string()),
   "allowedSections": zod.array(zod.string()),
@@ -153,7 +162,8 @@ export const ResetPasswordResponse = zod.object({
 export const GetCurrentUserResponse = zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "permissions": zod.array(zod.string()),
   "allowedSections": zod.array(zod.string()),
@@ -197,7 +207,10 @@ export const ListInvitationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "whatsappDeliveryStatus": zod.string(),
+  "emailDeliveryStatus": zod.string(),
   "role": zod.string(),
   "status": zod.string(),
   "allowedSections": zod.array(zod.string()),
@@ -227,7 +240,8 @@ export const ListInvitationsResponse = zod.object({
  */
 export const CreateInvitationBody = zod.object({
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().optional(),
+  "phone": zod.string(),
   "role": zod.string(),
   "allowedSections": zod.array(zod.string()),
   "permissions": zod.array(zod.string()).optional(),
@@ -246,7 +260,10 @@ export const CreateInvitationBody = zod.object({
 export const CreateInvitationResponse = zod.object({
   "id": zod.string(),
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "whatsappDeliveryStatus": zod.string(),
+  "emailDeliveryStatus": zod.string(),
   "role": zod.string(),
   "status": zod.string(),
   "allowedSections": zod.array(zod.string()),
@@ -290,7 +307,10 @@ export const GetInvitationParams = zod.object({
 export const GetInvitationResponse = zod.object({
   "id": zod.string(),
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "whatsappDeliveryStatus": zod.string(),
+  "emailDeliveryStatus": zod.string(),
   "role": zod.string(),
   "status": zod.string(),
   "allowedSections": zod.array(zod.string()),
@@ -330,7 +350,10 @@ export const UpdateInvitationBody = zod.object({
 export const UpdateInvitationResponse = zod.object({
   "id": zod.string(),
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "whatsappDeliveryStatus": zod.string(),
+  "emailDeliveryStatus": zod.string(),
   "role": zod.string(),
   "status": zod.string(),
   "allowedSections": zod.array(zod.string()),
@@ -383,7 +406,10 @@ export const ExtendInvitationBody = zod.object({
 export const ExtendInvitationResponse = zod.object({
   "id": zod.string(),
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "whatsappDeliveryStatus": zod.string(),
+  "emailDeliveryStatus": zod.string(),
   "role": zod.string(),
   "status": zod.string(),
   "allowedSections": zod.array(zod.string()),
@@ -405,7 +431,7 @@ export const ExtendInvitationResponse = zod.object({
 
 
 /**
- * @summary Resend invitation email
+ * @summary Resend a WhatsApp invitation link
  */
 export const ResendInvitationParams = zod.object({
   "id": zod.coerce.string()
@@ -418,23 +444,30 @@ export const ResendInvitationResponse = zod.object({
 
 
 /**
- * @summary Accept invitation and set password
+ * @summary Activate invitation with a phone OTP
  */
+export const acceptInvitationBodyOtpMin = 6;
+export const acceptInvitationBodyOtpMax = 6;
+
 export const acceptInvitationBodyPasswordMin = 8;
 
 
 
 export const AcceptInvitationBody = zod.object({
   "token": zod.string(),
-  "password": zod.string().min(acceptInvitationBodyPasswordMin),
+  "otp": zod.string().min(acceptInvitationBodyOtpMin).max(acceptInvitationBodyOtpMax),
+  "password": zod.string().min(acceptInvitationBodyPasswordMin).optional(),
   "acceptedTerms": zod.boolean()
 })
 
 export const AcceptInvitationResponse = zod.object({
+  "accessToken": zod.string().optional(),
+  "refreshToken": zod.string().optional(),
   "user": zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "permissions": zod.array(zod.string()),
   "allowedSections": zod.array(zod.string()),
@@ -449,20 +482,43 @@ export const AcceptInvitationResponse = zod.object({
 
 
 /**
- * @summary Validate invitation token and get details
+ * @summary Validate a private invitation link
  */
-export const ValidateInvitationTokenParams = zod.object({
-  "token": zod.coerce.string()
+export const validateInvitationBodyTokenMin = 32;
+export const validateInvitationBodyTokenMax = 256;
+
+
+
+export const ValidateInvitationBody = zod.object({
+  "token": zod.string().min(validateInvitationBodyTokenMin).max(validateInvitationBodyTokenMax)
 })
 
-export const ValidateInvitationTokenResponse = zod.object({
+export const ValidateInvitationResponse = zod.object({
   "inviteeName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "expiresAt": zod.string(),
   "allowedSections": zod.array(zod.string()),
-  "requiresMfa": zod.boolean(),
-  "inviterName": zod.string().optional()
+  "inviterName": zod.string()
+})
+
+
+/**
+ * @summary Send a verification code to the invited phone
+ */
+export const sendInvitationOtpBodyTokenMin = 32;
+export const sendInvitationOtpBodyTokenMax = 256;
+
+
+
+export const SendInvitationOtpBody = zod.object({
+  "token": zod.string().min(sendInvitationOtpBodyTokenMin).max(sendInvitationOtpBodyTokenMax)
+})
+
+export const SendInvitationOtpResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string().optional()
 })
 
 
@@ -479,7 +535,8 @@ export const ListUsersResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "status": zod.string(),
   "mfaEnabled": zod.boolean(),
@@ -511,7 +568,8 @@ export const CreateUserBody = zod.object({
 export const CreateUserResponse = zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "status": zod.string(),
   "mfaEnabled": zod.boolean(),
@@ -532,7 +590,8 @@ export const GetUserParams = zod.object({
 export const GetUserResponse = zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "status": zod.string(),
   "mfaEnabled": zod.boolean(),
@@ -559,7 +618,8 @@ export const UpdateUserBody = zod.object({
 export const UpdateUserResponse = zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
   "role": zod.string(),
   "status": zod.string(),
   "mfaEnabled": zod.boolean(),

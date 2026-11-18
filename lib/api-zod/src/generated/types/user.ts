@@ -9,7 +9,10 @@
 export interface User {
   id: string;
   fullName: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
   role: string;
   status: string;
   mfaEnabled: boolean;

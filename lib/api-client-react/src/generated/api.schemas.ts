@@ -27,7 +27,10 @@ export interface LoginInput {
 export interface UserProfile {
   id: string;
   fullName: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
   role: string;
   permissions: string[];
   allowedSections: string[];
@@ -40,6 +43,8 @@ export interface UserProfile {
 }
 
 export interface AuthResult {
+  accessToken?: string;
+  refreshToken?: string;
   user: UserProfile;
   requiresMfa: boolean;
   /** @nullable */
@@ -77,7 +82,12 @@ export interface SetupOwnerInput {
 export interface Invitation {
   id: string;
   inviteeName: string;
-  email: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  phone: string | null;
+  whatsappDeliveryStatus: string;
+  emailDeliveryStatus: string;
   role: string;
   status: string;
   allowedSections: string[];
@@ -101,7 +111,8 @@ export interface Invitation {
 
 export interface InvitationInput {
   inviteeName: string;
-  email: string;
+  email?: string;
+  phone: string;
   role: string;
   allowedSections: string[];
   permissions?: string[];
@@ -144,12 +155,14 @@ export interface InvitationStats {
 
 export interface InvitationValidation {
   inviteeName: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
   role: string;
   expiresAt: string;
   allowedSections: string[];
-  requiresMfa: boolean;
-  inviterName?: string;
+  inviterName: string;
 }
 
 export interface RevokeInput {
@@ -163,15 +176,31 @@ export interface ExtendInvitationInput {
 
 export interface AcceptInvitationInput {
   token: string;
+  /**
+     * @minLength 6
+     * @maxLength 6
+     */
+  otp: string;
   /** @minLength 8 */
-  password: string;
+  password?: string;
   acceptedTerms: boolean;
+}
+
+export interface InvitationTokenInput {
+  /**
+     * @minLength 32
+     * @maxLength 256
+     */
+  token: string;
 }
 
 export interface User {
   id: string;
   fullName: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
   role: string;
   status: string;
   mfaEnabled: boolean;

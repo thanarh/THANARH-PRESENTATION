@@ -235,8 +235,7 @@ function baseTemplate(opts: {
 export async function sendInvitationEmail(opts: {
   to: string;
   inviteeName: string;
-  inviteCode: string;
-  portalUrl: string;
+  inviteUrl: string;
   expiresAt: Date;
   inviterName: string;
   customMessage?: string;
@@ -251,19 +250,12 @@ export async function sendInvitationEmail(opts: {
       <p>تمت دعوتك من قِبل <span class="label">${opts.inviterName}</span> للاطلاع على رؤية ومنظومة مشروع <strong>ثناره</strong> الطبي الشاملة.</p>
       ${opts.customMessage ? `<p>${opts.customMessage}</p>` : ""}
 
-      <p style="margin:0 0 8px;font-weight:600;">كود الدعوة الخاص بك:</p>
-      <center>
-        <div style="font-size:32px;font-weight:800;letter-spacing:8px;color:#0F3D33;background:#F7F5F1;border:2px solid #A9CBB5;padding:20px 40px;border-radius:12px;display:inline-block;margin:8px 0;font-family:monospace;">
-          ${opts.inviteCode}
-        </div>
-      </center>
-
       <div class="details-card" style="margin-top:20px;">
         <p><span class="label">صلاحية الدعوة:</span> ${expiry}</p>
       </div>
 
-      <p>انقر على الزر أدناه للدخول إلى البوابة، ثم أدخل الكود أعلاه عند الطلب:</p>
-      <center><a href="${opts.portalUrl}" class="btn">الدخول إلى بوابة ثناره</a></center>
+       <p>افتح الرابط لتفعيل حسابك. سيصلك رمز التحقق على رقم الجوال المدعو.</p>
+       <center><a href="${opts.inviteUrl}" class="btn">تفعيل الدعوة والدخول</a></center>
       <div class="notice">
         هذه الدعوة شخصية ومخصصة للمستلم فقط. يرجى عدم مشاركتها أو إعادة توجيهها.<br/>
         This invitation is personal and intended only for its recipient. Do not share or forward it.
@@ -273,7 +265,7 @@ export async function sendInvitationEmail(opts: {
     to: opts.to,
     subject: "دعوة خاصة للدخول إلى تجربة ثناره",
     html,
-    text: `مرحباً ${opts.inviteeName}، تمت دعوتك إلى ثناره.\nكود الدعوة: ${opts.inviteCode}\nرابط البوابة: ${opts.portalUrl}\nصلاحية الدعوة: ${expiry}`,
+    text: `مرحباً ${opts.inviteeName}، تمت دعوتك إلى ثناره.\nرابط التفعيل: ${opts.inviteUrl}\nسيصلك رمز التحقق على الجوال.\nصلاحية الدعوة: ${expiry}`,
   });
   if (!sent) throw new Error("SMTP delivery failed — check mail service status");
 }
@@ -375,9 +367,9 @@ export async function sendVisitRequestAdminNotification(opts: {
 export async function sendAdminInvitationNotification(opts: {
   adminEmails: string[];
   inviteeName: string;
-  inviteeEmail: string;
+  inviteeEmail?: string;
   inviteePhone?: string;
-  inviteCode: string;
+  deliveryStatus: string;
   role: string;
   expiresAt: Date;
   inviterName: string;
@@ -391,10 +383,10 @@ export async function sendAdminInvitationNotification(opts: {
       <p>تم إرسال دعوة جديدة من قِبل <span class="label">${opts.inviterName}</span>.</p>
       <div class="details-card">
         <p><span class="label">المدعو:</span> ${opts.inviteeName}</p>
-        <p><span class="label">البريد:</span> ${opts.inviteeEmail}</p>
+        ${opts.inviteeEmail ? `<p><span class="label">البريد:</span> ${opts.inviteeEmail}</p>` : ""}
         ${opts.inviteePhone ? `<p><span class="label">الجوال:</span> ${opts.inviteePhone}</p>` : ""}
         <p><span class="label">الصلاحية:</span> ${opts.role}</p>
-        <p><span class="label">كود الدعوة:</span> <span style="font-family:monospace;font-weight:700;letter-spacing:4px;">${opts.inviteCode}</span></p>
+        <p><span class="label">حالة الإرسال:</span> ${opts.deliveryStatus}</p>
         <p><span class="label">تنتهي:</span> ${expiry}</p>
       </div>
       <p style="color:#6B7280;font-size:13px;">هذا إشعار تلقائي من منظومة ثناره.</p>`,
@@ -404,7 +396,7 @@ export async function sendAdminInvitationNotification(opts: {
       to: adminEmail,
       subject: `دعوة جديدة — ${opts.inviteeName} (${opts.role})`,
       html,
-      text: `دعوة جديدة لـ ${opts.inviteeName} (${opts.inviteeEmail}) بصلاحية ${opts.role}. الكود: ${opts.inviteCode}. تنتهي: ${expiry}.`,
+      text: `دعوة جديدة لـ ${opts.inviteeName}${opts.inviteeEmail ? ` (${opts.inviteeEmail})` : ""} بصلاحية ${opts.role}. حالة الإرسال: ${opts.deliveryStatus}. تنتهي: ${expiry}.`,
     });
   }
 }

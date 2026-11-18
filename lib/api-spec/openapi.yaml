@@ -352,7 +352,7 @@ paths:
     post:
       operationId: resendInvitation
       tags: [invitations]
-      summary: Resend invitation email
+      summary: Resend a WhatsApp invitation link
       parameters:
         - name: id
           in: path
@@ -371,7 +371,7 @@ paths:
     post:
       operationId: acceptInvitation
       tags: [invitations]
-      summary: Accept invitation and set password
+      summary: Activate invitation with a phone OTP
       requestBody:
         required: true
         content:
@@ -386,17 +386,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthResult"
 
-  /invitations/validate/{token}:
-    get:
-      operationId: validateInvitationToken
+  /invitations/validate:
+    post:
+      operationId: validateInvitation
       tags: [invitations]
-      summary: Validate invitation token and get details
-      parameters:
-        - name: token
-          in: path
-          required: true
-          schema:
-            type: string
+      summary: Validate a private invitation link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationTokenInput"
       responses:
         "200":
           description: Valid invitation
@@ -406,6 +406,25 @@ paths:
                 $ref: "#/components/schemas/InvitationValidation"
         "404":
           description: Invalid or expired token
+
+  /invitations/otp/send:
+    post:
+      operationId: sendInvitationOtp
+      tags: [invitations]
+      summary: Send a verification code to the invited phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationTokenInput"
+      responses:
+        "200":
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   /users:
     get:
@@ -963,6 +982,10 @@ components:
     AuthResult:
       type: object
       properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
         user:
           $ref: "#/components/schemas/UserProfile"
         requiresMfa:
@@ -981,7 +1004,9 @@ components:
         fullName:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
         role:
           type: string
         permissions:
@@ -1003,7 +1028,6 @@ components:
       required:
         - id
         - fullName
-        - email
         - role
         - permissions
         - allowedSections
@@ -1079,6 +1103,12 @@ components:
         inviteeName:
           type: string
         email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        whatsappDeliveryStatus:
+          type: string
+        emailDeliveryStatus:
           type: string
         role:
           type: string
@@ -1122,6 +1152,9 @@ components:
         - id
         - inviteeName
         - email
+        - phone
+        - whatsappDeliveryStatus
+        - emailDeliveryStatus
         - role
         - status
         - allowedSections
@@ -1138,7 +1171,8 @@ components:
           type: string
         email:
           type: string
-
+        phone:
+          type: string
         role:
           type: string
         allowedSections:
@@ -1171,7 +1205,7 @@ components:
           type: string
       required:
         - inviteeName
-        - email
+        - phone
         - role
         - allowedSections
         - expiresAt
@@ -1242,7 +1276,9 @@ components:
         inviteeName:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
         role:
           type: string
         expiresAt:
@@ -1251,17 +1287,14 @@ components:
           type: array
           items:
             type: string
-        requiresMfa:
-          type: boolean
         inviterName:
           type: string
       required:
         - inviteeName
-        - email
         - role
         - expiresAt
         - allowedSections
-        - requiresMfa
+        - inviterName
 
     RevokeInput:
       type: object
@@ -1287,6 +1320,10 @@ components:
       properties:
         token:
           type: string
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
         password:
           type: string
           minLength: 8
@@ -1294,8 +1331,18 @@ components:
           type: boolean
       required:
         - token
-        - password
+        - otp
         - acceptedTerms
+
+    InvitationTokenInput:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 256
+      required:
+        - token
 
     User:
       type: object
@@ -1305,7 +1352,9 @@ components:
         fullName:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
         role:
           type: string
         status:
@@ -1323,7 +1372,6 @@ components:
       required:
         - id
         - fullName
-        - email
         - role
         - status
         - mfaEnabled

@@ -8,7 +8,12 @@
 
 export interface AcceptInvitationInput {
   token: string;
+  /**
+     * @minLength 6
+     * @maxLength 6
+     */
+  otp: string;
   /** @minLength 8 */
-  password: string;
+  password?: string;
   acceptedTerms: boolean;
 }

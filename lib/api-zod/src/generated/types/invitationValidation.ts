@@ -8,10 +8,12 @@
 
 export interface InvitationValidation {
   inviteeName: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
   role: string;
   expiresAt: string;
   allowedSections: string[];
-  requiresMfa: boolean;
-  inviterName?: string;
+  inviterName: string;
 }

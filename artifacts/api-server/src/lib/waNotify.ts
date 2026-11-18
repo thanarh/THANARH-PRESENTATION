@@ -34,6 +34,7 @@ export async function notifyWaOtp(
   code: string,
   lang: "ar" | "en" = "ar",
   clientName = "Thanarah portal user",
+  purpose: "login" | "invitation" = "login",
 ): Promise<void> {
   const token = process.env.QIROX_PROJECT_API_TOKEN;
   const projectId = process.env.QIROX_PROJECT_ID;
@@ -48,8 +49,8 @@ export async function notifyWaOtp(
 
   const msg =
     lang === "ar"
-      ? `🔐 *ثناية — رمز التحقق*\n\nرمزك لتسجيل الدخول:\n\n*${code}*\n\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
-      : `🔐 *Thanarah — Verification Code*\n\nYour sign-in code:\n\n*${code}*\n\nValid for 5 minutes. Do not share it.`;
+      ? `🔐 *ثناره — رمز التحقق*\n\n${purpose === "invitation" ? "رمز تفعيل دعوتك:" : "رمز تسجيل الدخول:"}\n\n*${code}*\n\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
+      : `🔐 *Thanarah — Verification Code*\n\n${purpose === "invitation" ? "Your invitation activation code:" : "Your sign-in code:"}\n\n*${code}*\n\nValid for 5 minutes. Do not share it.`;
 
   const response = await fetch(
     `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/whatsapp`,
@@ -114,18 +115,43 @@ export async function notifyWaInvitationSent(
   await notifyWa(adminPhone, msg);
 }
 
-export async function notifyWaInvitationReceived(
+export async function notifyWaInvitationLink(
   userPhone: string,
   inviteeName: string,
-  inviteCode: string,
-  portalUrl: string,
+  inviteUrl: string,
   lang: "ar" | "en" = "ar"
 ): Promise<void> {
-  const msg =
+  const token = process.env.QIROX_PROJECT_API_TOKEN;
+  const projectId = process.env.QIROX_PROJECT_ID;
+  if (!token || !projectId) throw new Error("QIROX WhatsApp credentials are not configured");
+
+  const digits = userPhone.replace(/\D/g, "");
+  if (!/^[1-9]\d{7,14}$/.test(digits)) {
+    throw new Error("Phone number must include its international country code");
+  }
+
+  const message =
     lang === "ar"
-      ? `🌟 *دعوة إلى بوابة ثناية*\n\nأهلاً ${inviteeName}،\nتمت دعوتك للوصول إلى البوابة التقديمية لثناية.\n\n🔑 كود الدعوة: *${inviteCode}*\n🔗 الرابط: ${portalUrl}\n\nاستخدم الكود أو الرابط لتفعيل حسابك.`
-      : `🌟 *Invitation to Thanarah Portal*\n\nHello ${inviteeName},\nYou've been invited to access the Thanarah presentation portal.\n\n🔑 Invite Code: *${inviteCode}*\n🔗 Portal: ${portalUrl}\n\nUse the code or link to activate your account.`;
-  await notifyWa(userPhone, msg);
+      ? `مرحباً ${inviteeName}، تمت دعوتك إلى ثناره.\n\nافتح الرابط لتفعيل حسابك، ثم أدخل رمز التحقق الذي يصلك على واتساب:\n${inviteUrl}\n\nالرابط شخصي وينتهي خلال 7 أيام.`
+      : `Hello ${inviteeName}, you are invited to Thanarah.\n\nOpen this link to activate your account, then enter the verification code sent to your WhatsApp:\n${inviteUrl}\n\nThis personal link expires in 7 days.`;
+
+  const response = await fetch(
+    `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/api`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `thanarah-invite-${randomUUID()}`,
+      },
+      body: JSON.stringify({
+        channel: "whatsapp",
+        recipient: { phone: `+${digits}`, name: inviteeName },
+        message,
+      }),
+    },
+  );
+  if (!response.ok) throw new Error(`QIROX WhatsApp API returned HTTP ${response.status}`);
 }
 
 export async function notifyWaSystemUpdate(

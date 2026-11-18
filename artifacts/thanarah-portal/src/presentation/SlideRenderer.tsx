@@ -172,7 +172,7 @@ function SlideProblem() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الثاني — لماذا وُجدت ثناره؟"
+      <SlideHero chapter="المشكلة"
         ar="أدوات كثيرة،\nوتجربة واحدة تحتاج أن تترابط." />
       <FadeIn delay={0.1}>
         <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>ما يحتاجه الفريق يومياً</h2>
@@ -196,7 +196,7 @@ function SlideSolution() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الثالث — ما هي ثناره؟"
+      <SlideHero chapter="الحل"
         ar="منظومة رقمية\nتعمل مع العيادة." />
       <FadeIn delay={0.1}>
         <DarkPanel>
@@ -229,7 +229,7 @@ function SlideEcosystem() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الثالث — المنظومة"
+      <SlideHero chapter="المنظومة"
         ar="كل أدوات العيادة،\nفي منظومة واحدة." />
       <FadeIn delay={0.1}>
         <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>أربع مساحات مترابطة</h2>
@@ -253,7 +253,7 @@ function SlideCustomerJourney() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الخامس — رحلة العميل"
+      <SlideHero chapter="رحلة الاستخدام"
         ar="من الاحتياج،\nإلى تجربة رقمية مترابطة." />
       <FadeIn delay={0.1}>
         <FlowList steps={steps.map(s => s.ar)} />
@@ -285,8 +285,8 @@ function SlidePlans() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الخامس — الباقات"
-        ar="باقة لكل حجم\nولكل احتياج" />
+      <SlideHero chapter="الباقات"
+        ar="باقة تناسب\nاحتياج منشأتك." />
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {plans.map((p, i) => (
@@ -337,7 +337,7 @@ function SlideWebsiteBuilder() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل السابع — الموقع الذكي"
+      <SlideHero chapter="الموقع"
         ar="حضور رقمي،\nيعكس هوية منشأتك." />
       <FadeIn delay={0.1}>
         <DarkPanel dir="rtl">
@@ -373,13 +373,13 @@ function SlideWhatsappAI() {
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الثامن — WhatsApp AI"
+      <SlideHero chapter="واتساب"
         ar="تواصل أسهل،\nمن القناة التي يعرفها المريض." />
       <FadeIn delay={0.1}>
         <div className="rounded-2xl overflow-hidden" style={{ background: '#ECF5EC', border: `1px solid ${C.soft}50` }}>
           <div className="px-5 py-3 flex items-center gap-3" style={{ background: '#1A7020' }}>
             <span className="text-white text-lg">💬</span>
-            <span className="text-white font-bold text-sm">عيادة الابتسامة الذهبية</span>
+            <span className="text-white font-bold text-sm">محادثة مع ثناره</span>
           </div>
           <div className="p-4 space-y-3">
             {conversation.map((msg, i) => (
@@ -422,7 +422,7 @@ function SlideApps() {
   const pipeline = ['حدد الهوية', 'خصص تجربة التطبيق', 'اربطه بخدمات المنشأة'];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل التاسع — التطبيقات"
+      <SlideHero chapter="التطبيقات"
         ar="تجربة المنشأة،\nفي متناول المريض." />
       <FadeIn delay={0.1}>
         <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>تخصيص تجربة التطبيق</h2>

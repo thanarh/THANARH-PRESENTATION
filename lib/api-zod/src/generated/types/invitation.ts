@@ -9,7 +9,12 @@
 export interface Invitation {
   id: string;
   inviteeName: string;
-  email: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  phone: string | null;
+  whatsappDeliveryStatus: string;
+  emailDeliveryStatus: string;
   role: string;
   status: string;
   allowedSections: string[];

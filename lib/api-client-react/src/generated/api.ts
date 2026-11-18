@@ -36,6 +36,7 @@ import type {
   InvitationInput,
   InvitationListResult,
   InvitationStats,
+  InvitationTokenInput,
   InvitationUpdate,
   InvitationValidation,
   ListAuditLogsParams,
@@ -1350,7 +1351,7 @@ export const getResendInvitationUrl = (id: string,) => {
 }
 
 /**
- * @summary Resend invitation email
+ * @summary Resend a WhatsApp invitation link
  */
 export const resendInvitation = async (id: string, options?: RequestInit): Promise<SuccessResponse> => {
 
@@ -1399,7 +1400,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type ResendInvitationMutationError = ErrorType<unknown>
 
     /**
- * @summary Resend invitation email
+ * @summary Resend a WhatsApp invitation link
  */
 export const useResendInvitation = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendInvitation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1421,7 +1422,7 @@ export const getAcceptInvitationUrl = () => {
 }
 
 /**
- * @summary Accept invitation and set password
+ * @summary Activate invitation with a phone OTP
  */
 export const acceptInvitation = async (acceptInvitationInput: AcceptInvitationInput, options?: RequestInit): Promise<AuthResult> => {
 
@@ -1470,7 +1471,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AcceptInvitationMutationError = ErrorType<unknown>
 
     /**
- * @summary Accept invitation and set password
+ * @summary Activate invitation with a phone OTP
  */
 export const useAcceptInvitation = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,{data: BodyType<AcceptInvitationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -1483,25 +1484,25 @@ export const useAcceptInvitation = <TError = ErrorType<unknown>,
       return useMutation(getAcceptInvitationMutationOptions(options));
     }
 
-export const getValidateInvitationTokenUrl = (token: string,) => {
+export const getValidateInvitationUrl = () => {
 
 
 
 
-  return `/api/invitations/validate/${token}`
+  return `/api/invitations/validate`
 }
 
 /**
- * @summary Validate invitation token and get details
+ * @summary Validate a private invitation link
  */
-export const validateInvitationToken = async (token: string, options?: RequestInit): Promise<InvitationValidation> => {
+export const validateInvitation = async (invitationTokenInput: InvitationTokenInput, options?: RequestInit): Promise<InvitationValidation> => {
 
-  return customFetch<InvitationValidation>(getValidateInvitationTokenUrl(token),
+  return customFetch<InvitationValidation>(getValidateInvitationUrl(),
   {
     ...options,
-    method: 'GET'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invitationTokenInput)
   }
 );}
 
@@ -1509,56 +1510,121 @@ export const validateInvitationToken = async (token: string, options?: RequestIn
 
 
 
-export const getValidateInvitationTokenQueryKey = (token: string,) => {
-    return [
-    `/api/invitations/validate/${token}`
-    ] as const;
+export const getValidateInvitationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateInvitation>>, TError,{data: BodyType<InvitationTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateInvitation>>, TError,{data: BodyType<InvitationTokenInput>}, TContext> => {
+
+const mutationKey = ['validateInvitation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateInvitation>>, {data: BodyType<InvitationTokenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  validateInvitation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof validateInvitation>>>
+    export type ValidateInvitationMutationBody = BodyType<InvitationTokenInput>
+    export type ValidateInvitationMutationError = ErrorType<void>
+
+    /**
+ * @summary Validate a private invitation link
+ */
+export const useValidateInvitation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateInvitation>>, TError,{data: BodyType<InvitationTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof validateInvitation>>,
+        TError,
+        {data: BodyType<InvitationTokenInput>},
+        TContext
+      > => {
+      return useMutation(getValidateInvitationMutationOptions(options));
     }
 
-
-export const getValidateInvitationTokenQueryOptions = <TData = Awaited<ReturnType<typeof validateInvitationToken>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof validateInvitationToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getValidateInvitationTokenQueryKey(token);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof validateInvitationToken>>> = ({ signal }) => validateInvitationToken(token, { signal, ...requestOptions });
+export const getSendInvitationOtpUrl = () => {
 
 
 
 
-
-   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof validateInvitationToken>>, TError, TData> & { queryKey: QueryKey }
+  return `/api/invitations/otp/send`
 }
-
-export type ValidateInvitationTokenQueryResult = NonNullable<Awaited<ReturnType<typeof validateInvitationToken>>>
-export type ValidateInvitationTokenQueryError = ErrorType<void>
-
 
 /**
- * @summary Validate invitation token and get details
+ * @summary Send a verification code to the invited phone
  */
+export const sendInvitationOtp = async (invitationTokenInput: InvitationTokenInput, options?: RequestInit): Promise<SuccessResponse> => {
 
-export function useValidateInvitationToken<TData = Awaited<ReturnType<typeof validateInvitationToken>>, TError = ErrorType<void>>(
- token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof validateInvitationToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getValidateInvitationTokenQueryOptions(token,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
+  return customFetch<SuccessResponse>(getSendInvitationOtpUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invitationTokenInput)
+  }
+);}
 
 
 
 
 
+export const getSendInvitationOtpMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendInvitationOtp>>, TError,{data: BodyType<InvitationTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendInvitationOtp>>, TError,{data: BodyType<InvitationTokenInput>}, TContext> => {
 
+const mutationKey = ['sendInvitationOtp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendInvitationOtp>>, {data: BodyType<InvitationTokenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendInvitationOtp(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendInvitationOtpMutationResult = NonNullable<Awaited<ReturnType<typeof sendInvitationOtp>>>
+    export type SendInvitationOtpMutationBody = BodyType<InvitationTokenInput>
+    export type SendInvitationOtpMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Send a verification code to the invited phone
+ */
+export const useSendInvitationOtp = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendInvitationOtp>>, TError,{data: BodyType<InvitationTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendInvitationOtp>>,
+        TError,
+        {data: BodyType<InvitationTokenInput>},
+        TContext
+      > => {
+      return useMutation(getSendInvitationOtpMutationOptions(options));
+    }
 
 export const getListUsersUrl = (params?: ListUsersParams,) => {
   const normalizedParams = new URLSearchParams();

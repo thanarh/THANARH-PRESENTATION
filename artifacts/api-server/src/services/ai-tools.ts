@@ -1,7 +1,7 @@
 /**
  * AI tool definitions and executors — gives the WhatsApp assistant real capabilities:
  * - send_link: return a portal/page URL
- * - create_invitation: create an invite code in DB and optionally email it
+ * - create_invitation: send a phone-bound invitation link and OTP activation
  * - send_welcome_email: send a branded welcome email to a given address
  */
 
@@ -11,6 +11,7 @@ import { sendEmail, sendInvitationEmail } from "../lib/email";
 import Invitation from "../models/invitation";
 import User from "../models/user";
 import { logger } from "../lib/logger";
+import { notifyWaInvitationLink } from "../lib/waNotify";
 
 const PORTAL_URL =
   process.env.BASE_URL?.replace(/\/$/, "") ?? "https://presentation.thanarah.com";
@@ -50,16 +51,16 @@ export const AI_TOOLS = [
     function: {
       name: "create_invitation",
       description:
-        "Creates a real invitation code in the system so the person can access the Thanarah portal. Use when the user asks for an invite, access link, or invitation code.",
+        "Creates a phone-bound Thanarah portal invitation and sends the activation link by WhatsApp. Email is optional.",
       parameters: {
         type: "object",
         properties: {
           name:       { type: "string", description: "Full name of the invitee" },
-          email:      { type: "string", description: "Email address of the invitee" },
-          phone:      { type: "string", description: "Optional phone number" },
-          send_email: { type: "boolean", description: "Whether to also email the invitation to them (default true)" },
+          email:      { type: "string", description: "Optional email address for a second copy" },
+          phone:      { type: "string", description: "International phone number, such as +966501234567" },
+          send_email: { type: "boolean", description: "Whether to also email the link when an email is provided" },
         },
-        required: ["name", "email"],
+        required: ["name", "phone"],
       },
     },
   },
@@ -84,7 +85,7 @@ export const AI_TOOLS = [
 
 // ── Tool executor ─────────────────────────────────────────────────────────────
 export async function executeTool(name: string, args: Record<string, any>): Promise<string> {
-  logger.info({ tool: name, args }, "Executing AI tool");
+  logger.info({ tool: name }, "Executing AI tool");
 
   // ── send_link ──────────────────────────────────────────────────────────────
   if (name === "send_link") {
@@ -101,53 +102,73 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
     const ownerEmail = process.env.THANARAH_OWNER_EMAIL_1;
     const owner = ownerEmail
       ? await User.findOne({ email: ownerEmail }).lean()
-      : null;
+      : await User.findOne({ role: "owner", status: "active" }).lean();
+    if (!owner) return "لا يوجد حساب مالك نشط لإنشاء الدعوة.";
 
+    const phoneInput = String(args.phone ?? "").trim().replace(/[\s().-]/g, "");
+    const phone = phoneInput.startsWith("00") ? `+${phoneInput.slice(2)}` : phoneInput;
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) return "أدخل رقم الجوال بصيغته الدولية، مثل +966501234567.";
+    const email = typeof args.email === "string" && args.email.trim() ? args.email.trim().toLowerCase() : undefined;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "البريد الإلكتروني غير صحيح.";
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (await User.findOne({ phone: { $regex: new RegExp(`${phoneDigits}$`) } })) {
+      return "يوجد حساب مرتبط بهذا الرقم بالفعل.";
+    }
+    if (email && await User.findOne({ email })) return "يوجد حساب مرتبط بهذا البريد بالفعل.";
+    if (await Invitation.findOne({
+      phone,
+      status: { $in: ["draft", "sent", "opened", "failed_delivery"] },
+      expiresAt: { $gt: new Date() },
+    })) return "توجد دعوة سارية لهذا الرقم بالفعل.";
     const rawToken  = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-    const inviteCode = crypto.randomBytes(4).toString("hex").toUpperCase();
     const expiresAt  = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    await Invitation.create({
+    const invitation = await Invitation.create({
       inviteeName: args.name,
-      email:       args.email,
-      phone:       args.phone ?? undefined,
+      email,
+      phone,
       tokenHash,
-      inviteCode,
       role:                    "investor",
       expiresAt,
       maxLogins:               10,
       maxDevices:              2,
       sessionDurationMinutes:  120,
       allowFullScreen:         true,
-      createdBy:               owner?._id ?? undefined,
-      status:                  "sent",
+      createdBy:               owner._id,
+      status:                  "draft",
+      whatsappDeliveryStatus:  "pending",
+      emailDeliveryStatus:     email ? "pending" : "skipped",
     });
 
-    const sendEmail_ = args.send_email !== false;
-    if (sendEmail_) {
-      try {
-        await sendInvitationEmail({
-          to:          args.email,
-          inviteeName: args.name,
-          inviteCode,
-          portalUrl:   PORTAL_URL,
-          expiresAt,
-          inviterName: "فريق ثناره",
-        });
-      } catch (err) {
-        logger.warn({ err }, "Failed to send invitation email — code still created");
-      }
-    }
-
-    const link = `${PORTAL_URL}/join?code=${inviteCode}`;
+    const inviteUrl = `${PORTAL_URL}/invite#${rawToken}`;
+    const sendEmail_ = Boolean(email) && args.send_email !== false;
+    const [whatsappResult, emailResult] = await Promise.allSettled([
+      notifyWaInvitationLink(phone, String(args.name), inviteUrl),
+      sendEmail_
+        ? sendInvitationEmail({
+            to: email!,
+            inviteeName: String(args.name),
+            inviteUrl,
+            expiresAt,
+            inviterName: "فريق ثناره",
+          })
+        : Promise.resolve(),
+    ]);
+    const whatsappDelivered = whatsappResult.status === "fulfilled";
+    const emailDelivered = sendEmail_ && emailResult.status === "fulfilled";
+    const emailStatus = !email ? "skipped" : emailDelivered ? "sent" : sendEmail_ ? "failed" : "skipped";
+    await Invitation.findByIdAndUpdate(invitation._id, {
+      status: whatsappDelivered || emailDelivered ? "sent" : "failed_delivery",
+      whatsappDeliveryStatus: whatsappDelivered ? "sent" : "failed",
+      emailDeliveryStatus: emailStatus,
+    });
+    if (!whatsappDelivered) logger.warn({ invitationId: invitation.id }, "AI-created invitation WhatsApp delivery failed");
+    if (sendEmail_ && !emailDelivered) logger.warn({ invitationId: invitation.id }, "AI-created invitation email delivery failed");
     return [
-      `✅ تم إنشاء كود الدعوة لـ ${args.name}`,
-      ``,
-      `🔑 كود الدخول: *${inviteCode}*`,
-      `🔗 رابط مباشر: ${link}`,
-      ``,
-      `صالح لمدة 7 أيام.${sendEmail_ ? ` تم إرسال الدعوة أيضاً إلى ${args.email} 📧` : ""}`,
+      whatsappDelivered ? `✅ أُرسل رابط الدعوة إلى واتساب: ${args.name}` : `⚠️ حُفظت الدعوة لكن تعذر إرسال واتساب`,
+      sendEmail_ ? (emailDelivered ? `📧 أُرسل رابط إضافي إلى ${email}` : `⚠️ تعذر إرسال نسخة البريد`) : "",
+      "يُفعّل الحساب بعد إدخال رمز التحقق المرسل على الجوال.",
     ].join("\n");
   }
 

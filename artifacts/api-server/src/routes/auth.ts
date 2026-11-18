@@ -119,7 +119,7 @@ router.post("/login", async (req: Request, res: Response) => {
   const { email, password } = parsed.data;
   const user = await User.findOne({ email });
 
-  if (!user || user.status === "disabled") {
+  if (!user || user.status === "disabled" || !user.passwordHash) {
     await logAudit({ actor: email, action: "login.failed", result: "failure", riskScore: "medium", ipAddress: ip, metadata: { reason: "user_not_found" }, timestamp: new Date() });
     res.status(401).json({ error: "Invalid credentials" });
     return;
@@ -179,7 +179,9 @@ router.post("/login", async (req: Request, res: Response) => {
   await logAudit({ actor: user.fullName, actorId: user._id as unknown as import("mongoose").Types.ObjectId, action: "login.success", result: "success", riskScore: "low", ipAddress: ip, sessionId: session.id, timestamp: new Date() });
 
   // Fire-and-forget login alert
-  sendLoginAlertEmail({ to: user.email, name: user.fullName, ipAddress: ip, device: getDeviceType(ua), time: new Date() }).catch(() => {});
+  if (user.email) {
+    sendLoginAlertEmail({ to: user.email, name: user.fullName, ipAddress: ip, device: getDeviceType(ua), time: new Date() }).catch(() => {});
+  }
   if (user.phone) notifyWaLoginAlert(user.phone, user.fullName, ip, getDeviceType(ua)).catch(() => {});
 
   res.json({
@@ -189,6 +191,7 @@ router.post("/login", async (req: Request, res: Response) => {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       permissions: user.permissions,
       allowedSections: user.allowedSections,
@@ -258,6 +261,7 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response) => {
     id: user._id.toString(),
     fullName: user.fullName,
     email: user.email,
+    phone: user.phone,
     role: user.role,
     permissions: user.permissions,
     allowedSections: user.allowedSections,
@@ -300,7 +304,7 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
   const user = await User.findOne({ email });
 
   // Always return success to prevent email enumeration
-  if (user) {
+  if (user?.email) {
     const token = generateSecureToken();
     user.passwordResetToken = hashToken(token);
     user.passwordResetExpiry = new Date(Date.now() + 30 * 60 * 1000);
@@ -421,7 +425,7 @@ router.post("/mfa/setup", authenticate, async (req: AuthRequest, res: Response) 
 
   // Generate a fresh secret (not saved yet — only saved on /mfa/enable after verification)
   const secret = generateSecret();
-  const otpauthUrl = generateURI({ strategy: "totp", issuer: "Thanarah", label: user.email, secret });
+  const otpauthUrl = generateURI({ strategy: "totp", issuer: "Thanarah", label: user.email || user.phone || user.id, secret });
 
   res.json({ secret, otpauthUrl });
 });
@@ -455,7 +459,7 @@ router.post("/mfa/disable", authenticate, async (req: AuthRequest, res: Response
     const r3 = verifySync({ token: String(code).replace(/\s/g, ""), secret: user.mfaSecret });
     authorized = !!(r3 && (typeof r3 === 'boolean' ? r3 : r3.valid));
   }
-  if (!authorized && password) {
+  if (!authorized && password && user.passwordHash) {
     authorized = await bcrypt.compare(password, user.passwordHash);
   }
   if (!authorized) {
@@ -503,18 +507,18 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
   }
 
   // Rate-limit: max 1 OTP per phone per 60 s
-  const recent = await WaOtp.findOne({ phone, createdAt: { $gt: new Date(Date.now() - 60_000) } });
+  const recent = await WaOtp.findOne({ phone, purpose: { $ne: "invitation" }, createdAt: { $gt: new Date(Date.now() - 60_000) } });
   if (recent) {
     res.status(429).json({ error: "انتظر دقيقة قبل طلب رمز جديد" });
     return;
   }
 
   // Invalidate any previous OTPs for this phone
-  await WaOtp.deleteMany({ phone });
+  await WaOtp.deleteMany({ phone, purpose: { $ne: "invitation" } });
 
   // Generate and store OTP
   const { code, hash } = generateWaOtp();
-  await WaOtp.create({ phone, otpHash: hash });
+  await WaOtp.create({ phone, otpHash: hash, purpose: "login" });
 
   // Send via WhatsApp (fire-and-forget with error forwarded to response)
   try {
@@ -543,7 +547,7 @@ router.post("/wa-otp/verify", async (req: Request, res: Response) => {
   if (!parsed.success) { res.status(400).json({ error: "بيانات غير صحيحة" }); return; }
 
   const phone = normalizePhone(parsed.data.phone);
-  const record = await WaOtp.findOne({ phone });
+  const record = await WaOtp.findOne({ phone, purpose: { $ne: "invitation" } });
 
   if (!record) {
     res.status(400).json({ error: "لم يُطلب رمز لهذا الرقم أو انتهت صلاحيته" });
@@ -613,6 +617,7 @@ router.post("/wa-otp/verify", async (req: Request, res: Response) => {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       permissions: user.permissions,
       allowedSections: user.allowedSections,

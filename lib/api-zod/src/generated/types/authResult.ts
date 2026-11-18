@@ -8,6 +8,8 @@
 import type { UserProfile } from './userProfile';
 
 export interface AuthResult {
+  accessToken?: string;
+  refreshToken?: string;
   user: UserProfile;
   requiresMfa: boolean;
   /** @nullable */

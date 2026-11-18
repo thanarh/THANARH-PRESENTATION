@@ -7,9 +7,9 @@ export type InvitationStatus =
 
 export interface IInvitation extends Document {
   inviteeName: string;
-  email: string;
+  email?: string;
   tokenHash: string;
-  inviteCode: string;
+  inviteCode?: string;
   role: string;
   permissions: string[];
   allowedSections: string[];
@@ -24,6 +24,8 @@ export interface IInvitation extends Document {
   allowFullScreen: boolean;
   allowViewFinancials: boolean;
   phone?: string;
+  whatsappDeliveryStatus?: "pending" | "sent" | "failed";
+  emailDeliveryStatus?: "pending" | "sent" | "failed" | "skipped";
   customMessage?: string;
   reason?: string;
   internalRef?: string;
@@ -44,7 +46,7 @@ export interface IInvitation extends Document {
 const invitationSchema = new mongoose.Schema<IInvitation>(
   {
     inviteeName: { type: String, required: true, trim: true },
-    email: { type: String, required: true, lowercase: true, trim: true },
+    email: { type: String, lowercase: true, trim: true },
     tokenHash: { type: String, required: true, unique: true },
     inviteCode: { type: String, unique: true, sparse: true },
     role: { type: String, required: true },
@@ -65,6 +67,8 @@ const invitationSchema = new mongoose.Schema<IInvitation>(
     allowFullScreen: { type: Boolean, default: true },
     allowViewFinancials: { type: Boolean, default: false },
     phone: { type: String, trim: true },
+    whatsappDeliveryStatus: { type: String, enum: ["pending", "sent", "failed"] },
+    emailDeliveryStatus: { type: String, enum: ["pending", "sent", "failed", "skipped"] },
     customMessage: String,
     reason: String,
     internalRef: String,

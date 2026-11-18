@@ -14,7 +14,7 @@ import Login from './pages/Login';
 import Setup from './pages/Setup';
 import VisitRequest from './pages/VisitRequest';
 import ResetPassword from './pages/ResetPassword';
-import InviteAccept from './pages/InviteAccept';
+import InviteActivation from './pages/InviteActivation';
 import ErrorPage from './pages/ErrorPage';
 import NotFound from '@/pages/not-found';
 
@@ -49,7 +49,7 @@ function Router() {
       <Route path="/invite/expired" component={() => <ErrorPage type="expired" />} />
       <Route path="/invite/revoked" component={() => <ErrorPage type="revoked" />} />
       <Route path="/access-denied" component={() => <ErrorPage type="denied" />} />
-      <Route path="/invite" component={InviteAccept} />
+      <Route path="/invite" component={InviteActivation} />
 
       {/* Authenticated Routes */}
       <Route path="/dashboard">

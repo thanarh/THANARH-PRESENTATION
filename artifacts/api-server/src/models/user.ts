@@ -5,8 +5,8 @@ export type UserStatus = "active" | "disabled" | "pending";
 
 export interface IUser extends Document {
   fullName: string;
-  email: string;
-  passwordHash: string;
+  email?: string;
+  passwordHash?: string;
   role: UserRole;
   status: UserStatus;
   permissions: string[];
@@ -32,8 +32,8 @@ export interface IUser extends Document {
 const userSchema = new mongoose.Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    passwordHash: { type: String },
     role: {
       type: String,
       enum: ["owner", "super_admin", "admin", "presenter", "investor", "partner", "team_member", "viewer"],
@@ -60,7 +60,10 @@ const userSchema = new mongoose.Schema<IUser>(
   { timestamps: true },
 );
 
-// email already indexed via unique:true in the schema definition — no duplicate needed
+// The email index is migrated explicitly so existing databases can switch safely
+// from required, unique email to optional, unique email for phone-only accounts.
+userSchema.set("autoIndex", false);
+userSchema.index({ email: 1 }, { unique: true, sparse: true, name: "email_1" });
 
 const User: Model<IUser> = mongoose.models.User ?? mongoose.model<IUser>("User", userSchema);
 export default User;

@@ -26,6 +26,7 @@ export * from './invitation';
 export * from './invitationInput';
 export * from './invitationListResult';
 export * from './invitationStats';
+export * from './invitationTokenInput';
 export * from './invitationUpdate';
 export * from './invitationValidation';
 export * from './listAuditLogsParams';

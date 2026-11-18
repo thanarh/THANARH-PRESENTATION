@@ -103,7 +103,7 @@ export default function PresentationHome() {
           {/* Logo mark */}
           <div
             className="w-16 h-16 rounded-full mx-auto mb-7 flex items-center justify-center"
-            style={{ background: WARM.goldLight, border: `1px solid rgba(184,150,12,0.25)` }}
+            style={{ background: WARM.goldLight, border: `1px solid rgba(30,107,77,0.25)` }}
           >
             <img
               src="/logo-icon.png"

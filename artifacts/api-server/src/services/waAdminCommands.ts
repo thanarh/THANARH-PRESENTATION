@@ -17,6 +17,7 @@ import Session from "../models/session";
 import AuditLog from "../models/auditLog";
 import { connectDb } from "../lib/db";
 import { sendInvitationEmail, sendEmail } from "../lib/email";
+import { notifyWaInvitationLink } from "../lib/waNotify";
 import { logger } from "../lib/logger";
 
 // ─── Admin phone whitelist ────────────────────────────────────────────────────
@@ -124,15 +125,6 @@ const STATUS_AR: Record<string, string> = {
 function roleLabel(r: string)   { return ROLE_AR[r]   ?? r; }
 function statusLabel(s: string) { return STATUS_AR[s]  ?? s; }
 
-/** Generates a readable XXXX-NNNN invite code */
-function genCode(): string {
-  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const N = "0123456789";
-  const p1 = Array.from({ length: 4 }, () => A[crypto.randomInt(A.length)]).join("");
-  const p2 = Array.from({ length: 4 }, () => N[crypto.randomInt(N.length)]).join("");
-  return `${p1}-${p2}`;
-}
-
 /** Find an active owner/super_admin to act as system creator */
 async function getSystemUser() {
   return User.findOne({
@@ -159,13 +151,8 @@ ${SEP}
 ▸ \`سجل\` — آخر 5 أحداث في النظام
 
 *🔑 إدارة الدعوات*
-▸ \`دعوة email الاسم\`
-  ← إنشاء دعوة وإرسالها بالبريد
-  _مثال: دعوة ahmed@co.com أحمد العمري_
-
-▸ \`كود email الاسم\`
-  ← كود سريع بدون إرسال بريد
-  _مثال: كود sarah@co.com سارة_
+▸ \`دعوة +9665xxxxxxxx الاسم [email]\`
+  ← إرسال رابط واتساب، والبريد اختياري
 
 *📧 البريد الإلكتروني*
 ▸ \`بريد email الرسالة\`
@@ -286,7 +273,7 @@ async function cmdUsers(): Promise<string> {
   const users = await User.find()
     .sort({ createdAt: -1 })
     .limit(8)
-    .select("fullName email role status lastLoginAt")
+    .select("fullName email phone role status lastLoginAt")
     .lean();
 
   if (!users.length) return "👥 لا يوجد مستخدمون حتى الآن.";
@@ -294,7 +281,7 @@ async function cmdUsers(): Promise<string> {
   const lines = users
     .map((u: any) => {
       const login = u.lastLoginAt ? timeLabel(new Date(u.lastLoginAt)) : "لم يدخل بعد";
-      return `*${u.fullName}*\n  ${roleLabel(u.role)} | ${statusLabel(u.status)}\n  📧 ${u.email}\n  🕒 آخر دخول: ${login}`;
+  return `*${u.fullName}*\n  ${roleLabel(u.role)} | ${statusLabel(u.status)}\n  ${u.phone ? `📱 ${u.phone}` : `📧 ${u.email || "—"}`}\n  🕒 آخر دخول: ${login}`;
     })
     .join("\n\n");
 
@@ -309,15 +296,16 @@ async function cmdInvitations(): Promise<string> {
   const invites = await Invitation.find()
     .sort({ createdAt: -1 })
     .limit(8)
-    .select("inviteeName email role status inviteCode expiresAt")
+    .select("inviteeName email phone role status whatsappDeliveryStatus emailDeliveryStatus expiresAt")
     .lean();
 
   if (!invites.length) return "✉️ لا توجد دعوات حتى الآن.";
 
   const lines = invites
     .map((inv: any) => {
-      const code = inv.inviteCode ? `🔑 \`${inv.inviteCode}\`` : "بدون كود";
-      return `*${inv.inviteeName}*\n  ${roleLabel(inv.role)} | ${statusLabel(inv.status)}\n  📧 ${inv.email}\n  ${code} | ⌛ ${dateLabel(new Date(inv.expiresAt))}`;
+      const email = inv.email ? `\n  📧 ${inv.email}` : "";
+      const wa = inv.whatsappDeliveryStatus === "sent" ? "واتساب: تم" : "واتساب: فشل";
+      return `*${inv.inviteeName}*\n  ${roleLabel(inv.role)} | ${statusLabel(inv.status)}\n  📱 ${inv.phone || "—"}${email}\n  ${wa} | ⌛ ${dateLabel(new Date(inv.expiresAt))}`;
     })
     .join("\n\n");
 
@@ -378,19 +366,18 @@ async function cmdAuditLog(): Promise<string> {
 
 // ── دعوة / كود ────────────────────────────────────────────────────────────────
 
-async function cmdInvite(args: string[], sendMail: boolean): Promise<string> {
-  const usage = sendMail
-    ? `⚠️ *الاستخدام:* دعوة email الاسم\n_مثال: دعوة ahmed@co.com أحمد العمري_`
-    : `⚠️ *الاستخدام:* كود email الاسم\n_مثال: كود sarah@co.com سارة خالد_`;
+async function cmdInvite(args: string[]): Promise<string> {
+  const usage = `⚠️ *الاستخدام:* دعوة +9665xxxxxxxx الاسم [email]\n_مثال: دعوة +966501234567 أحمد العمري ahmed@example.com_`;
+  if (args.length < 2) return usage;
 
-  if (!args.length) return usage;
-
-  const email = args[0].toLowerCase().trim();
-  if (!EMAIL_RE.test(email)) {
-    return `❌ *البريد الإلكتروني غير صحيح:* ${email}\n${usage}`;
-  }
-
-  const inviteeName = args.slice(1).join(" ").trim() || email.split("@")[0];
+  let phone = args[0].trim().replace(/[\s().-]/g, "");
+  if (phone.startsWith("00")) phone = `+${phone.slice(2)}`;
+  if (/^05\d{8}$/.test(phone)) phone = `+966${phone.slice(1)}`;
+  else if (/^5\d{8}$/.test(phone)) phone = `+966${phone}`;
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) return `❌ رقم الجوال غير صحيح.\n${usage}`;
+  const email = args.find(part => EMAIL_RE.test(part))?.toLowerCase();
+  const inviteeName = args.slice(1).filter(part => part.toLowerCase() !== email).join(" ").trim();
+  if (!inviteeName) return usage;
 
   await connectDb();
 
@@ -399,28 +386,32 @@ async function cmdInvite(args: string[], sendMail: boolean): Promise<string> {
     return "❌ لا يوجد حساب إداري في النظام.\nأنشئ حساب المالك أولاً عبر /api/setup.";
   }
 
+  const phoneDigits = phone.replace(/\D/g, "");
+  const existingUser = await User.findOne({ phone: { $regex: new RegExp(`${phoneDigits}$`) } });
+  if (existingUser) return `⚠️ يوجد حساب مرتبط بهذا الرقم بالفعل.`;
+
   // Prevent duplicate active invitations
   const existing = await Invitation.findOne({
-    email,
+    phone,
     status: { $in: ["sent", "active", "opened", "registration_started", "draft"] },
+    expiresAt: { $gt: new Date() },
   }).lean();
+  if (email && await User.findOne({ email })) return "⚠️ يوجد حساب مرتبط بهذا البريد بالفعل.";
 
   if (existing) {
-    const code = (existing as any).inviteCode ? `\n🔑 الكود الحالي: \`${(existing as any).inviteCode}\`` : "";
     const exp  = dateLabel(new Date((existing as any).expiresAt));
-    return `⚠️ يوجد دعوة نشطة بالفعل لـ *${email}*\nالحالة: ${statusLabel((existing as any).status)} | تنتهي: ${exp}${code}`;
+    return `⚠️ توجد دعوة نشطة بالفعل لهذا الرقم\nالحالة: ${statusLabel((existing as any).status)} | تنتهي: ${exp}`;
   }
 
-  const inviteCode = genCode();
   const rawToken   = crypto.randomBytes(32).toString("hex");
   const tokenHash  = crypto.createHash("sha256").update(rawToken).digest("hex");
   const expiresAt  = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   const invitation = await Invitation.create({
     inviteeName,
-    email,
+    ...(email ? { email } : {}),
+    phone,
     tokenHash,
-    inviteCode,
     role: "investor",
     permissions: [],
     allowedSections: [],
@@ -429,67 +420,32 @@ async function cmdInvite(args: string[], sendMail: boolean): Promise<string> {
     maxDevices: 2,
     sessionDurationMinutes: 60,
     status: "draft",
+    whatsappDeliveryStatus: "pending",
+    emailDeliveryStatus: email ? "pending" : "skipped",
     allowComments: false,
     allowFullScreen: true,
     allowViewFinancials: false,
     createdBy: systemUser._id,
   });
 
-  // Quick code only — no email
-  if (!sendMail) {
-    return `
-*⚡ كود دعوة سريع*
-${SEP}
-👤 *${inviteeName}*
-📧 ${email}
-🔑 الكود: \`${inviteCode}\`
-📅 تنتهي: ${dateLabel(expiresAt)}
-🎯 الدور: ${roleLabel("investor")}
-${SEP}
-_أرسل هذا الكود للمستخدم يدوياً_
-_لم يُرسَل أي بريد إلكتروني_`.trim();
-  }
-
-  // Send invitation email
-  try {
-    const portalUrl = (process.env.FRONTEND_URL ?? process.env.BASE_URL ?? "").replace(/\/$/, "");
-    await sendInvitationEmail({
-      to: email,
-      inviteeName,
-      inviteCode,
-      portalUrl: portalUrl || "https://thanarah.com",
-      expiresAt,
-      inviterName: systemUser.fullName,
-    });
-
-    await Invitation.findByIdAndUpdate(invitation._id, { status: "sent" });
-
-    return `
-*✅ دعوة أُرسلت بنجاح!*
-${SEP}
-👤 *${inviteeName}*
-📧 ${email}
-🔑 الكود: \`${inviteCode}\`
-📅 تنتهي: ${dateLabel(expiresAt)}
-🎯 الدور: ${roleLabel("investor")}
-${SEP}
-_✉️ تم إرسال بريد الدعوة_`.trim();
-  } catch (err: any) {
-    // Email failed — keep invitation but flag it, still return the code
-    await Invitation.findByIdAndUpdate(invitation._id, { status: "failed_delivery" });
-    logger.error({ err, email }, "WA bot: invitation email delivery failed");
-
-    return `
-*⚠️ الدعوة أُنشئت لكن فشل إرسال البريد*
-${SEP}
-👤 *${inviteeName}*
-📧 ${email}
-🔑 الكود: \`${inviteCode}\`
-📅 تنتهي: ${dateLabel(expiresAt)}
-${SEP}
-_❌ تحقق من إعدادات SMTP_
-_أرسل الكود يدوياً للمستخدم_`.trim();
-  }
+  const portalUrl = (process.env.FRONTEND_URL ?? process.env.BASE_URL ?? "https://presentation.thanarah.com").replace(/\/$/, "");
+  const inviteUrl = `${portalUrl}/invite#${rawToken}`;
+  const [waResult, emailResult] = await Promise.allSettled([
+    notifyWaInvitationLink(phone, inviteeName, inviteUrl),
+    email
+      ? sendInvitationEmail({ to: email, inviteeName, inviteUrl, expiresAt, inviterName: systemUser.fullName })
+      : Promise.resolve(),
+  ]);
+  const whatsappDelivered = waResult.status === "fulfilled";
+  const emailDelivered = Boolean(email) && emailResult.status === "fulfilled";
+  await Invitation.findByIdAndUpdate(invitation._id, {
+    status: whatsappDelivered || emailDelivered ? "sent" : "failed_delivery",
+    whatsappDeliveryStatus: whatsappDelivered ? "sent" : "failed",
+    emailDeliveryStatus: !email ? "skipped" : emailDelivered ? "sent" : "failed",
+  });
+  if (!whatsappDelivered) logger.warn({ invitationId: invitation.id }, "WA command invitation WhatsApp delivery failed");
+  if (email && !emailDelivered) logger.warn({ invitationId: invitation.id }, "WA command invitation email delivery failed");
+  return `${whatsappDelivered ? "✅" : "⚠️"} ${whatsappDelivered ? "تم إرسال رابط الدعوة على واتساب" : "تعذر إرسال رابط واتساب"} إلى *${inviteeName}*.\n${email ? (emailDelivered ? `📧 نسخة البريد وصلت إلى ${email}` : "⚠️ فشل إرسال البريد.") : "لا يوجد بريد إضافي."}\nيتم الدخول بعد التحقق من رقم الجوال.`;
 }
 
 // ── بريد مخصص ─────────────────────────────────────────────────────────────────
@@ -620,11 +576,11 @@ export async function handleAdminCommand(body: string): Promise<string> {
     }
     // Create invitation + send email
     if (["دعوة", "دعوه", "invite"].includes(cmd)) {
-      return cmdInvite(args, true);
+      return cmdInvite(args);
     }
-    // Quick code — no email
+    // Invitation codes are no longer issued.
     if (["كود", "code", "quick"].includes(cmd)) {
-      return cmdInvite(args, false);
+      return `لم تعد الدعوات تستخدم أكواداً. أرسل: دعوة +9665xxxxxxxx الاسم`;
     }
     // Send custom email
     if (["بريد", "email", "ايميل", "إيميل", "mail"].includes(cmd)) {

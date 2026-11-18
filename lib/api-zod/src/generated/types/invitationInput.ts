@@ -8,7 +8,8 @@
 
 export interface InvitationInput {
   inviteeName: string;
-  email: string;
+  email?: string;
+  phone: string;
   role: string;
   allowedSections: string[];
   permissions?: string[];

@@ -5,6 +5,8 @@ export interface IWaOtp extends Document {
   phone: string;      // normalized digits only, e.g. "966501234567"
   otpHash: string;    // SHA-256 of the 6-digit code
   attempts: number;   // failed verification attempts (max 3 → invalidate)
+  purpose: "login" | "invitation";
+  invitationId?: mongoose.Types.ObjectId;
   createdAt: Date;    // TTL index: auto-deleted after 5 min
 }
 
@@ -13,6 +15,8 @@ const WaOtpSchema = new Schema<IWaOtp>(
     phone:    { type: String, required: true, index: true },
     otpHash:  { type: String, required: true },
     attempts: { type: Number, default: 0 },
+    purpose:  { type: String, enum: ["login", "invitation"], default: "login", index: true },
+    invitationId: { type: Schema.Types.ObjectId, ref: "Invitation" },
     createdAt:{ type: Date,   default: Date.now },
   },
   { timestamps: false }
