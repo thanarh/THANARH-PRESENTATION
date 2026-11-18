@@ -4,12 +4,10 @@
  */
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FadeIn, C, ChapterBadge, DarkPanel, Card, stagger, fadeUp, ThanarahIcon } from './shared';
+import { FadeIn, C, ChapterBadge, DarkPanel, stagger, fadeUp, ThanarahIcon } from './shared';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-const GOLD   = '#A07820';
 const ACCENT = '#E8F0EC';
-const BG     = '#F7F5F1';
 
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
 
@@ -39,20 +37,27 @@ const COL_CLASS: Record<number, string> = {
 
 function ItemGrid({ items, columns = 2 }: { items: { icon?: string; ar: string; sub?: string }[]; columns?: number }) {
   const cls = COL_CLASS[columns] ?? 'grid-cols-2';
+  const tones = [
+    { background: '#E0EEE4', foreground: '#17533E' },
+    { background: '#F6E5D7', foreground: '#744E34' },
+    { background: '#E9E8F0', foreground: '#4C526D' },
+    { background: '#F4EDCF', foreground: '#6E5B2D' },
+  ];
   return (
     <motion.div variants={stagger} initial="hidden" animate="show"
-      className={`grid gap-2 md:gap-3 mt-4 md:mt-5 ${cls}`}>
+      className={`grid gap-3 md:gap-4 mt-4 md:mt-6 ${cls}`}>
       {items.map((item, i) => (
         <motion.div key={i} variants={fadeUp}
           dir="rtl"
-          className="rounded-xl p-3 md:p-4 flex items-start gap-2"
-          style={{ background: ACCENT, border: `1px solid ${C.soft}50` }}>
-          {item.icon && (
-            <span className="text-lg md:text-xl mt-0.5 shrink-0">{item.icon}</span>
-          )}
+          className="rounded-2xl p-4 md:p-5 flex items-start gap-3 transition-transform duration-300 hover:-translate-y-1"
+          style={{ background: tones[i % tones.length].background, border: '1px solid rgba(255,255,255,0.72)' }}>
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[10px] font-extrabold tracking-wide"
+            style={{ background: 'rgba(255,255,255,0.68)', color: tones[i % tones.length].foreground }}>
+            {String(i + 1).padStart(2, '0')}
+          </span>
           <div>
-            <div className="font-bold text-xs md:text-sm" style={{ color: C.ink }}>{item.ar}</div>
-            {item.sub && <div className="text-xs mt-0.5" style={{ color: C.muted }}>{item.sub}</div>}
+            <div className="font-extrabold text-sm md:text-base" style={{ color: tones[i % tones.length].foreground }}>{item.ar}</div>
+            {item.sub && <div className="text-xs md:text-sm mt-1 leading-relaxed" style={{ color: C.muted }}>{item.sub}</div>}
           </div>
         </motion.div>
       ))}
@@ -62,18 +67,18 @@ function ItemGrid({ items, columns = 2 }: { items: { icon?: string; ar: string; 
 
 function FlowList({ steps }: { steps: string[] }) {
   return (
-    <div className="space-y-3 mt-8">
+    <div className="space-y-3 mt-5">
       {steps.map((step, i) => (
         <motion.div key={i}
           dir="rtl"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.1 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-          className="flex items-center gap-4 rounded-xl px-5 py-3.5"
-          style={{ background: i % 2 === 0 ? ACCENT : C.white, border: `1px solid ${C.soft}40` }}>
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-            style={{ background: C.primary, color: C.white }}>
-            {i + 1}
+          className="flex items-center gap-4 rounded-2xl px-4 py-3.5"
+          style={{ background: i % 2 === 0 ? '#E0EEE4' : C.white, border: '1px solid rgba(30,107,77,0.08)' }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold shrink-0"
+            style={{ background: i % 2 === 0 ? C.primary : '#F6E5D7', color: i % 2 === 0 ? C.white : '#744E34' }}>
+            {String(i + 1).padStart(2, '0')}
           </div>
           <span className="font-medium" style={{ color: C.ink }}>{step}</span>
         </motion.div>
@@ -116,46 +121,37 @@ function SplitComparison({ left, right, leftTitle, rightTitle }:
   );
 }
 
-function NumberStat({ value, label }: { value: string; label: string }) {
-  return (
-    <motion.div variants={fadeUp}
-      dir="rtl"
-      className="rounded-2xl p-6 text-center"
-      style={{ background: C.dark, color: C.white }}>
-      <div className="text-4xl font-bold mb-2" style={{ color: C.soft }}>{value}</div>
-      <div className="text-sm font-medium" style={{ color: `${C.soft}cc` }}>{label}</div>
-    </motion.div>
-  );
-}
-
 // ─── Section: Introduction ─────────────────────────────────────────────────────
 function SlideIntroduction() {
   const pillars = [
-    { ar: 'الرعاية',    sub: 'Care',           icon: '🏥' },
-    { ar: 'الإدارة',    sub: 'Management',      icon: '📊' },
-    { ar: 'الذكاء',     sub: 'Intelligence',    icon: '🤖' },
-    { ar: 'التواصل',    sub: 'Communication',   icon: '💬' },
-    { ar: 'التشغيل',    sub: 'Operations',      icon: '⚙️' },
-    { ar: 'النمو',      sub: 'Growth',          icon: '📈' },
+    { ar: 'إدارة العيادة', sub: 'العمليات اليومية' },
+    { ar: 'تجربة المريض', sub: 'من التواصل إلى الموعد' },
+    { ar: 'الحضور الرقمي', sub: 'مواقع وتطبيقات' },
+    { ar: 'التواصل', sub: 'قنوات مترابطة' },
   ];
   return (
-    <div className="space-y-8">
-      <SlideHero chapter="الفصل الأول — البداية والتهيئة"
-        ar={'ثناره —\nمستقبل الرعاية\nمن منظومة واحدة'} />
+    <div className="space-y-6 md:space-y-8">
+      <SlideHero chapter="البداية"
+        ar={'عيادتك،\nكلّها معًا.'} />
       <FadeIn delay={0.15}>
-        <DarkPanel className="text-center">
-          <ThanarahIcon size={48} />
-          <p className="text-2xl md:text-3xl font-bold mt-4" style={{ color: C.white }}>
-            حين تتكامل التقنية، تبدأ رعاية أفضل.
-          </p>
-          <p className="mt-3 text-sm font-medium tracking-widest uppercase" style={{ color: `${C.soft}bb` }}>
-            When technology integrates, better care begins.
-          </p>
+        <DarkPanel className="relative overflow-hidden text-center md:text-right">
+          <div aria-hidden="true" className="absolute -left-12 -top-20 h-56 w-56 rounded-full bg-white/5" />
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div>
+              <p className="text-xl md:text-2xl font-extrabold" style={{ color: C.white }}>
+                ثناره تجمع تفاصيل العيادة في مكان واحد.
+              </p>
+              <p className="mt-2 text-sm md:text-base" style={{ color: `${C.soft}dd` }}>
+                إدارة، تواصل، وحضور رقمي — بلا تكرار للشرح.
+              </p>
+            </div>
+            <ThanarahIcon size={48} />
+          </div>
         </DarkPanel>
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-xl font-bold mb-4" style={{ color: C.primary }}>ستة محاور</h2>
-        <ItemGrid items={pillars} columns={3} />
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>أربع ركائز، تجربة واحدة</h2>
+        <ItemGrid items={pillars} columns={4} />
       </FadeIn>
     </div>
   );
@@ -164,32 +160,27 @@ function SlideIntroduction() {
 // ─── Section: Problem ─────────────────────────────────────────────────────────
 function SlideProblem() {
   const systems = [
-    { ar: 'برنامج حجوزات', icon: '📅' }, { ar: 'ملفات طبية', icon: '🗂' },
-    { ar: 'محاسبة', icon: '💰' }, { ar: 'مخزون', icon: '📦' },
-    { ar: 'موقع إلكتروني', icon: '🌐' }, { ar: 'تطبيق جوال', icon: '📱' },
-    { ar: 'واتساب', icon: '💬' }, { ar: 'نظام موظفين', icon: '👥' },
-    { ar: 'CRM', icon: '🔗' }, { ar: 'نظام تسويق', icon: '📣' },
-    { ar: 'بريد إلكتروني', icon: '✉️' }, { ar: 'دعم فني', icon: '🛠' },
+    { ar: 'الحجوزات والملفات' },
+    { ar: 'الإدارة والمدفوعات' },
+    { ar: 'الموقع والتطبيق' },
+    { ar: 'التواصل مع المرضى' },
   ];
   const losses = [
-    { ar: 'خسارة الوقت',           sub: 'الموظفون يدخلون البيانات أكثر من مرة',            icon: '⏱' },
-    { ar: 'خسارة الإيرادات',       sub: 'رسائل وحجوزات غير مكتملة تتحول إلى فرص ضائعة',  icon: '💸' },
-    { ar: 'خسارة البيانات',        sub: 'المعلومة موزعة بين أكثر من نظام',                 icon: '🔀' },
-    { ar: 'خسارة تجربة المريض',   sub: 'المريض يتنقل بين واتساب وموقع واتصال ودفع منفصل', icon: '😔' },
-    { ar: 'خسارة القرار',          sub: 'الإدارة لا ترى الصورة الكاملة لحظيًا',            icon: '📉' },
+    { ar: 'وقت أكثر في التنقل بين الأنظمة' },
+    { ar: 'بيانات موزعة يصعب جمعها' },
+    { ar: 'رحلة مريض غير مترابطة' },
   ];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل الثاني — لماذا وُجدت ثناره؟"
-        ar="المنشأة الطبية الحديثة\nتعمل عبر أنظمة كثيرة…\nلكنها لا تعمل كمنظومة واحدة."
-        en="Too many systems. Zero integration." />
+        ar="أدوات كثيرة،\nوتجربة واحدة تحتاج أن تترابط." />
       <FadeIn delay={0.1}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>الأنظمة المنفصلة</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>ما يحتاجه الفريق يومياً</h2>
         <ItemGrid items={systems} columns={4} />
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: '#E53E3E' }}>خمسة أنواع من الخسائر</h2>
-        <ItemGrid items={losses} columns={1} />
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>حين تبقى الأدوات منفصلة</h2>
+        <ItemGrid items={losses} columns={3} />
       </FadeIn>
     </div>
   );
@@ -198,36 +189,21 @@ function SlideProblem() {
 // ─── Section: Solution ────────────────────────────────────────────────────────
 function SlideSolution() {
   const steps = [
-    'اختر الباقة وأضف الخدمات التي تحتاجها',
-    'ادفع وأدخل بيانات منشأتك',
-    'استلم نظامك وخصص هويتك',
-    'اربط موقعك وواتسابك وطبيقك',
-    'أدر منشأتك وراقب النمو',
+    'اختر الخدمات المناسبة لمنشأتك',
+    'خصص الهوية والبيانات',
+    'اربط أدوات التواصل والحجز',
+    'أدر العمل من لوحة واحدة',
   ];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل الثالث — ما هي ثناره؟"
-        ar="ثناره — البنية الرقمية\nالكاملة للمنشأة الطبية"
-        en="The complete digital operating system for healthcare." />
+        ar="منظومة رقمية\nتعمل مع العيادة." />
       <FadeIn delay={0.1}>
         <DarkPanel>
-          <p dir="rtl" className="text-xl font-bold leading-relaxed" style={{ color: C.white }}>
-            ثناره هي منصة تشغيل رقمي متكاملة للقطاع الطبي، تجمع{' '}
-            <span style={{ color: C.soft }}>إدارة المنشأة</span>،{' '}
-            <span style={{ color: C.soft }}>تجربة المريض</span>،{' '}
-            <span style={{ color: C.soft }}>المواقع</span>،{' '}
-            <span style={{ color: C.soft }}>التطبيقات</span>،{' '}
-            <span style={{ color: C.soft }}>الاتصالات</span> والذكاء الاصطناعي{' '}
-            داخل <span style={{ color: GOLD }}>منظومة واحدة</span>.
+          <p dir="rtl" className="text-xl md:text-2xl font-extrabold leading-relaxed" style={{ color: C.white }}>
+            إدارة المنشأة وتجربة المريض والحضور الرقمي —{' '}
+            <span style={{ color: C.soft }}>ضمن منظومة ثناره.</span>
           </p>
-          <div className="mt-6 flex flex-col gap-2" dir="rtl">
-            {['ليست برنامج عيادة فقط.', 'ليست منشئ مواقع فقط.', 'ليست أداة حجز فقط.'].map((t, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span style={{ color: '#E53E3E' }}>✕</span>
-                <span className="text-sm" style={{ color: `${C.soft}cc` }}>{t}</span>
-              </div>
-            ))}
-          </div>
         </DarkPanel>
       </FadeIn>
       <FadeIn delay={0.2}>
@@ -241,37 +217,27 @@ function SlideSolution() {
 // ─── Section: Ecosystem ───────────────────────────────────────────────────────
 function SlideEcosystem() {
   const modules = [
-    { ar: 'Customer Portal',   sub: 'بوابة العميل',      icon: '🏠' },
-    { ar: 'Smart Clinic',      sub: 'العيادة الذكية',    icon: '🏥' },
-    { ar: 'Website Builder',   sub: 'منشئ المواقع',      icon: '🌐' },
-    { ar: 'Applications',      sub: 'التطبيقات',          icon: '📱' },
-    { ar: 'WhatsApp AI',       sub: 'مساعد واتساب',       icon: '💬' },
-    { ar: 'CRM & ERP',         sub: 'الإدارة والموارد',  icon: '📊' },
-    { ar: 'Accounting',        sub: 'المحاسبة',           icon: '💰' },
-    { ar: 'Analytics',         sub: 'التحليلات',          icon: '📈' },
-    { ar: 'AI Intelligence',   sub: 'الذكاء الاصطناعي',  icon: '🤖' },
-    { ar: 'Security',          sub: 'الأمان',             icon: '🛡' },
-    { ar: 'Integrations',      sub: 'التكاملات',          icon: '🔗' },
-    { ar: 'Support',           sub: 'الدعم الفني',        icon: '🛠' },
+    { ar: 'إدارة العيادة', sub: 'المهام اليومية' },
+    { ar: 'تجربة المريض', sub: 'التواصل والحجوزات' },
+    { ar: 'الموقع والتطبيق', sub: 'الحضور الرقمي' },
+    { ar: 'المساندة الذكية', sub: 'واتساب وتكاملات' },
   ];
   const clients = [
-    { ar: 'عيادات الأسنان', icon: '🦷' }, { ar: 'المجمعات الطبية', icon: '🏥' },
-    { ar: 'المستشفيات', icon: '🏨' }, { ar: 'المختبرات', icon: '🧪' },
-    { ar: 'مراكز الأشعة', icon: '📡' }, { ar: 'العلاج الطبيعي', icon: '💪' },
-    { ar: 'التجميل الطبي', icon: '✨' }, { ar: 'سلاسل العيادات', icon: '🔗' },
-    { ar: 'اليوم الواحد', icon: '🏃' }, { ar: 'شركات التشغيل', icon: '⚙️' },
+    { ar: 'العيادات' },
+    { ar: 'المجمعات الطبية' },
+    { ar: 'المجموعات الطبية' },
   ];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل الثالث — المنظومة"
-        ar="Thanarah Core\nوحوله كل ما تحتاجه" />
+        ar="كل أدوات العيادة،\nفي منظومة واحدة." />
       <FadeIn delay={0.1}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>وحدات المنظومة</h2>
-        <ItemGrid items={modules} columns={3} />
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>أربع مساحات مترابطة</h2>
+        <ItemGrid items={modules} columns={4} />
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>تخدم</h2>
-        <ItemGrid items={clients} columns={5} />
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>مصممة للمنشآت الطبية</h2>
+        <ItemGrid items={clients} columns={3} />
       </FadeIn>
     </div>
   );
@@ -280,27 +246,22 @@ function SlideEcosystem() {
 // ─── Section: Customer Journey ────────────────────────────────────────────────
 function SlideCustomerJourney() {
   const steps = [
-    { ar: 'زيارة موقع ثناره',         sub: 'واجهة فاخرة بخلفية أوف وايت' },
-    { ar: 'التعرف الذكي على الاحتياج',  sub: 'أسئلة ذكية تقترح الباقة المناسبة' },
-    { ar: 'اختيار الباقة',             sub: 'Lite · Pro · Infinity · Customize' },
-    { ar: 'إضافة الخدمات الإضافية',    sub: 'تطبيق، واتساب، بريد مؤسسي، وأكثر' },
-    { ar: 'الدفع عبر جيديا',           sub: 'آمن ومعتمد، بدون تخزين بيانات البطاقة' },
-    { ar: 'إنشاء البيئة تلقائيًا',     sub: 'Tenant · Subdomain · هوية · وحدات' },
-    { ar: 'لوحة التحكم',              sub: 'إدارة كاملة من مكان واحد' },
-    { ar: 'الدعم والتطوير المستمر',    sub: 'طلبات تعديل، تذاكر، فريق داخلي' },
+    { ar: 'تحديد احتياج المنشأة' },
+    { ar: 'اختيار الخدمات والهوية' },
+    { ar: 'ربط الموقع وقنوات التواصل' },
+    { ar: 'إدارة العمل من لوحة واحدة' },
   ];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل الخامس — رحلة العميل"
-        ar="من أول نقرة\nإلى منشأة طبية رقمية متكاملة" />
+        ar="من الاحتياج،\nإلى تجربة رقمية مترابطة." />
       <FadeIn delay={0.1}>
         <FlowList steps={steps.map(s => s.ar)} />
       </FadeIn>
       <FadeIn delay={0.2}>
         <DarkPanel className="text-center">
-          <p dir="rtl" className="text-xl font-bold" style={{ color: C.white }}>
-            من الاشتراك إلى تشغيل منشأة طبية رقمية متكاملة{' '}
-            <span style={{ color: C.soft }}>داخل تجربة واحدة.</span>
+          <p dir="rtl" className="text-lg md:text-xl font-extrabold" style={{ color: C.white }}>
+            خطوات واضحة، ومنظومة تنمو مع احتياج المنشأة.
           </p>
         </DarkPanel>
       </FadeIn>
@@ -311,16 +272,16 @@ function SlideCustomerJourney() {
 // ─── Section: Plans ───────────────────────────────────────────────────────────
 function SlidePlans() {
   const plans = [
-    { name: 'Lite', ar: 'الأساسي', sub: 'للمنشآت الصغيرة التي تحتاج أساس التشغيل', color: '#6B7280' },
-    { name: 'Pro',  ar: 'الاحترافي', sub: 'للعيادات النامية والفروع المتعددة', color: C.primary },
-    { name: 'Infinity', ar: 'اللا محدود', sub: 'للمنشآت التي تحتاج معظم قدرات المنظومة', color: C.dark },
-    { name: 'Customize', ar: 'المخصص', sub: 'للمستشفيات والمجموعات والمشاريع الخاصة', color: GOLD },
+    { name: 'Lite', ar: 'الأساسي', sub: 'بداية عملية للعيادة', color: '#E0EEE4' },
+    { name: 'Pro',  ar: 'الاحترافي', sub: 'للنمو والفروع المتعددة', color: '#F6E5D7' },
+    { name: 'Infinity', ar: 'المتكامل', sub: 'لمنظومة أوسع', color: '#E9E8F0' },
+    { name: 'Customize', ar: 'المخصص', sub: 'احتياج خاص أو مؤسسي', color: '#F4EDCF' },
   ];
   const addons = [
-    { ar: 'تطبيق مخصص', icon: '📱' }, { ar: 'دومين خاص', icon: '🌐' },
-    { ar: 'بريد مؤسسي', icon: '✉️' }, { ar: 'WhatsApp AI', icon: '💬' },
-    { ar: 'تقارير متقدمة', icon: '📊' }, { ar: 'تكاملات دفع', icon: '💳' },
-    { ar: 'تدريب موظفين', icon: '🎓' }, { ar: 'تطوير مخصص', icon: '⚙️' },
+    { ar: 'موقع وهوية رقمية' },
+    { ar: 'تطبيق للمنشأة' },
+    { ar: 'واتساب وتواصل' },
+    { ar: 'تكاملات وتقارير' },
   ];
   return (
     <div className="space-y-8">
@@ -331,16 +292,16 @@ function SlidePlans() {
           {plans.map((p, i) => (
             <motion.div key={i} variants={fadeUp}
               className="rounded-2xl p-6"
-              style={{ background: p.color, color: 'white' }}>
-              <div className="text-2xl font-bold mb-1">{p.name}</div>
-              <div className="text-base font-bold opacity-90 mb-2">{p.ar}</div>
+              style={{ background: p.color, color: C.dark }}>
+              <div className="text-xl font-extrabold mb-1">{p.name}</div>
+              <div className="text-sm font-bold mb-2">{p.ar}</div>
               <div className="text-sm opacity-75">{p.sub}</div>
             </motion.div>
           ))}
         </div>
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>الإضافات</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>أضف ما تحتاجه فقط</h2>
         <ItemGrid items={addons} columns={4} />
       </FadeIn>
     </div>
@@ -350,19 +311,15 @@ function SlidePlans() {
 // ─── Section: Smart Clinic ────────────────────────────────────────────────────
 function SlideSmartClinic() {
   const modules = [
-    { ar: 'لوحة القيادة الطبية',  sub: 'مرضى، حجوزات، أطباء، غرف، تنبيهات AI',  icon: '🎯' },
-    { ar: 'ملف المريض الكامل',    sub: 'تاريخ طبي، وصفات، أشعة، مدفوعات',       icon: '📋' },
-    { ar: 'المواعيد الذكية',      sub: 'يومي، أسبوعي، شهري، بالطبيب والفرع',    icon: '📅' },
-    { ar: 'الفواتير والتحصيل',    sub: 'دفعات جزئية، أقساط، استرداد، تقارير',   icon: '💰' },
-    { ar: 'نظام الأسنان',         sub: 'Dental Chart تفاعلي مع التاريخ الكامل',  icon: '🦷' },
-    { ar: 'المخزون والمشتريات',   sub: 'تنبيهات تلقائية، موردون، جرد',           icon: '📦' },
-    { ar: 'التأمين',              sub: 'موافقات، مطالبات، تتبع الرفض',            icon: '🛡' },
-    { ar: 'الموظفون والحضور',     sub: 'QR Login، Wallet Pass، ورديات',          icon: '👥' },
+    { ar: 'المواعيد والمرضى', sub: 'عرض وإدارة العمل اليومي' },
+    { ar: 'ملف المريض', sub: 'المعلومات الطبية المرتبطة بالرعاية' },
+    { ar: 'الفواتير والتحصيل', sub: 'متابعة المدفوعات من مكان واحد' },
+    { ar: 'الفريق والمخزون', sub: 'تنظيم الموارد والمهام' },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل السادس — النظام الطبي"
-        ar="العيادة الذكية —\nكل شيء في منظومة واحدة" />
+      <SlideHero chapter="العيادة الذكية"
+        ar="مساحة عمل واحدة،\nليوم عيادة أسهل." />
       <FadeIn delay={0.1}>
         <ItemGrid items={modules} columns={2} />
       </FadeIn>
@@ -373,34 +330,28 @@ function SlideSmartClinic() {
 // ─── Section: Website Builder ─────────────────────────────────────────────────
 function SlideWebsiteBuilder() {
   const features = [
-    { ar: 'سحب وإفلات بدون كود',   icon: '🖱' },
-    { ar: 'مكتبة قوالب طبية',      icon: '🎨' },
-    { ar: 'حجز متكامل مع النظام',  icon: '📅' },
-    { ar: 'دفع إلكتروني مباشر',    icon: '💳' },
-    { ar: 'SEO محسّن',              icon: '🔍' },
-    { ar: 'نشر فوري + Subdomain',   icon: '🚀' },
-    { ar: 'إنشاء بالذكاء الاصطناعي', icon: '🤖' },
-    { ar: 'بريد مؤسسي مدمج',       icon: '✉️' },
+    { ar: 'قوالب للمنشآت الطبية' },
+    { ar: 'حجز مرتبط بالخدمات' },
+    { ar: 'محتوى وهوية قابلة للتخصيص' },
+    { ar: 'أدوات إنشاء ذكية' },
   ];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل السابع — الموقع الذكي"
-        ar="موقعك الطبي\nيُنشأ خلال دقائق" />
+        ar="حضور رقمي،\nيعكس هوية منشأتك." />
       <FadeIn delay={0.1}>
         <DarkPanel dir="rtl">
           <p className="text-lg font-bold" style={{ color: C.white }}>
-            العميل يكتب:{' '}
-            <span style={{ color: C.soft }}>
-              «أنشئ موقعًا لعيادة أسنان راقية في الرياض، بهوية هادئة»
-            </span>
+            موقع طبي مرتبط بخدمات المنشأة{' '}
+            <span style={{ color: C.soft }}>وبطريقة عملها.</span>
           </p>
-          <p className="mt-3 text-sm" style={{ color: `${C.soft}99` }}>
-            النظام يقترح: هيكل الموقع · الألوان · الصفحات · المحتوى · CTAs
+          <p className="mt-3 text-sm" style={{ color: `${C.soft}cc` }}>
+            الهوية، الصفحات، والحجز — ضمن تجربة واحدة.
           </p>
         </DarkPanel>
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>مميزات منشئ المواقع</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>الموقع جزء من المنظومة</h2>
         <ItemGrid items={features} columns={4} />
       </FadeIn>
     </div>
@@ -410,25 +361,20 @@ function SlideWebsiteBuilder() {
 // ─── Section: WhatsApp AI ─────────────────────────────────────────────────────
 function SlideWhatsappAI() {
   const conversation = [
-    { role: 'patient', text: 'عندكم ابتسامة هوليوود؟' },
-    { role: 'ai', text: 'نعم، تتوفر عدة خيارات بعد تقييم الطبيب. أستطيع عرض أقرب موعد للاستشارة.' },
-    { role: 'patient', text: 'متى أقرب موعد الأسبوع القادم؟' },
-    { role: 'ai', text: 'متاح الثلاثاء 2:00 م أو الأربعاء 11:00 ص. أيهما يناسبك؟' },
-    { role: 'patient', text: 'الثلاثاء 2:00 م' },
-    { role: 'ai', text: '✅ تم حجز موعدك. سيصلك تأكيد ورابط الدفع الآن.' },
+    { role: 'patient', text: 'أرغب في حجز موعد.' },
+    { role: 'ai', text: 'يسعدنا مساعدتك. أي خدمة تحتاج؟' },
+    { role: 'patient', text: 'استشارة.' },
+    { role: 'ai', text: 'يمكنني متابعة طلب الموعد معك.' },
   ];
   const capabilities = [
-    { ar: 'تدريب على بيانات المنشأة', icon: '🧠' },
-    { ar: 'حجز المواعيد تلقائيًا', icon: '📅' },
-    { ar: 'الدفع داخل المحادثة', icon: '💳' },
-    { ar: 'تحويل بشري ذكي', icon: '👤' },
-    { ar: 'إضافة لـ CRM لحظيًا', icon: '🔗' },
-    { ar: 'متاح 24/7', icon: '🕐' },
+    { ar: 'ردود مرتبطة بخدمات المنشأة' },
+    { ar: 'متابعة طلبات المواعيد' },
+    { ar: 'تحويل المحادثة للفريق' },
   ];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل الثامن — WhatsApp AI"
-        ar="مساعد واتساب\nيحجز ويدفع ويخدم" />
+        ar="تواصل أسهل،\nمن القناة التي يعرفها المريض." />
       <FadeIn delay={0.1}>
         <div className="rounded-2xl overflow-hidden" style={{ background: '#ECF5EC', border: `1px solid ${C.soft}50` }}>
           <div className="px-5 py-3 flex items-center gap-3" style={{ background: '#1A7020' }}>
@@ -468,24 +414,22 @@ function SlideWhatsappAI() {
 // ─── Section: Apps ────────────────────────────────────────────────────────────
 function SlideApps() {
   const patientApp = [
-    { ar: 'الحساب والملف الطبي', icon: '👤' },
-    { ar: 'الحجوزات والمواعيد', icon: '📅' },
-    { ar: 'الوصفات والنتائج',   icon: '💊' },
-    { ar: 'الفواتير والدفع',    icon: '💳' },
-    { ar: 'Wallet Pass + QR',   icon: '📲' },
-    { ar: 'إشعارات ذكية',       icon: '🔔' },
+    { ar: 'الملف والخدمات' },
+    { ar: 'المواعيد والحجوزات' },
+    { ar: 'الإشعارات' },
+    { ar: 'الدفع والفواتير' },
   ];
-  const pipeline = ['اسم التطبيق وشعاره', 'الألوان والصفحات', 'Build تلقائي', 'Submission لمتاجر', 'Publish'];
+  const pipeline = ['حدد الهوية', 'خصص تجربة التطبيق', 'اربطه بخدمات المنشأة'];
   return (
     <div className="space-y-8">
       <SlideHero chapter="الفصل التاسع — التطبيقات"
-        ar="مصنع التطبيقات —\nمن الموقع إلى iOS وAndroid" />
+        ar="تجربة المنشأة،\nفي متناول المريض." />
       <FadeIn delay={0.1}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>App Factory</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>تخصيص تجربة التطبيق</h2>
         <FlowList steps={pipeline} />
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>تطبيق المريض</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-1" style={{ color: C.primary }}>تطبيق المريض</h2>
         <ItemGrid items={patientApp} columns={3} />
       </FadeIn>
     </div>
@@ -495,23 +439,22 @@ function SlideApps() {
 // ─── Section: Internal Operations ────────────────────────────────────────────
 function SlideInternalOperations() {
   const units = [
-    { ar: 'العملاء والمنشآت',  icon: '🏢' }, { ar: 'الاشتراكات',   icon: '📋' },
-    { ar: 'فريق المطورين',     icon: '👨‍💻' }, { ar: 'الدعم الفني',  icon: '🛠' },
-    { ar: 'CRM والمبيعات',    icon: '📈' }, { ar: 'التسويق',       icon: '📣' },
-    { ar: 'المحاسبة',          icon: '💰' }, { ar: 'الشركاء',       icon: '🤝' },
-    { ar: 'الموارد البشرية',   icon: '👥' }, { ar: 'الأمان',        icon: '🛡' },
+    { ar: 'المنشآت والعملاء' },
+    { ar: 'الاشتراكات والخدمات' },
+    { ar: 'الدعم والتطوير' },
+    { ar: 'الشركاء والتكاملات' },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل العاشر — إدارة شركة ثناره"
-        ar="منصة الإدارة المركزية —\nCommand Center" />
+      <SlideHero chapter="إدارة المنظومة"
+        ar="تشغيل ومساندة،\nمن لوحة واحدة." />
       <FadeIn delay={0.1}>
         <DarkPanel className="text-center">
           <p dir="rtl" className="text-xl font-bold" style={{ color: C.white }}>
-            ثناره تدير نفسها من نفس المنظومة.
+            لوحة واحدة لمتابعة خدمات ثناره والمنشآت.
           </p>
           <p className="mt-2 text-sm" style={{ color: `${C.soft}99` }}>
-            Every unit. Every client. Every service — one command center.
+            خدمات المنشآت، في مساحة عمل مترابطة.
           </p>
         </DarkPanel>
       </FadeIn>
@@ -525,51 +468,17 @@ function SlideInternalOperations() {
 // ─── Section: Architecture ────────────────────────────────────────────────────
 function SlideArchitecture() {
   const layers = [
-    { ar: 'المستخدمون والأجهزة',           icon: '📱' },
-    { ar: 'الحماية الطرفية',               icon: '🛡' },
-    { ar: 'تطبيقات الويب والجوال',         icon: '🌐' },
-    { ar: 'API Gateway',                   icon: '🔀' },
-    { ar: 'Authentication & Authorization', icon: '🔑' },
-    { ar: 'Core Services + Tenant Layer',  icon: '⚙️' },
-    { ar: 'MongoDB · Cache · Queue · Storage', icon: '🗄' },
-    { ar: 'AI Gateway · Integrations',    icon: '🤖' },
-    { ar: 'Monitoring · Audit · Backup',  icon: '📊' },
+    { ar: 'واجهة الاستخدام' },
+    { ar: 'خدمات العيادة' },
+    { ar: 'البيانات والصلاحيات' },
+    { ar: 'التكاملات والمتابعة' },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الثاني عشر — المعمارية التقنية"
-        ar="بنية تقنية طبقية\nمحكمة وقابلة للتوسع" />
+      <SlideHero chapter="كيف تعمل المنظومة"
+        ar="طبقات واضحة،\nتجربة واحدة." />
       <FadeIn delay={0.1}>
-        <div className="space-y-2 mt-4">
-          {layers.map((layer, i) => (
-            <motion.div key={i}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.08 + i * 0.06, duration: 0.5 }}
-              dir="rtl"
-              className="flex items-center gap-4 rounded-xl px-5 py-3"
-              style={{
-                background: i === 0 || i === layers.length - 1 ? C.dark : i % 2 === 0 ? ACCENT : C.white,
-                color: i === 0 || i === layers.length - 1 ? C.white : C.ink,
-                border: `1px solid ${C.soft}30`,
-              }}>
-              <span className="text-xl">{layer.icon}</span>
-              <span className="font-medium text-sm">{layer.ar}</span>
-              {i < layers.length - 1 && (
-                <span className="mr-auto text-xs" style={{ color: i === 0 ? C.soft : C.muted }}>↓</span>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </FadeIn>
-      <FadeIn delay={0.2}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { value: 'Multi-Tenant', label: 'بيانات معزولة لكل منشأة' },
-            { value: 'MongoDB', label: 'قاعدة بيانات مرنة وقابلة للتوسع' },
-            { value: '99.9%', label: 'هدف Uptime مع Auto Recovery' },
-          ].map((s, i) => <NumberStat key={i} {...s} />)}
-        </div>
+        <ItemGrid items={layers} columns={4} />
       </FadeIn>
     </div>
   );
@@ -578,24 +487,19 @@ function SlideArchitecture() {
 // ─── Section: Security ────────────────────────────────────────────────────────
 function SlideSecurity() {
   const layers = [
-    { ar: 'MFA — التحقق متعدد العوامل',  sub: 'كل جلسة محمية بطبقة ثانية',         icon: '🔐' },
-    { ar: 'RBAC — الصلاحيات الدقيقة',   sub: 'كل مستخدم يرى ما يُسمح له فقط',     icon: '🔑' },
-    { ar: 'Trusted Devices',             sub: 'أجهزة موثوقة، تنبيه فوري للجديدة',   icon: '📱' },
-    { ar: 'Forensic Watermark',          sub: 'كل جلسة موسومة بهوية المستخدم',       icon: '💧' },
-    { ar: 'Audit Logs',                  sub: 'سجل كامل لكل إجراء',                  icon: '📋' },
-    { ar: 'Tenant Isolation',            sub: 'بيانات كل منشأة معزولة تمامًا',       icon: '🏰' },
-    { ar: 'Signed URLs',                 sub: 'روابط مؤقتة وموقعة لكل ملف',          icon: '🔗' },
-    { ar: 'Risk Scoring',                sub: 'تقييم آلي لسلوك المستخدم',             icon: '📊' },
+    { ar: 'صلاحيات حسب الدور', sub: 'ما يراه كل مستخدم يناسب مهمته' },
+    { ar: 'وصول حسب القسم', sub: 'تحديد ما يمكن فتحه' },
+    { ar: 'مدة للجلسة', sub: 'إدارة وقت الدخول' },
+    { ar: 'سجل وهوية مرئية', sub: 'تتبع الاستخدام داخل العرض' },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الثالث عشر — الأمان"
-        ar="طبقات حماية\nلا تراها — لكنها دائمًا موجودة" />
+      <SlideHero chapter="الخصوصية والتحكم"
+        ar="وصول مضبوط،\nومتابعة واضحة." />
       <FadeIn delay={0.1}>
         <DarkPanel>
           <p dir="rtl" className="text-lg font-bold" style={{ color: C.white }}>
-            فريق ثناره <span style={{ color: '#FC8181' }}>لا يدخل</span> إلى نظام العميل إلا بعد{' '}
-            <span style={{ color: C.soft }}>موافقة صريحة، مقيدة بوقت وصلاحيات محددة.</span>
+            الصلاحيات والجلسات وسجل الاستخدام تساعد على حماية الوصول.
           </p>
         </DarkPanel>
       </FadeIn>
@@ -609,26 +513,20 @@ function SlideSecurity() {
 // ─── Section: Business Model ──────────────────────────────────────────────────
 function SlideBusinessModel() {
   const streams = [
-    { ar: 'اشتراكات شهرية',     sub: 'Lite · Pro · Infinity',       icon: '🔄' },
-    { ar: 'الإضافات',           sub: 'تطبيقات، واتساب، تقارير',     icon: '➕' },
-    { ar: 'AI Usage',            sub: 'استهلاك الذكاء الاصطناعي',    icon: '🤖' },
-    { ar: 'التطوير المخصص',     sub: 'مشاريع خاصة وتكاملات',        icon: '⚙️' },
-    { ar: 'خدمات الإطلاق',      sub: 'إعداد، تدريب، تخصيص',        icon: '🚀' },
-    { ar: 'Marketplace',         sub: 'قوالب، حلول، شركاء',         icon: '🏪' },
-    { ar: 'عقود المؤسسات',      sub: 'مستشفيات وسلاسل',             icon: '🏢' },
-    { ar: 'الأجهزة مستقبلًا',   sub: 'أجهزة طبية متصلة',            icon: '🔬' },
+    { ar: 'الباقات', sub: 'اختر مستوى الخدمة' },
+    { ar: 'الإضافات', sub: 'أضف وحدات حسب الحاجة' },
+    { ar: 'التخصيص', sub: 'حلول للمتطلبات الخاصة' },
   ];
-  const growth = ['Lite', 'Pro', 'فروع إضافية', 'AI', 'تطبيق', 'تقارير متقدمة', 'Enterprise'];
+  const growth = ['الخدمات الأساسية', 'إضافات', 'فروع', 'تخصيص'];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الرابع عشر — نموذج الأعمال"
-        ar="منصة تحقق الإيراد\nمن أكثر من مسار" />
+      <SlideHero chapter="الباقات والخدمات"
+        ar="ابدأ بما تحتاجه،\nوتوسّع عند الحاجة." />
       <FadeIn delay={0.1}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>مصادر الإيرادات</h2>
-        <ItemGrid items={streams} columns={4} />
+        <ItemGrid items={streams} columns={3} />
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-3" style={{ color: C.primary }}>نمو العميل داخل ثناره</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-3" style={{ color: C.primary }}>مساحة النمو</h2>
         <div className="flex gap-2 items-center flex-wrap" dir="rtl">
           {growth.map((g, i) => (
             <React.Fragment key={i}>
@@ -651,43 +549,17 @@ function SlideBusinessModel() {
 
 // ─── Section: Market ──────────────────────────────────────────────────────────
 function SlideMarket() {
-  const regions = [
-    { ar: 'الرياض', icon: '📍', phase: 'المرحلة الأولى' },
-    { ar: 'جدة', icon: '📍', phase: 'المرحلة الأولى' },
-    { ar: 'المنطقة الشرقية', icon: '📍', phase: 'المرحلة الأولى' },
-    { ar: 'المملكة كاملة', icon: '🇸🇦', phase: 'المرحلة الثانية' },
-    { ar: 'دول الخليج', icon: '🌍', phase: 'المرحلة الثالثة' },
-    { ar: 'الأسواق العالمية', icon: '🌐', phase: 'المرحلة الرابعة' },
-  ];
-  const whySaudi = [
-    { ar: 'تسارع التحول الرقمي', icon: '🚀' },
-    { ar: 'نمو المنشآت الطبية', icon: '📈' },
-    { ar: 'ارتفاع توقعات المرضى', icon: '⭐' },
-    { ar: 'الحاجة للأتمتة', icon: '🤖' },
-    { ar: 'بيئة دفع وتطبيقات ناضجة', icon: '💳' },
+  const market = [
+    { ar: 'العيادات' },
+    { ar: 'المجمعات الطبية' },
+    { ar: 'المجموعات متعددة الفروع' },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الخامس عشر — السوق والتوسع"
-        ar="السوق السعودي\nنقطة الانطلاق لعالم أكبر" />
+      <SlideHero chapter="لمن صُممت ثناره؟"
+        ar="منشآت طبية،\nباحتياجات مختلفة." />
       <FadeIn delay={0.1}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>لماذا السعودية؟</h2>
-        <ItemGrid items={whySaudi} columns={1} />
-      </FadeIn>
-      <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-4" style={{ color: C.primary }}>خطة التوسع</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {regions.map((r, i) => (
-            <motion.div key={i} variants={fadeUp}
-              dir="rtl"
-              className="rounded-xl p-4 text-center"
-              style={{ background: ACCENT, border: `1px solid ${C.soft}50` }}>
-              <div className="text-2xl mb-2">{r.icon}</div>
-              <div className="font-bold text-sm" style={{ color: C.ink }}>{r.ar}</div>
-              <div className="text-xs mt-1" style={{ color: C.muted }}>{r.phase}</div>
-            </motion.div>
-          ))}
-        </div>
+        <ItemGrid items={market} columns={3} />
       </FadeIn>
     </div>
   );
@@ -697,25 +569,15 @@ function SlideMarket() {
 function SlideCompetitiveAdvantages() {
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الفصل الرابع — الفرق عن السوق"
-        ar="لماذا يصعب\nتقليد ثناره؟" />
+      <SlideHero chapter="ما الذي يجمعه النظام؟"
+        ar="رحلة مترابطة،\nبدلاً من أدوات متفرقة." />
       <FadeIn delay={0.1}>
         <SplitComparison
-          leftTitle="السوق التقليدي"
+          leftTitle="أدوات متفرقة"
           rightTitle="ثناره"
-          left={['أنظمة منفصلة', 'بيانات موزعة', 'تطبيق مستقل', 'ذكاء اصطناعي شكلي', 'دعم من أكثر من جهة', 'تحديثات يدوية', 'صعوبة التوسع', 'تقارير متأخرة']}
-          right={['منظومة مترابطة', 'بيانات موحدة', 'تطبيق مرتبط بالنظام', 'ذكاء داخل التشغيل', 'دعم مركزي', 'تحديثات مركزية', 'توسع حسب الباقة', 'رؤية لحظية']}
+          left={['إدارة موزعة', 'بيانات متفرقة', 'تواصل منفصل', 'تجربة غير موحدة']}
+          right={['لوحة واحدة', 'سياق مترابط', 'قنوات متصلة', 'تجربة متناسقة']}
         />
-      </FadeIn>
-      <FadeIn delay={0.2}>
-        <DarkPanel>
-          <p dir="rtl" className="text-lg font-bold" style={{ color: C.white }}>
-            المنافس يستطيع تقليد{' '}
-            <span style={{ color: '#FC8181' }}>الواجهة</span>،
-            {' '}لكنه لا يرى{' '}
-            <span style={{ color: C.soft }}>البنية العميقة</span> خلفها.
-          </p>
-        </DarkPanel>
       </FadeIn>
     </div>
   );
@@ -724,21 +586,15 @@ function SlideCompetitiveAdvantages() {
 // ─── Section: Roadmap ─────────────────────────────────────────────────────────
 function SlideRoadmap() {
   const future = [
-    { ar: 'Advanced Smart Clinic', icon: '🏥' },
-    { ar: 'Marketplace', icon: '🏪' },
-    { ar: 'App Factory Automation', icon: '🏭' },
-    { ar: 'Digital Twin', icon: '🪞' },
-    { ar: 'Autopilot', icon: '🤖' },
-    { ar: 'Insurance Integrations', icon: '📋' },
-    { ar: 'Device Integrations', icon: '🔬' },
-    { ar: 'Enterprise Hospitals', icon: '🏨' },
-    { ar: 'Developer Ecosystem', icon: '👨‍💻' },
-    { ar: 'Global Expansion', icon: '🌐' },
+    { ar: 'تطوير أدوات العيادة' },
+    { ar: 'تحسين تجربة المريض' },
+    { ar: 'توسيع التكاملات' },
+    { ar: 'تطوير الموقع والتطبيق' },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="خارطة الطريق"
-        ar="المستقبل مبني\nعلى نفس الأساس" />
+      <SlideHero chapter="مجالات التطوير"
+        ar="تتطور المنظومة،\nمع احتياج المنشأة." />
       <FadeIn delay={0.1}>
         <ItemGrid items={future} columns={2} />
       </FadeIn>
@@ -750,29 +606,29 @@ function SlideRoadmap() {
 function SlideTimeline() {
   const phases = [
     {
-      month: 'الشهر الأول', color: C.primary,
-      items: ['Presentation Portal', 'الهوية والمستخدمون', 'الدعوات والصلاحيات', 'الأساس الأمني', 'Architecture'],
+      month: 'التأسيس', color: '#E0EEE4',
+      items: ['الهوية والبيانات', 'الصلاحيات', 'الخدمات الأساسية'],
     },
     {
-      month: 'الشهر الثاني', color: C.dark,
-      items: ['Customer Portal', 'الاشتراكات وجيديا', 'Tenant Provisioning', 'Smart Clinic MVP', 'الدعم الفني'],
+      month: 'التشغيل', color: '#F6E5D7',
+      items: ['إدارة العمل', 'الحجز والتواصل', 'مساندة الفريق'],
     },
     {
-      month: 'الشهر الثالث', color: GOLD,
-      items: ['Website Builder MVP', 'WhatsApp AI Prototype', 'التقارير والنشر', 'المراقبة', 'Pilot Clinics'],
+      month: 'التوسع', color: '#E9E8F0',
+      items: ['موقع وتطبيق', 'تكاملات إضافية', 'خدمات حسب الحاجة'],
     },
   ];
   return (
     <div className="space-y-8">
-      <SlideHero chapter="الخطة الزمنية"
-        ar="ثلاثة أشهر\nمن الصفر إلى التشغيل" />
+      <SlideHero chapter="مراحل العمل"
+        ar="خطوات واضحة،\nمن دون وعود زمنية غير مؤكدة." />
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {phases.map((phase, i) => (
             <motion.div key={i} variants={fadeUp}
               className="rounded-2xl overflow-hidden shadow-sm"
               style={{ border: `1px solid ${C.soft}40` }}>
-              <div className="px-5 py-3 font-bold text-sm" style={{ background: phase.color, color: 'white' }}>
+              <div className="px-5 py-3 font-bold text-sm" style={{ background: phase.color, color: C.dark }}>
                 {phase.month}
               </div>
               <div className="p-4 space-y-2" style={{ background: C.white }}>
@@ -795,9 +651,9 @@ function SlideTimeline() {
 // ─── Section: Summary ─────────────────────────────────────────────────────────
 function SlideSummary() {
   const nextSteps = [
-    { role: 'للمستثمر', items: ['فتح النموذج المالي', 'حجز اجتماع', 'تسجيل الاهتمام'], icon: '💼', color: GOLD },
-    { role: 'للشريك',   items: ['طلب شراكة', 'استكشاف التكامل', 'مشاركة بيانات التواصل'], icon: '🤝', color: C.primary },
-    { role: 'للعميل',   items: ['طلب تجربة', 'اختيار باقة', 'حجز عرض توضيحي'], icon: '🏥', color: C.dark },
+    { role: 'للمنشأة', items: ['اطلب عرضاً توضيحياً'], color: '#E0EEE4' },
+    { role: 'للشريك',   items: ['ناقش فرص التعاون'], color: '#F6E5D7' },
+    { role: 'للمهتم',   items: ['تعرّف على الباقات'], color: '#E9E8F0' },
   ];
   return (
     <div className="space-y-8">
@@ -805,29 +661,27 @@ function SlideSummary() {
         <div className="text-center space-y-4">
           <ThanarahIcon size={48} />
           <h1 className="text-2xl md:text-3xl xl:text-4xl font-bold leading-tight" style={{ color: C.ink }}>
-            نحن لا نبني نظامًا<br />
-            <span style={{ color: C.primary }}>لإدارة العيادات.</span>
+            ثناره تجمع<br />
+            <span style={{ color: C.primary }}>إدارة العيادة وتجربة المريض.</span>
           </h1>
-          <p className="text-2xl font-medium" style={{ color: C.muted }}>
-            نحن نبني البنية الرقمية التي ستعمل من خلالها<br />
-            المنشآت الطبية في المستقبل.
+          <p className="text-lg md:text-xl font-medium" style={{ color: C.muted }}>
+            منظومة واحدة، ومساحة أوضح للعمل.
           </p>
           <div className="pt-4">
-            <span className="text-3xl font-bold tracking-widest" style={{ color: C.primary }}>
-              ثناره — تقنية تخدم الإنسان
+            <span className="text-xl font-bold" style={{ color: C.primary }}>
+              ثناره — تقنية تخدم الرعاية
             </span>
           </div>
         </div>
       </FadeIn>
       <FadeIn delay={0.2}>
-        <h2 dir="rtl" className="text-lg font-bold mb-6" style={{ color: C.primary }}>الخطوة التالية</h2>
+        <h2 dir="rtl" className="text-base font-bold mb-4" style={{ color: C.primary }}>الخطوة التالية</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {nextSteps.map((ns, i) => (
             <motion.div key={i} variants={fadeUp}
               className="rounded-2xl overflow-hidden">
-              <div className="px-5 py-3 text-center font-bold" style={{ background: ns.color, color: 'white' }}>
-                <span className="text-xl">{ns.icon}</span>
-                <div className="text-sm mt-1">{ns.role}</div>
+              <div className="px-5 py-3 text-center font-bold" style={{ background: ns.color, color: C.dark }}>
+                <div className="text-sm">{ns.role}</div>
               </div>
               <div className="p-4 space-y-2" style={{ background: ACCENT, border: `1px solid ${C.soft}40`, borderTop: 'none', borderRadius: '0 0 1rem 1rem' }}>
                 {ns.items.map((item, j) => (
@@ -847,25 +701,17 @@ function SlideGeneric({ titleAr, descriptionAr, order }: { titleAr: string; desc
   return (
     <div className="space-y-12">
       <FadeIn>
-        <div className="text-[8rem] font-bold leading-none select-none"
-          style={{ color: `${C.soft}40` }}>
+        <div className="text-6xl md:text-7xl font-bold leading-none select-none"
+          style={{ color: `${C.soft}70` }}>
           {String(order).padStart(2, '0')}
         </div>
-        <h1 dir="rtl" className="text-5xl md:text-6xl font-bold leading-tight -mt-8"
+        <h1 dir="rtl" className="text-3xl md:text-5xl font-bold leading-tight -mt-2"
           style={{ color: C.ink }}>{titleAr}</h1>
         {descriptionAr && (
-          <p dir="rtl" className="text-xl mt-4 leading-relaxed" style={{ color: C.muted }}>
+          <p dir="rtl" className="text-base md:text-lg mt-4 leading-relaxed" style={{ color: C.muted }}>
             {descriptionAr}
           </p>
         )}
-      </FadeIn>
-      <FadeIn delay={0.15}>
-        <DarkPanel className="text-center">
-          <ThanarahIcon size={36} />
-          <p className="mt-3 text-base font-medium" style={{ color: `${C.soft}cc` }}>
-            Thanarah — The Future of Healthcare Technology
-          </p>
-        </DarkPanel>
       </FadeIn>
     </div>
   );
@@ -904,8 +750,15 @@ interface SlideRendererProps {
 
 export function SlideRenderer({ slug, titleAr, descriptionAr, order }: SlideRendererProps) {
   const Component = SLIDE_MAP[slug];
-  if (Component) {
-    return <Component titleAr={titleAr} descriptionAr={descriptionAr} order={order} />;
-  }
-  return <SlideGeneric titleAr={titleAr} descriptionAr={descriptionAr} order={order} />;
+  return (
+    <div className="relative isolate">
+      <div aria-hidden="true" className="pointer-events-none absolute -top-12 -left-12 h-48 w-48 rounded-full bg-[#D9EBDD]/70 blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute top-[38%] -right-14 h-40 w-40 rounded-full bg-[#F3E4D4]/60 blur-3xl" />
+      <div className="relative z-10">
+        {Component
+          ? <Component titleAr={titleAr} descriptionAr={descriptionAr} order={order} />
+          : <SlideGeneric titleAr={titleAr} descriptionAr={descriptionAr} order={order} />}
+      </div>
+    </div>
+  );
 }

@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&display=swap');
+
+.thanarah-slide {
+  background:
+    radial-gradient(ellipse at 10% 14%, rgba(221, 238, 226, .66), transparent 28%),
+    radial-gradient(ellipse at 93% 82%, rgba(250, 228, 209, .54), transparent 25%),
+    #f7f5f1;
+  color: #123f32;
+  font-family: "Noto Sans Arabic", "DM Sans", sans-serif;
+}
+
+.thanarah-grain {
+  opacity: .18;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+}
+
+.thanarah-highlight::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -.03em;
+  bottom: .09em;
+  left: -.02em;
+  height: .28em;
+  border-radius: 999px;
+  background: #d7e9dc;
+  transform: rotate(-1.5deg);
+}
+
+.thanarah-tile {
+  transition: transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.thanarah-tile:hover { transform: translateY(-4px) rotate(-.7deg); }
+.thanarah-mint { color: #17533e; background: #e0eee4; }
+.thanarah-peach { color: #744e34; background: #f6e5d7; }
+.thanarah-lilac { color: #4c526d; background: #e9e8f0; }
+.thanarah-yellow { color: #6e5b2d; background: #f4edcf; }
+
+.thanarah-watermark {
+  z-index: 1;
+  color: #164e3d;
+  opacity: .022;
+  transform: rotate(-18deg);
+}
+.thanarah-watermark span {
+  white-space: nowrap;
+  font: 900 clamp(5rem, 15vw, 15rem)/1 "DM Sans", sans-serif;
+  letter-spacing: -.08em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thanarah-tile { transition: none; }
+}

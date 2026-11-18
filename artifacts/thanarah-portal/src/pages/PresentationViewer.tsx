@@ -92,7 +92,8 @@ export default function PresentationViewer() {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        style={{ paddingBottom: isMobile ? 0 : 80 }}
+        className="mx-auto w-full max-w-[1240px] px-4 sm:px-8 lg:px-14"
+        style={{ paddingBottom: isMobile ? 24 : 96, paddingTop: isMobile ? 24 : 44 }}
       >
         <SlideRenderer
           slug={slug}

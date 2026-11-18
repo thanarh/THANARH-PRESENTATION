@@ -14,12 +14,12 @@ import { ArrowRight, ArrowLeft, Lock, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const WARM = {
-  gold:        '#B8960C',
-  goldLight:   'rgba(184,150,12,0.10)',
-  ink:         '#1C1915',
-  muted:       '#6B6459',
-  divider:     '#E8E3DA',
-  card:        '#F0EDE6',
+  gold:        '#1E6B4D',
+  goldLight:   'rgba(30,107,77,0.10)',
+  ink:         '#123F32',
+  muted:       '#61756B',
+  divider:     '#DDE8E0',
+  card:        '#EAF2EC',
   bg:          '#F7F5F1',
 } as const;
 
@@ -123,13 +123,13 @@ export default function PresentationHome() {
             className="text-3xl md:text-4xl font-bold leading-snug mb-4"
             style={{ color: WARM.ink, letterSpacing: '-0.02em' }}
           >
-            {isRtl ? 'نظام ثناره الطبي الشامل' : 'Thanarah Unified Medical System'}
+            {isRtl ? 'عيادتك، كلّها معًا.' : 'Your clinic, all in sync.'}
           </h1>
 
           <p className="text-base leading-relaxed mb-8" style={{ color: WARM.muted }}>
             {isRtl
-              ? 'مستقبل إدارة الرعاية الصحية — مُعدّ خصيصاً لك.'
-              : 'The future of healthcare management — prepared exclusively for you.'}
+              ? 'إدارة العيادة وتجربة المريض في منظومة واحدة.'
+              : 'Clinic operations and patient experience in one system.'}
           </p>
 
           {resumeSlug && (
@@ -168,7 +168,7 @@ export default function PresentationHome() {
           className="text-xs font-semibold tracking-[0.15em] uppercase mb-6"
           style={{ color: WARM.muted }}
         >
-          {isRtl ? 'محتويات العرض' : 'Presentation Contents'}
+          {isRtl ? 'اكتشف ثناره' : 'Explore Thanarah'}
         </motion.p>
 
         <ol className="space-y-2">

@@ -47,11 +47,12 @@ export const fadeUp = {
 
 // Chapter badge
 export function ChapterBadge({ ar, en }: { ar: string; en: string }) {
+  const label = en && en !== ar ? `${en} — ${ar}` : ar;
   return (
     <div className="inline-flex items-center gap-2 mb-6">
       <div className="h-px w-8" style={{ background: C.primary }} />
       <span className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: C.primary }}>
-        {en} — {ar}
+        {label}
       </span>
       <div className="h-px w-8" style={{ background: C.primary }} />
     </div>

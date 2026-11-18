@@ -30,29 +30,30 @@ export function Watermark() {
     ctx.clearRect(0, 0, W, H);
 
     const dateStr = new Date().toISOString().split('T')[0];
-    const line1   = `${user.fullName}  •  ${user.email}`;
+    const contact = user.email || user.phone || user.id;
+    const line1   = `${user.fullName}  •  ${contact}`;
     const line2   = `${sessionId}  •  ${dateStr}  •  CONFIDENTIAL`;
 
     ctx.save();
-    ctx.font       = '500 13px Cairo, Inter, sans-serif';
+    ctx.font       = '500 11px Cairo, Inter, sans-serif';
     ctx.textAlign  = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle  = 'rgba(15,61,51,0.11)';
+    ctx.fillStyle  = 'rgba(15,61,51,0.025)';
     ctx.rotate((-22 * Math.PI) / 180);
 
-    const TILE_W = 580;
-    const TILE_H = 300;
+    const TILE_W = 820;
+    const TILE_H = 440;
     const off    = offsetRef.current;
 
     for (let x = -TILE_W * 2 + (off % TILE_W); x < W * 2; x += TILE_W) {
       for (let y = -TILE_H * 2 + (off * 0.6 % TILE_H); y < H * 2; y += TILE_H) {
-        ctx.fillStyle = 'rgba(15,61,51,0.11)';
+        ctx.fillStyle = 'rgba(15,61,51,0.025)';
         ctx.fillText(line1, x, y + 60);
-        ctx.fillStyle = 'rgba(15,61,51,0.09)';
+        ctx.fillStyle = 'rgba(15,61,51,0.018)';
         ctx.fillText(line2, x, y + 80);
-        ctx.fillStyle = 'rgba(15,61,51,0.11)';
+        ctx.fillStyle = 'rgba(15,61,51,0.025)';
         ctx.fillText(line1, x + TILE_W / 2, y + 60 + TILE_H / 2);
-        ctx.fillStyle = 'rgba(15,61,51,0.09)';
+        ctx.fillStyle = 'rgba(15,61,51,0.018)';
         ctx.fillText(line2, x + TILE_W / 2, y + 80 + TILE_H / 2);
       }
     }
