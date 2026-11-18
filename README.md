@@ -160,7 +160,7 @@ thanarah-presentation/
 ## بدء التشغيل | Getting Started
 
 ### المتطلبات
-- Node.js 22+
+- Node.js 20.19+
 - pnpm 10+
 - MongoDB Atlas cluster
 - حساب SMTP2GO

@@ -5,7 +5,7 @@ A secure, invitation-only investor and partner presentation portal for Thanarah 
 ## Stack
 
 - **Frontend:** React 19, TypeScript, Vite 7, Tailwind CSS 4, shadcn/ui, Framer Motion, TanStack Query v5, Wouter
-- **Backend:** Express 5, Node.js 22+, Mongoose 9 (MongoDB Atlas)
+- **Backend:** Express 5, Node.js 20.19+, Mongoose 9 (MongoDB Atlas)
 - **Tooling:** Orval (API client codegen from OpenAPI), esbuild, pnpm workspaces
 - **Auth:** JWT + httpOnly cookies, 8-tier RBAC (Owner → Viewer)
 - **Languages:** Arabic, English, Turkish, Urdu (RTL support)
@@ -45,6 +45,12 @@ All configured in Replit Secrets / Env Vars:
 | `BASE_URL` / `FRONTEND_URL` | Public URL for links in emails |
 | `THANARAH_OWNER_EMAIL_1` / `THANARAH_OWNER_EMAIL_2` | Owner notification addresses |
 | `MONGODB_DATABASE_NAME` | `thanarah_presentation` |
+
+## First-time owner setup
+
+After the API connects to MongoDB, open `/setup` in the portal and create the owner account. Use the `OWNER_SETUP_KEY` secret and a password of at least 12 characters. The setup page works only once.
+
+Email delivery is optional for local/Replit startup; configure `SMTP_PASSWORD` to enable it.
 
 ## Workspace structure
 
