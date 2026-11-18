@@ -23,7 +23,7 @@ WaOtpSchema.index({ createdAt: 1 }, { expireAfterSeconds: 300 });
 
 /** Generate a 6-digit numeric OTP and return both the plaintext and its hash */
 export function generateWaOtp(): { code: string; hash: string } {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(crypto.randomInt(100000, 1_000_000));
   const hash = crypto.createHash("sha256").update(code).digest("hex");
   return { code, hash };
 }
@@ -31,7 +31,10 @@ export function generateWaOtp(): { code: string; hash: string } {
 /** Verify a submitted code against a stored hash */
 export function verifyWaOtp(submitted: string, storedHash: string): boolean {
   const h = crypto.createHash("sha256").update(submitted.trim()).digest("hex");
-  return h === storedHash;
+  const submittedDigest = Buffer.from(h, "hex");
+  const expectedDigest = Buffer.from(storedHash, "hex");
+  return submittedDigest.length === expectedDigest.length
+    && crypto.timingSafeEqual(submittedDigest, expectedDigest);
 }
 
 /** Normalize an arbitrary phone string to digits-only international format */

@@ -24,9 +24,8 @@ import {
 } from "../lib/email";
 import { connectDb } from "../lib/db";
 import { logger } from "../lib/logger";
-import { whatsappService } from "../services/whatsapp";
 import WaOtp, { generateWaOtp, verifyWaOtp, normalizePhone } from "../models/waOtp";
-import { notifyWaOtp, notifyWaLoginAlert, notifyWaPasswordReset } from "../lib/waNotify";
+import { isQiroxOtpConfigured, notifyWaOtp, notifyWaLoginAlert, notifyWaPasswordReset } from "../lib/waNotify";
 
 const JWT_SECRET = process.env.JWT_SECRET || "thanarah-dev-secret-change-in-production";
 
@@ -472,14 +471,6 @@ router.post("/mfa/disable", authenticate, async (req: AuthRequest, res: Response
   res.json({ success: true });
 });
 
-// ─── WhatsApp status ──────────────────────────────────────────────────────────
-
-// GET /api/auth/wa-status — frontend uses this to decide whether to show the WA login tab
-router.get("/wa-status", async (_req: Request, res: Response) => {
-  const state = whatsappService.getState();
-  res.json({ connected: state.status === "connected", phone: state.phone ?? null });
-});
-
 // ─── WhatsApp OTP login ───────────────────────────────────────────────────────
 
 // POST /api/auth/wa-otp/send — generate + deliver a 6-digit OTP via WhatsApp
@@ -490,12 +481,16 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "رقم الجوال غير صحيح" }); return; }
 
+  const inputPhone = parsed.data.phone.trim().replace(/[\s().-]/g, "");
+  if (!/^\+[1-9]\d{7,14}$/.test(inputPhone)) {
+    res.status(400).json({ error: "أدخل رقم الجوال بصيغته الدولية مع مفتاح الدولة" });
+    return;
+  }
+
   const phone = normalizePhone(parsed.data.phone);
 
-  // WhatsApp must be connected
-  const state = whatsappService.getState();
-  if (state.status !== "connected") {
-    res.status(503).json({ error: "خدمة الواتساب غير متصلة حالياً" });
+  if (!isQiroxOtpConfigured()) {
+    res.status(503).json({ error: "خدمة إرسال رمز واتساب غير مهيأة حالياً" });
     return;
   }
 
@@ -523,9 +518,9 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
 
   // Send via WhatsApp (fire-and-forget with error forwarded to response)
   try {
-    await notifyWaOtp(phone, code, (user.preferredLanguage === "en" ? "en" : "ar"));
+    await notifyWaOtp(phone, code, user.preferredLanguage === "en" ? "en" : "ar", user.fullName);
   } catch (err) {
-    logger.error({ phone, err }, "Failed to send WA OTP");
+    logger.error({ err }, "Failed to send WA OTP");
     res.status(502).json({ error: "تعذّر إرسال الرمز عبر واتساب" });
     return;
   }

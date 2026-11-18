@@ -6,6 +6,7 @@
  */
 import { whatsappService } from "../services/whatsapp";
 import { logger } from "./logger";
+import { randomUUID } from "node:crypto";
 
 /** Convert a digits-only phone number to a WhatsApp JID */
 function toJid(phone: string): string {
@@ -24,12 +25,54 @@ export async function notifyWa(phone: string, message: string): Promise<void> {
 
 // ── Pre-built notification templates ─────────────────────────────────────────
 
-export async function notifyWaOtp(phone: string, code: string, lang: "ar" | "en" = "ar"): Promise<void> {
+export function isQiroxOtpConfigured(): boolean {
+  return Boolean(process.env.QIROX_PROJECT_API_TOKEN && process.env.QIROX_PROJECT_ID);
+}
+
+export async function notifyWaOtp(
+  phone: string,
+  code: string,
+  lang: "ar" | "en" = "ar",
+  clientName = "Thanarah portal user",
+): Promise<void> {
+  const token = process.env.QIROX_PROJECT_API_TOKEN;
+  const projectId = process.env.QIROX_PROJECT_ID;
+  if (!token || !projectId) {
+    throw new Error("QIROX WhatsApp credentials are not configured");
+  }
+
+  const digits = phone.replace(/\D/g, "");
+  if (!/^[1-9]\d{7,14}$/.test(digits)) {
+    throw new Error("Phone number must include its international country code");
+  }
+
   const msg =
     lang === "ar"
       ? `🔐 *ثناية — رمز التحقق*\n\nرمزك لتسجيل الدخول:\n\n*${code}*\n\nصالح لمدة 5 دقائق. لا تشاركه مع أحد.`
       : `🔐 *Thanarah — Verification Code*\n\nYour sign-in code:\n\n*${code}*\n\nValid for 5 minutes. Do not share it.`;
-  await notifyWa(phone, msg);
+
+  const response = await fetch(
+    `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/whatsapp`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `thanarah-otp-${randomUUID()}`,
+      },
+      body: JSON.stringify({
+        recipient: { phone: `+${digits}`, name: clientName },
+        platformName: "Thanarah Medical-Tech",
+        clientName,
+        code,
+        message: msg,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`QIROX WhatsApp API returned HTTP ${response.status}`);
+  }
 }
 
 export async function notifyWaLoginAlert(

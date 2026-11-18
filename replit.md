@@ -45,12 +45,15 @@ All configured in Replit Secrets / Env Vars:
 | `BASE_URL` / `FRONTEND_URL` | Public URL for links in emails |
 | `THANARAH_OWNER_EMAIL_1` / `THANARAH_OWNER_EMAIL_2` | Owner notification addresses |
 | `MONGODB_DATABASE_NAME` | `thanarah_presentation` |
+| `QIROX_PROJECT_ID` | Project ID used to send login codes |
+| `QIROX_PROJECT_API_TOKEN` | QIROX WhatsApp token (Replit Secret) |
 
 ## First-time owner setup
 
 After the API connects to MongoDB, open `/setup` in the portal and create the owner account. Use the `OWNER_SETUP_KEY` secret and a password of at least 12 characters. The setup page works only once.
 
 Email delivery is optional for local/Replit startup; configure `SMTP_PASSWORD` to enable it.
+Invitation links/codes remain available for account activation; they no longer sign users in directly.
 
 ## Workspace structure
 

@@ -12,7 +12,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { Loader2, ArrowRight, AlertCircle, CheckCircle2, Mail, Fingerprint, KeyRound, ShieldCheck, Shield, MessageCircle, Phone } from 'lucide-react';
+import { Loader2, ArrowRight, AlertCircle, CheckCircle2, Mail, Fingerprint, ShieldCheck, Shield, MessageCircle, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   passkeySupported, hasStoredPasskey, getPasskeyDisplayName,
@@ -312,7 +312,7 @@ function QuickAuthSetup({ open, onClose, refreshToken, userId, email, displayNam
 
 // ─── Main Login page ──────────────────────────────────────────────────────────
 
-type LoginMode = 'email' | 'invite' | 'biometric' | 'mfa' | 'whatsapp';
+type LoginMode = 'email' | 'biometric' | 'mfa' | 'whatsapp';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -329,8 +329,6 @@ export default function Login() {
   const [forgotOpen, setForgotOpen]       = useState(false);
   const [setupOpen, setSetupOpen]         = useState(false);
   const [bioLoading, setBioLoading]       = useState(false);
-  const [inviteCode, setInviteCode]       = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
   const [mfaCode, setMfaCode]             = useState('');
   const [mfaToken, setMfaToken]           = useState('');
   const [mfaLoading, setMfaLoading]       = useState(false);
@@ -339,7 +337,6 @@ export default function Login() {
   const [pendingRole, setPendingRole]     = useState('');
 
   // ── WhatsApp OTP login state ───────────────────────────────────────────────
-  const [waConnected, setWaConnected]   = useState(false);
   const [waPhone, setWaPhone]           = useState('');
   const [waStep, setWaStep]             = useState<'phone' | 'otp'>('phone');
   const [waOtp, setWaOtp]               = useState('');
@@ -358,15 +355,6 @@ export default function Login() {
   useEffect(() => {
     if (mode === 'biometric' && hasPasskey) handleBiometric();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Check WhatsApp connection status ──────────────────────────────────────
-  useEffect(() => {
-    const base = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
-    fetch(`${base}/api/auth/wa-status`)
-      .then(r => r.json())
-      .then(d => setWaConnected(!!d.connected))
-      .catch(() => {});
-  }, []);
 
   // ── Cooldown timer for WA OTP resend ──────────────────────────────────────
   useEffect(() => {
@@ -426,34 +414,6 @@ export default function Login() {
   const onEmailSubmit = (values: z.infer<typeof loginSchema>) => {
     setErrorMsg('');
     loginMutate({ data: values });
-  };
-
-  // ── Invite code — direct login, no password needed ────────────────────────
-  const handleInviteSubmit = async () => {
-    const clean = inviteCode.trim().toUpperCase().replace(/\s/g, '');
-    if (!clean) { setErrorMsg(isRtl ? 'أدخل كود الدعوة' : 'Enter your invite code'); return; }
-    setErrorMsg('');
-    setInviteLoading(true);
-    try {
-      const base = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
-      const res  = await fetch(`${base}/api/invitations/enter`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteCode: clean }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMsg(data.error || (isRtl ? 'كود غير صحيح أو منتهي الصلاحية' : 'Invalid or expired invite code'));
-        return;
-      }
-      // Direct login — no password step needed
-      authLogin(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
-      doRedirect(data.user.role);
-    } catch {
-      setErrorMsg(isRtl ? 'حدث خطأ، حاول مرة أخرى' : 'Error occurred, please try again');
-    } finally {
-      setInviteLoading(false);
-    }
   };
 
   // ── 2FA verify ────────────────────────────────────────────────────────────
@@ -523,8 +483,11 @@ export default function Login() {
 
   // ── WhatsApp OTP: send code ────────────────────────────────────────────────
   const handleWaSendOtp = async () => {
-    const clean = waPhone.trim().replace(/\s/g, '');
-    if (clean.length < 7) { setErrorMsg(isRtl ? 'أدخل رقم جوال صحيح' : 'Enter a valid phone number'); return; }
+    const clean = waPhone.trim().replace(/[\s().-]/g, '');
+    if (!/^\+[1-9]\d{7,14}$/.test(clean)) {
+      setErrorMsg(isRtl ? 'أدخل رقم الجوال مع مفتاح الدولة، مثل +966...' : 'Enter your number with its country code, e.g. +966...');
+      return;
+    }
     setErrorMsg('');
     setWaLoading(true);
     try {
@@ -635,17 +598,11 @@ export default function Login() {
                       onClick: () => { setErrorMsg(''); setMode('biometric'); if (hasPasskey) handleBiometric(); },
                     },
                     {
-                      key: 'invite' as const,
-                      icon: <KeyRound className="w-4 h-4 shrink-0" />,
-                      label: isRtl ? 'دعوة' : 'Invite',
-                      onClick: () => { setErrorMsg(''); setMode('invite'); },
-                    },
-                    ...(waConnected ? [{
                       key: 'whatsapp' as const,
                       icon: <MessageCircle className="w-4 h-4 shrink-0" />,
-                      label: isRtl ? 'واتساب' : 'WhatsApp',
+                      label: isRtl ? 'الجوال' : 'Phone',
                       onClick: () => { setErrorMsg(''); setWaStep('phone'); setWaOtp(''); setMode('whatsapp'); },
-                    }] : []),
+                    },
                     {
                       key: 'email' as const,
                       icon: <Mail className="w-4 h-4 shrink-0" />,
@@ -724,42 +681,6 @@ export default function Login() {
                         </Button>
                       </form>
                     </Form>
-                  </motion.div>
-                )}
-
-                {/* ── Invite code ───────────────────────────────────── */}
-                {mode === 'invite' && (
-                  <motion.div key="invite" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                    className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/15">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <KeyRound className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{isRtl ? 'كود الدعوة' : 'Invite Code'}</p>
-                        <p className="text-xs text-muted-foreground">{isRtl ? 'مثال: ABCD-1234' : 'e.g. ABCD-1234'}</p>
-                      </div>
-                    </div>
-                    <Input
-                      dir="ltr"
-                      placeholder="ABCD-1234"
-                      className="h-14 text-center text-xl font-mono tracking-widest uppercase bg-background/50"
-                      value={inviteCode}
-                      onChange={e => setInviteCode(e.target.value.toUpperCase())}
-                      onKeyDown={e => e.key === 'Enter' && handleInviteSubmit()}
-                    />
-                    <Button
-                      onClick={handleInviteSubmit}
-                      disabled={inviteLoading || !inviteCode.trim()}
-                      className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {inviteLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                        <span className="flex items-center gap-2">
-                          <ArrowRight className="w-4 h-4" />
-                          {isRtl ? 'تفعيل الدعوة' : 'Activate Invite'}
-                        </span>
-                      )}
-                    </Button>
                   </motion.div>
                 )}
 
