@@ -24,8 +24,15 @@ import {
 } from "../lib/email";
 import { connectDb } from "../lib/db";
 import { logger } from "../lib/logger";
-import WaOtp, { generateWaOtp, verifyWaOtp, normalizePhone } from "../models/waOtp";
+import WaOtp, {
+  generateWaOtp,
+  verifyWaOtp,
+  normalizePhone,
+  normalizePhoneE164,
+  phoneLookupValues,
+} from "../models/waOtp";
 import { isQiroxOtpConfigured, notifyWaOtp, notifyWaLoginAlert, notifyWaPasswordReset } from "../lib/waNotify";
+import { getConfiguredPhoneAdmin } from "../lib/admin-phone-access";
 
 const JWT_SECRET = process.env.JWT_SECRET || "thanarah-dev-secret-change-in-production";
 
@@ -51,39 +58,6 @@ function getDeviceType(ua: string): string {
   if (/mobile|android|iphone|ipad/i.test(ua)) return "mobile";
   if (/tablet|ipad/i.test(ua)) return "tablet";
   return "desktop";
-}
-
-function normalizeAdminPhone(value: string): string {
-  let phone = value.trim().replace(/[^\d+]/g, "");
-  if (phone.startsWith("00")) phone = `+${phone.slice(2)}`;
-  if (/^05\d{8}$/.test(phone)) phone = `+966${phone.slice(1)}`;
-  else if (/^5\d{8}$/.test(phone)) phone = `+966${phone}`;
-  return normalizePhone(phone);
-}
-
-function isConfiguredAdminPhone(phone: string): boolean {
-  const configured = (process.env.WA_ADMIN_PHONES ?? "")
-    .split(",")
-    .map(normalizeAdminPhone)
-    .filter(Boolean);
-  return configured.includes(phone);
-}
-
-function phoneLookupPatterns(phone: string): RegExp[] {
-  const candidates = [phone];
-  if (phone.startsWith("9665") && phone.length === 12) {
-    candidates.push(`0${phone.slice(3)}`);
-  }
-  return candidates.map((candidate) =>
-    new RegExp(`^\\+?${candidate.split("").join("\\D*")}$`),
-  );
-}
-
-function findUserByPhone(phone: string, activeOnly = false) {
-  return User.findOne({
-    phone: { $in: phoneLookupPatterns(phone) },
-    ...(activeOnly ? { status: "active" } : {}),
-  });
 }
 
 
@@ -149,7 +123,8 @@ router.post("/login", async (req: Request, res: Response) => {
     return;
   }
 
-  const { email, password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
+  const { password } = parsed.data;
   const user = await User.findOne({ email });
 
   if (!user || user.status === "disabled" || !user.passwordHash) {
@@ -518,56 +493,63 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "رقم الجوال غير صحيح" }); return; }
 
-  const inputPhone = parsed.data.phone.trim().replace(/[\s().-]/g, "");
-  if (!/^\+[1-9]\d{7,14}$/.test(inputPhone)) {
+  const e164Phone = normalizePhoneE164(parsed.data.phone);
+  if (!e164Phone) {
     res.status(400).json({ error: "أدخل رقم الجوال بصيغته الدولية مع مفتاح الدولة" });
     return;
   }
 
-  const phone = normalizePhone(parsed.data.phone);
+  const phone = normalizePhone(e164Phone);
 
   if (!isQiroxOtpConfigured()) {
     res.status(503).json({ error: "خدمة إرسال رمز واتساب غير مهيأة حالياً" });
     return;
   }
 
-  const isAdminPhone = isConfiguredAdminPhone(phone);
-  const user = await findUserByPhone(phone, true);
-  if (!user && !isAdminPhone) {
+  const [user, configuredAdmin] = await Promise.all([
+    User.findOne({ phone: { $in: phoneLookupValues(e164Phone) } }),
+    getConfiguredPhoneAdmin(e164Phone),
+  ]);
+  const protectedAdminRole = user && ["admin", "owner", "super_admin"].includes(user.role);
+  if (!configuredAdmin && (!user || user.status !== "active" || protectedAdminRole)) {
     // Return generic response to prevent phone enumeration
+    res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
+    return;
+  }
+  if (user?.status === "disabled") {
     res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
     return;
   }
 
   // Rate-limit: max 1 OTP per phone per 60 s
-  const recent = await WaOtp.findOne({ phone, purpose: { $ne: "invitation" }, createdAt: { $gt: new Date(Date.now() - 60_000) } });
+  const recent = await WaOtp.findOne({ phone, purpose: "login", createdAt: { $gt: new Date(Date.now() - 60_000) } });
   if (recent) {
     res.status(429).json({ error: "انتظر دقيقة قبل طلب رمز جديد" });
     return;
   }
 
   // Invalidate any previous OTPs for this phone
-  await WaOtp.deleteMany({ phone, purpose: { $ne: "invitation" } });
+  await WaOtp.deleteMany({ phone, purpose: "login" });
 
   // Generate and store OTP
   const { code, hash } = generateWaOtp();
   await WaOtp.create({ phone, otpHash: hash, purpose: "login" });
 
-  // Send via WhatsApp (fire-and-forget with error forwarded to response)
+  // Send via WhatsApp without logging the phone, OTP, or provider request details.
   try {
     await notifyWaOtp(
       phone,
       code,
       user?.preferredLanguage === "en" ? "en" : "ar",
-      user?.fullName ?? "مسؤول البوابة",
+      user?.fullName || configuredAdmin?.name || "مسؤول ثناره",
     );
-  } catch {
-    logger.error("Failed to send WA OTP");
+  } catch (err) {
+    await WaOtp.deleteMany({ phone, purpose: "login" });
+    logger.error({ errorName: err instanceof Error ? err.name : "unknown" }, "Failed to send WA OTP");
     res.status(502).json({ error: "تعذّر إرسال الرمز عبر واتساب" });
     return;
   }
 
-  logger.info({ userId: user?.id ?? "configured-admin" }, "WA OTP sent");
   res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
 });
 
@@ -577,72 +559,106 @@ router.post("/wa-otp/verify", async (req: Request, res: Response) => {
   const ip = getIp(req);
   const ua = req.headers["user-agent"] || "";
 
-  const schema = z.object({
-    phone: z.string().min(7),
-    otp:   z.string().min(4).max(8),
-  });
+  const schema = z.object({ phone: z.string().min(7), otp: z.string().regex(/^\d{6}$/) });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "بيانات غير صحيحة" }); return; }
 
-  const phone = normalizePhone(parsed.data.phone);
-  const record = await WaOtp.findOne({ phone, purpose: { $ne: "invitation" } });
+  const e164Phone = normalizePhoneE164(parsed.data.phone);
+  if (!e164Phone) {
+    res.status(400).json({ error: "رقم الجوال غير صحيح" });
+    return;
+  }
+  const phone = normalizePhone(e164Phone);
+  const record = await WaOtp.findOne({ phone, purpose: "login" });
 
   if (!record) {
     res.status(400).json({ error: "لم يُطلب رمز لهذا الرقم أو انتهت صلاحيته" });
     return;
   }
+  const otpAgeMs = Date.now() - record.createdAt.getTime();
+  if (otpAgeMs < 0 || otpAgeMs >= 5 * 60_000) {
+    await record.deleteOne();
+    res.status(400).json({ error: "انتهت صلاحية الرمز. اطلب رمزاً جديداً." });
+    return;
+  }
 
   // Max 3 wrong attempts before invalidating
   if (record.attempts >= 3) {
-    await record.deleteOne();
     res.status(429).json({ error: "تجاوزت الحد المسموح من المحاولات. اطلب رمزاً جديداً." });
     return;
   }
 
   if (!verifyWaOtp(parsed.data.otp, record.otpHash)) {
-    record.attempts += 1;
-    await record.save();
-    const remaining = 3 - record.attempts;
+    const updated = await WaOtp.findOneAndUpdate(
+      { _id: record._id, attempts: { $lt: 3 } },
+      { $inc: { attempts: 1 } },
+      { new: true },
+    );
+    if (!updated) {
+      await WaOtp.deleteMany({ _id: record._id });
+      res.status(429).json({ error: "تجاوزت الحد المسموح من المحاولات. اطلب رمزاً جديداً." });
+      return;
+    }
+    const remaining = 3 - updated.attempts;
+    await logAudit({
+      actor: "mobile-login",
+      action: "login.wa_otp.failed",
+      result: "failure",
+      riskScore: remaining === 0 ? "high" : "medium",
+      ipAddress: ip,
+      metadata: { reason: "invalid_code" },
+      timestamp: new Date(),
+    });
     res.status(401).json({ error: `رمز غير صحيح. المحاولات المتبقية: ${remaining}` });
     return;
   }
 
-  // OTP verified — delete it
-  await record.deleteOne();
+  // Consume a valid OTP exactly once, even if two verification requests race.
+  const consumed = await WaOtp.deleteOne({ _id: record._id, otpHash: record.otpHash });
+  if (!consumed.deletedCount) {
+    res.status(409).json({ error: "انتهت صلاحية الرمز أو سبق استخدامه. اطلب رمزاً جديداً." });
+    return;
+  }
 
-  const isAdminPhone = isConfiguredAdminPhone(phone);
-  let user = await findUserByPhone(phone);
-  if (isAdminPhone) {
-    const alreadyAdmin = user?.role === "admin" && user.status === "active";
-    if (!user) {
-      user = new User({
-        fullName: "مسؤول البوابة",
-        phone: `+${phone}`,
-        role: "admin",
-        status: "active",
-        permissions: [],
-        allowedSections: [],
-        preferredLanguage: "ar",
-      });
-    } else {
+  const configuredAdmin = await getConfiguredPhoneAdmin(e164Phone);
+  let user = await User.findOne({ phone: { $in: phoneLookupValues(e164Phone) } });
+  if (!user && !configuredAdmin) {
+    res.status(401).json({ error: "لم يُعثر على حساب مرتبط بهذا الرقم أو انتهت صلاحية الرمز" });
+    return;
+  }
+  if (user && ["admin", "owner", "super_admin"].includes(user.role) && !configuredAdmin) {
+    res.status(401).json({ error: "هذا الرقم غير موجود في قائمة الإدارة المعتمدة" });
+    return;
+  }
+  if (user?.status === "disabled") {
+    res.status(401).json({ error: "هذا الحساب موقوف. تواصل مع المسؤول." });
+    return;
+  }
+  if (!user && configuredAdmin) {
+    user = await User.create({
+      fullName: configuredAdmin.name || "مسؤول ثناره",
+      phone: e164Phone,
+      role: "admin",
+      status: "active",
+      emailVerified: false,
+      permissions: ["*"],
+      allowedSections: ["*"],
+    });
+  } else if (user && configuredAdmin) {
+    // Elevation is applied only after a valid, one-time WhatsApp code was consumed.
+    if (!["owner", "super_admin"].includes(user.role)) {
       user.role = "admin";
-      user.status = "active";
-      user.phone = `+${phone}`;
+      user.permissions = ["*"];
+      user.allowedSections = ["*"];
     }
-    await user.save();
-    if (!alreadyAdmin) {
-      await logAudit({
-        actor: user.fullName,
-        actorId: user._id as any,
-        action: "admin.phone_login_provisioned",
-        result: "success",
-        riskScore: "high",
-        ipAddress: ip,
-        timestamp: new Date(),
-      });
-    }
-  } else if (!user || user.status !== "active") {
-    res.status(401).json({ error: "لم يُعثر على حساب مرتبط بهذا الرقم" });
+    user.status = "active";
+    user.phone = e164Phone;
+  } else if (user) {
+    // Normalize older account phone formats after successful proof of ownership.
+    user.phone = e164Phone;
+  }
+  if (!user) {
+    res.status(401).json({ error: "لم يُعثر على حساب مرتبط بهذا الرقم أو انتهت صلاحية الرمز" });
     return;
   }
 
@@ -671,7 +687,7 @@ router.post("/wa-otp/verify", async (req: Request, res: Response) => {
 
   await logAudit({
     actor: user.fullName, actorId: user._id as any,
-    action: "login.wa_otp",
+    action: configuredAdmin ? "login.wa_otp.admin" : "login.wa_otp",
     result: "success", riskScore: "low",
     ipAddress: ip, sessionId: session.id,
     timestamp: new Date(),

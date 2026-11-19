@@ -21,55 +21,19 @@ import { notifyWaInvitationLink } from "../lib/waNotify";
 import { logger } from "../lib/logger";
 import { clearInvitationOtp, createInvitationOtp } from "../lib/invitation-otp";
 import { getPortalBaseUrl } from "../lib/portal-url";
+import { getConfiguredPhoneAdmin } from "../lib/admin-phone-access";
+import { normalizePhoneE164, phoneLookupValues } from "../lib/phone";
 
 // ─── Admin phone whitelist ────────────────────────────────────────────────────
 
-/** Env-var fallback: comma-separated list of admin phone numbers */
-function getEnvAdminPhones(): Set<string> {
-  const raw = process.env.WA_ADMIN_PHONES ?? "";
-  return new Set(
-    raw
-      .split(",")
-      .map((p) => p.trim().replace(/\D/g, ""))
-      .filter(Boolean),
-  );
-}
-
 /**
  * Returns true if the WhatsApp JID belongs to a configured admin phone.
- * Priority:
- *   1. DB-stored adminUsers across all enabled WhatsApp accounts (settings page)
- *   2. WA_ADMIN_PHONES env var (legacy fallback)
- *
  * JID format: 966501234567@s.whatsapp.net or 966501234567:N@s.whatsapp.net
  */
 export async function isAdminPhone(jid: string): Promise<boolean> {
   const digits = jid.split("@")[0].split(":")[0];
   if (!digits) return false;
-
-  // ── 1. DB lookup (primary — configured from admin panel) ─────────────────
-  try {
-    await connectDb();
-    // Dynamic import to avoid circular-dependency issues at module load time
-    const { default: WhatsAppAccount } = await import("../models/whatsappAccount.js");
-    const accounts = await (WhatsAppAccount as any)
-      .find({ enabled: true })
-      .select("adminUsers")
-      .lean();
-    for (const acc of accounts ?? []) {
-      for (const admin of acc.adminUsers ?? []) {
-        if (admin.enabled && admin.phone?.replace(/\D/g, "") === digits) {
-          return true;
-        }
-      }
-    }
-  } catch (err) {
-    logger.warn({ err }, "isAdminPhone: DB lookup failed — falling back to env var");
-  }
-
-  // ── 2. Env-var fallback ───────────────────────────────────────────────────
-  const envPhones = getEnvAdminPhones();
-  return envPhones.has(digits);
+  return Boolean(await getConfiguredPhoneAdmin(digits));
 }
 
 // ─── Formatters & helpers ─────────────────────────────────────────────────────
@@ -372,11 +336,8 @@ async function cmdInvite(args: string[]): Promise<string> {
   const usage = `⚠️ *الاستخدام:* دعوة +9665xxxxxxxx الاسم [email]\n_مثال: دعوة +966501234567 أحمد العمري ahmed@example.com_`;
   if (args.length < 2) return usage;
 
-  let phone = args[0].trim().replace(/[\s().-]/g, "");
-  if (phone.startsWith("00")) phone = `+${phone.slice(2)}`;
-  if (/^05\d{8}$/.test(phone)) phone = `+966${phone.slice(1)}`;
-  else if (/^5\d{8}$/.test(phone)) phone = `+966${phone}`;
-  if (!/^\+[1-9]\d{7,14}$/.test(phone)) return `❌ رقم الجوال غير صحيح.\n${usage}`;
+  const phone = normalizePhoneE164(args[0]);
+  if (!phone) return `❌ رقم الجوال غير صحيح.\n${usage}`;
   const email = args.find(part => EMAIL_RE.test(part))?.toLowerCase();
   const inviteeName = args.slice(1).filter(part => part.toLowerCase() !== email).join(" ").trim();
   if (!inviteeName) return usage;
@@ -388,13 +349,12 @@ async function cmdInvite(args: string[]): Promise<string> {
     return "❌ لا يوجد حساب إداري في النظام.\nأنشئ حساب المالك أولاً عبر /api/setup.";
   }
 
-  const phoneDigits = phone.replace(/\D/g, "");
-  const existingUser = await User.findOne({ phone: { $regex: new RegExp(`${phoneDigits}$`) } });
+  const existingUser = await User.findOne({ phone: { $in: phoneLookupValues(phone) } });
   if (existingUser) return `⚠️ يوجد حساب مرتبط بهذا الرقم بالفعل.`;
 
   // Prevent duplicate active invitations
   const existing = await Invitation.findOne({
-    phone,
+    phone: { $in: phoneLookupValues(phone) },
     status: { $in: ["sent", "active", "opened", "registration_started", "draft"] },
     expiresAt: { $gt: new Date() },
   }).lean();
@@ -602,7 +562,10 @@ export async function handleAdminCommand(body: string): Promise<string> {
     // Unrecognized
     return `❓ أمر غير معروف: *${cmd}*\n\nاكتب *مساعدة* لعرض جميع الأوامر المتاحة.`;
   } catch (err: any) {
-    logger.error({ err, cmd, args }, "WA admin command error");
+    logger.error(
+      { errorName: err instanceof Error ? err.name : "unknown", cmd },
+      "WA admin command error",
+    );
     return `❌ *خطأ في تنفيذ الأمر*\n\`${err?.message ?? "خطأ غير معروف"}\`\n\nاكتب *مساعدة* للمساعدة.`;
   }
 }

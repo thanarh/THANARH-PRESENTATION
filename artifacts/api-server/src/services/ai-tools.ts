@@ -14,6 +14,7 @@ import { logger } from "../lib/logger";
 import { notifyWaInvitationLink } from "../lib/waNotify";
 import { clearInvitationOtp, createInvitationOtp } from "../lib/invitation-otp";
 import { getPortalBaseUrl } from "../lib/portal-url";
+import { normalizePhoneE164, phoneLookupValues } from "../lib/phone";
 
 const PORTAL_URL = getPortalBaseUrl();
 
@@ -106,18 +107,16 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
       : await User.findOne({ role: "owner", status: "active" }).lean();
     if (!owner) return "لا يوجد حساب مالك نشط لإنشاء الدعوة.";
 
-    const phoneInput = String(args.phone ?? "").trim().replace(/[\s().-]/g, "");
-    const phone = phoneInput.startsWith("00") ? `+${phoneInput.slice(2)}` : phoneInput;
-    if (!/^\+[1-9]\d{7,14}$/.test(phone)) return "أدخل رقم الجوال بصيغته الدولية، مثل +966501234567.";
+    const phone = normalizePhoneE164(String(args.phone ?? ""));
+    if (!phone) return "أدخل رقم الجوال بصيغته الدولية، مثل +966501234567.";
     const email = typeof args.email === "string" && args.email.trim() ? args.email.trim().toLowerCase() : undefined;
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "البريد الإلكتروني غير صحيح.";
-    const phoneDigits = phone.replace(/\D/g, "");
-    if (await User.findOne({ phone: { $regex: new RegExp(`${phoneDigits}$`) } })) {
+    if (await User.findOne({ phone: { $in: phoneLookupValues(phone) } })) {
       return "يوجد حساب مرتبط بهذا الرقم بالفعل.";
     }
     if (email && await User.findOne({ email })) return "يوجد حساب مرتبط بهذا البريد بالفعل.";
     if (await Invitation.findOne({
-      phone,
+      phone: { $in: phoneLookupValues(phone) },
       status: { $in: ["draft", "sent", "opened", "failed_delivery"] },
       expiresAt: { $gt: new Date() },
     })) return "توجد دعوة سارية لهذا الرقم بالفعل.";

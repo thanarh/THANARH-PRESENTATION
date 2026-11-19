@@ -61,6 +61,8 @@ const authLimiter = rateLimit({
 app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/auth/wa-otp/send", authLimiter);
+app.use("/api/auth/wa-otp/verify", authLimiter);
 
 // Gzip/Brotli compression for all responses — reduces bandwidth by ~70 %
 app.use(compression({

@@ -129,7 +129,7 @@ export default function InviteActivation() {
         throw new Error('اكتمل التفعيل لكن تعذّر بدء الجلسة. حاول تسجيل الدخول.');
       }
       login(data.user, { accessToken: data.accessToken, refreshToken: data.refreshToken });
-      setLocation('/dashboard');
+      setLocation(['admin', 'owner', 'super_admin'].includes(data.user.role) ? '/admin' : '/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر تفعيل الحساب');
     } finally {
@@ -202,7 +202,7 @@ export default function InviteActivation() {
                     <Input
                       id="invite-otp"
                       value={otp}
-                      onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onChange={event => setOtp(event.target.value.replace(/[٠-٩۰-۹]/g, digit => String('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(digit) % 10)).replace(/\D/g, '').slice(0, 6))}
                       inputMode="numeric"
                       autoComplete="one-time-code"
                       placeholder="••••••"

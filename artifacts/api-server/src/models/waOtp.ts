@@ -1,5 +1,8 @@
 import mongoose, { type Document, Schema } from "mongoose";
 import crypto from "crypto";
+import { normalizePhoneDigits, normalizePhoneE164, phoneLookupValues } from "../lib/phone";
+
+export { normalizePhoneE164, phoneLookupValues };
 
 export interface IWaOtp extends Document {
   phone: string;      // normalized digits only, e.g. "966501234567"
@@ -43,7 +46,7 @@ export function verifyWaOtp(submitted: string, storedHash: string): boolean {
 
 /** Normalize an arbitrary phone string to digits-only international format */
 export function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
+  return normalizePhoneDigits(phone);
 }
 
 const WaOtp = mongoose.model<IWaOtp>("WaOtp", WaOtpSchema);

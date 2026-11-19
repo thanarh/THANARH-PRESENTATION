@@ -19,7 +19,7 @@ export async function notifyWa(phone: string, message: string): Promise<void> {
   try {
     await whatsappService.sendMessage(toJid(phone), message);
   } catch (err) {
-    logger.warn({ phone, err }, "WA notification skipped (non-fatal)");
+    logger.warn({ errorName: err instanceof Error ? err.name : "unknown" }, "WA notification skipped (non-fatal)");
   }
 }
 

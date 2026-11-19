@@ -12,7 +12,13 @@ import {
 import Invitation, { type InvitationStatus } from "../models/invitation";
 import User from "../models/user";
 import Session from "../models/session";
-import WaOtp, { verifyWaOtp, normalizePhone } from "../models/waOtp";
+import WaOtp, {
+  verifyWaOtp,
+  normalizePhone,
+  normalizePhoneE164,
+  phoneLookupValues,
+} from "../models/waOtp";
+import { getConfiguredPhoneAdmin } from "../lib/admin-phone-access";
 import { logAudit } from "../models/auditLog";
 import { sendInvitationEmail, sendAdminInvitationNotification } from "../lib/email";
 import { clearInvitationOtp, createInvitationOtp, getInvitationOtpState } from "../lib/invitation-otp";
@@ -32,11 +38,7 @@ const router = Router();
 const ACTIVE_INVITATION_STATUSES: InvitationStatus[] = ["draft", "sent", "opened", "failed_delivery"];
 
 function normalizeInvitePhone(value: unknown): string | null {
-  let phone = String(value ?? "").trim().replace(/[\s().-]/g, "");
-  if (phone.startsWith("00")) phone = `+${phone.slice(2)}`;
-  if (/^05\d{8}$/.test(phone)) phone = `+966${phone.slice(1)}`;
-  else if (/^5\d{8}$/.test(phone)) phone = `+966${phone}`;
-  return /^\+[1-9]\d{7,14}$/.test(phone) ? phone : null;
+  return normalizePhoneE164(String(value ?? ""));
 }
 
 function maskPhone(phone?: string): string | null {
@@ -75,7 +77,7 @@ async function deliverInvitation(
     whatsappDelivered = true;
   } catch (err) {
     await clearInvitationOtp(invitation.phone, invitation._id);
-    logger.warn({ err, invitationId: invitation._id }, "Invitation WhatsApp delivery failed");
+    logger.warn({ errorName: err instanceof Error ? err.name : "unknown", invitationId: invitation._id }, "Invitation WhatsApp delivery failed");
     errorMessages.push("تعذر إرسال واتساب");
   }
   if (whatsappDelivered) {
@@ -96,7 +98,7 @@ async function deliverInvitation(
         await Invitation.findByIdAndUpdate(invitation._id, { tokenHash: hashToken(rawToken) });
       }
     } catch (err) {
-      logger.warn({ err, invitationId: invitation._id }, "Invitation email delivery failed");
+      logger.warn({ errorName: err instanceof Error ? err.name : "unknown", invitationId: invitation._id }, "Invitation email delivery failed");
       errorMessages.push("تعذر إرسال البريد");
     }
   }
@@ -123,7 +125,7 @@ async function deliverInvitation(
     role: invitation.role,
     expiresAt: invitation.expiresAt,
     inviterName,
-  }).catch((err) => logger.warn({ err }, "Admin invitation notification failed"));
+  }).catch((err) => logger.warn({ errorName: err instanceof Error ? err.name : "unknown" }, "Admin invitation notification failed"));
 
   return {
     whatsappDelivered,
@@ -238,7 +240,10 @@ router.post("/otp/send", async (req: Request, res: Response) => {
     await notifyWaOtp(phone, code, "ar", invitation.inviteeName, "invitation");
   } catch (err) {
     await clearInvitationOtp(phone, invitation._id);
-    logger.error({ err, invitationId: invitation.id }, "Failed to send invitation OTP");
+    logger.error({
+      errorName: err instanceof Error ? err.name : "unknown",
+      invitationId: invitation.id,
+    }, "Failed to send invitation OTP");
     res.status(502).json({ error: "تعذّر إرسال رمز التحقق عبر واتساب" });
     return;
   }
@@ -277,9 +282,17 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const phoneDigits = normalizePhone(normalizedPhone);
-  const phonePattern = new RegExp(`${phoneDigits}$`);
-  if (await User.findOne({ phone: { $regex: phonePattern } })) {
+  const allowedRoles = ["viewer", "investor", "partner", "admin"];
+  if (!allowedRoles.includes(String(role))) {
+    res.status(400).json({ error: "الصلاحية المحددة غير مسموح بها" });
+    return;
+  }
+  if (role === "admin" && !(await getConfiguredPhoneAdmin(normalizedPhone))) {
+    res.status(403).json({ error: "يمكن إرسال دعوة الإدارة إلى الأرقام التي اعتمدها المالك فقط" });
+    return;
+  }
+
+  if (await User.findOne({ phone: { $in: phoneLookupValues(normalizedPhone) } })) {
     res.status(409).json({ error: "يوجد حساب مرتبط بهذا الرقم بالفعل" });
     return;
   }
@@ -288,7 +301,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
   const pendingInvite = await Invitation.findOne({
-    phone: normalizedPhone,
+    phone: { $in: phoneLookupValues(normalizedPhone) },
     status: { $in: ["draft", "sent", "opened", "failed_delivery"] },
     expiresAt: { $gt: new Date() },
   });
@@ -378,7 +391,38 @@ router.patch("/:id", authenticate, async (req: AuthRequest, res: Response) => {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
-  const updated = await Invitation.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true }).lean();
+  const patchSchema = z.object({
+    role: z.enum(["viewer", "investor", "partner", "admin"]).optional(),
+    permissions: z.array(z.string()).optional(),
+    allowedSections: z.array(z.string()).optional(),
+    startsAt: z.string().datetime().nullable().optional(),
+    expiresAt: z.string().datetime().optional(),
+    maxLogins: z.number().int().min(1).optional(),
+    maxDevices: z.number().int().min(1).optional(),
+    sessionDurationMinutes: z.number().int().min(5).optional(),
+    allowComments: z.boolean().optional(),
+    allowFullScreen: z.boolean().optional(),
+    allowViewFinancials: z.boolean().optional(),
+    customMessage: z.string().max(2000).nullable().optional(),
+    reason: z.string().max(500).optional(),
+  }).strict();
+  const parsed = patchSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "بيانات التحديث غير صحيحة" });
+    return;
+  }
+  if (parsed.data.role === "admin") {
+    const current = await Invitation.findById(req.params.id).select("phone").lean();
+    if (!current) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    if (!current.phone || !(await getConfiguredPhoneAdmin(current.phone))) {
+      res.status(403).json({ error: "يمكن إسناد صلاحية الإدارة إلى الأرقام المعتمدة فقط" });
+      return;
+    }
+  }
+  const updated = await Invitation.findByIdAndUpdate(req.params.id, { $set: parsed.data }, { new: true }).lean();
   if (!updated) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -453,6 +497,7 @@ router.post("/:id/resend", authenticate, async (req: AuthRequest, res: Response)
   const rawToken = generateSecureToken();
   await Invitation.findByIdAndUpdate(req.params.id, {
     status: "draft",
+    tokenHash: hashToken(rawToken),
     whatsappDeliveryStatus: "pending",
     emailDeliveryStatus: invitation.email ? "pending" : "skipped",
   });
@@ -485,6 +530,11 @@ router.post("/accept", async (req: Request, res: Response) => {
     res.status(404).json({ error: "رابط الدعوة غير صالح أو منتهي الصلاحية" });
     return;
   }
+  if (!["viewer", "investor", "partner", "admin"].includes(invitation.role)) {
+    res.status(403).json({ error: "صلاحية هذه الدعوة غير مسموح بها" });
+    return;
+  }
+  const phoneDigits = normalizePhone(invitation.phone);
   if (invitation.email && !parsed.data.password) {
     res.status(400).json({ error: "أضف كلمة مرور لتفعيل الدخول بالبريد الإلكتروني" });
     return;
@@ -494,11 +544,13 @@ router.post("/accept", async (req: Request, res: Response) => {
     return;
   }
 
-  const phoneDigits = normalizePhone(invitation.phone);
-  const phonePattern = new RegExp(`${phoneDigits}$`);
+  if (invitation.role === "admin" && !(await getConfiguredPhoneAdmin(invitation.phone))) {
+    res.status(403).json({ error: "لم يعد رقم الجوال ضمن قائمة الإدارة المعتمدة" });
+    return;
+  }
   const existingUser = await User.findOne({
     $or: [
-      { phone: { $regex: phonePattern } },
+      { phone: { $in: phoneLookupValues(invitation.phone) } },
       ...(invitation.email ? [{ email: invitation.email }] : []),
     ],
   });
@@ -516,15 +568,37 @@ router.post("/accept", async (req: Request, res: Response) => {
     res.status(400).json({ error: "اطلب رمز تحقق جديداً قبل تفعيل الدعوة" });
     return;
   }
-  if (otpRecord.attempts >= 3) {
+  const otpAgeMs = Date.now() - otpRecord.createdAt.getTime();
+  if (otpAgeMs < 0 || otpAgeMs >= 5 * 60_000) {
     await otpRecord.deleteOne();
+    res.status(400).json({ error: "انتهت صلاحية الرمز. اطلب رمزاً جديداً." });
+    return;
+  }
+  if (otpRecord.attempts >= 3) {
     res.status(429).json({ error: "تجاوزت الحد المسموح. اطلب رمزاً جديداً." });
     return;
   }
   if (!verifyWaOtp(parsed.data.otp, otpRecord.otpHash)) {
-    otpRecord.attempts += 1;
-    await otpRecord.save();
-    res.status(401).json({ error: `رمز غير صحيح. المحاولات المتبقية: ${3 - otpRecord.attempts}` });
+    const updatedOtp = await WaOtp.findOneAndUpdate(
+      { _id: otpRecord._id, attempts: { $lt: 3 } },
+      { $inc: { attempts: 1 } },
+      { new: true },
+    );
+    if (!updatedOtp) {
+      res.status(429).json({ error: "تجاوزت الحد المسموح. اطلب رمزاً جديداً." });
+      return;
+    }
+    await logAudit({
+      actor: "invitee",
+      action: "invitation.otp.failed",
+      targetId: String(invitation._id),
+      result: "failure",
+      riskScore: updatedOtp.attempts >= 3 ? "high" : "medium",
+      ipAddress: String(req.ip || ""),
+      metadata: { reason: "invalid_code" },
+      timestamp: new Date(),
+    });
+    res.status(401).json({ error: `رمز غير صحيح. المحاولات المتبقية: ${3 - updatedOtp.attempts}` });
     return;
   }
 
@@ -617,7 +691,10 @@ router.post("/accept", async (req: Request, res: Response) => {
     });
   } catch (err) {
     await Invitation.findByIdAndUpdate(invitation._id, { status: "opened" });
-    logger.error({ err, invitationId: invitation.id }, "Invitation activation failed");
+    logger.error({
+      errorName: err instanceof Error ? err.name : "unknown",
+      invitationId: invitation.id,
+    }, "Invitation activation failed");
     res.status(500).json({ error: "تعذر تفعيل الحساب الآن. أعد المحاولة أو اطلب رابطاً جديداً." });
   }
 });

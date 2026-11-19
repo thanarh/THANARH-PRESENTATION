@@ -44,6 +44,7 @@ All configured in Replit Secrets / Env Vars:
 | `MAIL_PROVIDER` | Set to `CPANEL` |
 | `BASE_URL` / `FRONTEND_URL` | Public URL for links in emails |
 | `THANARAH_OWNER_EMAIL_1` / `THANARAH_OWNER_EMAIL_2` | Owner notification addresses |
+| `WA_ADMIN_PHONES` | Optional comma-separated mobile-admin allowlist; store only in Replit Secrets, never in source or logs |
 | `MONGODB_DATABASE_NAME` | `thanarah_presentation` |
 | `QIROX_PROJECT_ID` | Project ID used to send login codes |
 | `QIROX_PROJECT_API_TOKEN` | QIROX WhatsApp token (Replit Secret) |
@@ -55,6 +56,7 @@ After the API connects to MongoDB, open `/setup` in the portal and create the ow
 
 Email delivery is optional for local/Replit startup; configure `SMTP_PASSWORD` to enable it.
 Invitation links/codes remain available for account activation; they no longer sign users in directly.
+Enabled admin phone entries in the WhatsApp settings are also accepted for mobile admin login after WhatsApp verification. The `WA_ADMIN_PHONES` secret is a fallback allowlist.
 
 ## Workspace structure
 

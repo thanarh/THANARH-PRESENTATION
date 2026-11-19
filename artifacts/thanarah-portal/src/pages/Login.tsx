@@ -21,7 +21,7 @@ import {
 import {
   storePasskeyRefresh, getPasskeyRefresh,
 } from '../utils/pin';
-import { isInternationalPhone, normalizePhoneInput } from '../utils/phone';
+import { isInternationalPhone, normalizeDigits, normalizePhoneInput } from '../utils/phone';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -511,7 +511,7 @@ export default function Login() {
 
   // ── WhatsApp OTP: verify code ─────────────────────────────────────────────
   const handleWaVerify = async () => {
-    const code = waOtp.replace(/\s/g, '');
+    const code = normalizeDigits(waOtp).replace(/\s/g, '');
     if (code.length < 6) { setErrorMsg(isRtl ? 'أدخل الرمز المكوّن من 6 أرقام' : 'Enter the 6-digit code'); return; }
     setErrorMsg('');
     setWaLoading(true);
@@ -749,7 +749,7 @@ export default function Login() {
                           maxLength={6}
                           placeholder="000000"
                           value={waOtp}
-                          onChange={e => { setWaOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrorMsg(''); }}
+                          onChange={e => { setWaOtp(normalizeDigits(e.target.value).replace(/\D/g, '').slice(0, 6)); setErrorMsg(''); }}
                           className="h-16 text-center text-3xl font-mono tracking-[0.4em] bg-background/50"
                           onKeyDown={e => e.key === 'Enter' && handleWaVerify()}
                           autoFocus

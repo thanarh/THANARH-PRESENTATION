@@ -182,7 +182,10 @@ class WhatsAppService extends EventEmitter {
         const legacyAdmin = !configuredAccount && await isAdminPhone(jid);
         const isAdmin = Boolean(adminProfile || legacyAdmin);
 
-        logger.info({ from: jid, pushName, body, isAdmin }, "WhatsApp message received");
+        logger.info(
+          { isAdmin, messageLength: body.length },
+          "WhatsApp message received",
+        );
 
         // ── Admin command routing ────────────────────────────────────────────
         if (isAdmin) {
@@ -204,9 +207,12 @@ class WhatsAppService extends EventEmitter {
             this.messages.unshift(outMsg);
             if (this.messages.length > 200) this.messages.length = 200;
             this.emit("message", outMsg);
-            logger.info({ jid, cmd: body.split(" ")[0] }, "Admin command executed via WhatsApp");
+            logger.info({ cmd: body.split(" ")[0] }, "Admin command executed via WhatsApp");
           } catch (err) {
-            logger.error({ err, jid }, "Admin command failed");
+            logger.error(
+              { errorName: err instanceof Error ? err.name : "unknown" },
+              "Admin command failed",
+            );
             await this.sock?.sendMessage(jid, { text: "❌ حدث خطأ أثناء تنفيذ الأمر. راجع سجلات الخادم." }).catch(() => {});
           }
           continue; // Skip AI auto-reply for admin numbers
@@ -253,9 +259,12 @@ class WhatsAppService extends EventEmitter {
             waMsg.aiReplied = true;
             this.messages.unshift(outMsg);
             this.emit("message", outMsg);
-            logger.info({ jid, replyLength: reply.length }, "AI auto-reply sent");
+            logger.info({ replyLength: reply.length }, "AI auto-reply sent");
           } catch (err) {
-            logger.error({ err, jid }, "Failed to send AI auto-reply");
+            logger.error(
+              { errorName: err instanceof Error ? err.name : "unknown" },
+              "Failed to send AI auto-reply",
+            );
           }
         }, AUTO_REPLY_DELAY_MS);
 
