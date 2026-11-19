@@ -1,8 +1,7 @@
 /**
- * waNotify — fire-and-forget WhatsApp notification helpers.
- *
- * All functions are safe to call regardless of whether WhatsApp is connected;
- * failures are logged as warnings and never propagate to the caller.
+ * WhatsApp notification helpers for QIROX and the local Baileys connection.
+ * Best-effort helpers swallow errors; QIROX delivery helpers throw when rejected
+ * so routes can report the failure or try another transport.
  */
 import { whatsappService } from "../services/whatsapp";
 import { logger } from "./logger";
@@ -27,6 +26,20 @@ export async function notifyWa(phone: string, message: string): Promise<void> {
 
 export function isQiroxOtpConfigured(): boolean {
   return Boolean(process.env.QIROX_PROJECT_API_TOKEN && process.env.QIROX_PROJECT_ID);
+}
+
+async function assertQiroxAccepted(response: Response): Promise<void> {
+  const payload = await response.json().catch(() => null) as
+    | { success?: unknown; ok?: unknown; error?: unknown }
+    | null;
+  const explicitlyRejected =
+    payload?.success === false ||
+    payload?.ok === false ||
+    (Boolean(payload?.error) && payload?.success !== true && payload?.ok !== true);
+
+  if (!response.ok || explicitlyRejected) {
+    throw new Error(`QIROX WhatsApp API rejected the message (HTTP ${response.status})`);
+  }
 }
 
 export async function notifyQiroxMessage(
@@ -63,9 +76,7 @@ export async function notifyQiroxMessage(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`QIROX WhatsApp API returned HTTP ${response.status}`);
-  }
+  await assertQiroxAccepted(response);
 }
 
 export async function notifyWaOtp(
@@ -110,9 +121,7 @@ export async function notifyWaOtp(
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`QIROX WhatsApp API returned HTTP ${response.status}`);
-  }
+  await assertQiroxAccepted(response);
 }
 
 export async function notifyWaLoginAlert(
@@ -193,7 +202,7 @@ export async function notifyWaInvitationLink(
       }),
     },
   );
-  if (!response.ok) throw new Error(`QIROX WhatsApp API returned HTTP ${response.status}`);
+  await assertQiroxAccepted(response);
 }
 
 export async function notifyWaSystemUpdate(

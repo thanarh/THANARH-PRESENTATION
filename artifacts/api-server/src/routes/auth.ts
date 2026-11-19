@@ -513,11 +513,19 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
   const protectedAdminRole = user && ["admin", "owner", "super_admin"].includes(user.role);
   if (!configuredAdmin && (!user || user.status !== "active" || protectedAdminRole)) {
     // Return generic response to prevent phone enumeration
-    res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
+    res.json({
+      success: true,
+      codeSent: false,
+      message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب",
+    });
     return;
   }
   if (user?.status === "disabled") {
-    res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
+    res.json({
+      success: true,
+      codeSent: false,
+      message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب",
+    });
     return;
   }
 
@@ -550,7 +558,11 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
     return;
   }
 
-  res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
+  res.json({
+    success: true,
+    codeSent: true,
+    message: "تم إرسال رمز التحقق إلى واتساب",
+  });
 });
 
 // POST /api/auth/wa-otp/verify — verify OTP and issue session tokens

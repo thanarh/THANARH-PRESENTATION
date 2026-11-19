@@ -30,6 +30,24 @@ export function parseVisitDecisionText(text: string): VisitDecision | null {
   return null;
 }
 
+export function parseVisitDecisionReply(
+  text: string,
+): { decision: VisitDecision; requestSuffix?: string } | null {
+  const normalized = text
+    .trim()
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
+  const match = /^([12])(?:\s+([a-f\d]{6}))?$/i.exec(normalized);
+  if (!match) return null;
+
+  const decision = parseVisitDecisionText(match[1]);
+  if (!decision) return null;
+  return {
+    decision,
+    ...(match[2] ? { requestSuffix: match[2].toLowerCase() } : {}),
+  };
+}
+
 async function sendApprovedInvitation(
   visit: any,
   actor: VisitDecisionActor,
@@ -222,20 +240,32 @@ export async function handleVisitApprovalReply(options: {
   body: string;
   quotedMessageId?: string | null;
 }): Promise<{ handled: boolean; reply?: string }> {
-  const decision = parseVisitDecisionText(options.body);
+  const parsedReply = parseVisitDecisionReply(options.body);
+  const decision = parsedReply?.decision;
+  const requestSuffix = parsedReply?.requestSuffix;
   const phone = normalizePhoneE164(options.phone);
   if (!decision || !phone || !(await getConfiguredPhoneAdmin(phone))) {
     return { handled: false };
   }
 
   let visit: any = null;
-  if (options.quotedMessageId) {
+  if (requestSuffix) {
+    const pending = await VisitRequest.find({
+      status: "pending",
+      "approvalMessages.adminPhone": phone,
+    }).sort({ requestedAt: -1 });
+    visit = pending.find((request) => String(request._id).toLowerCase().endsWith(requestSuffix)) ?? null;
+    if (!visit) {
+      return { handled: true, reply: "لم أجد طلباً معلّقاً بهذا الرقم." };
+    }
+  } else if (options.quotedMessageId) {
     visit = await VisitRequest.findOne({
       approvalMessages: {
         $elemMatch: { adminPhone: phone, messageId: options.quotedMessageId },
       },
     });
-  } else {
+  }
+  if (!visit) {
     const pending = await VisitRequest.find({
       status: "pending",
       "approvalMessages.adminPhone": phone,
@@ -245,7 +275,7 @@ export async function handleVisitApprovalReply(options: {
     if (pending.length > 1) {
       return {
         handled: true,
-        reply: "لديك أكثر من طلب معلّق. رُدّ مباشرة على رسالة الطلب المطلوب بالرقم 1 للموافقة أو 2 للرفض.",
+        reply: "لديك أكثر من طلب معلّق. أرسل 1 أو 2 متبوعاً بآخر 6 أحرف من رقم الطلب الظاهر في الرسالة.",
       };
     }
     visit = pending[0] ?? null;

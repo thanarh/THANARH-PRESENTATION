@@ -12,6 +12,7 @@ import { listConfiguredPhoneAdmins } from "../lib/admin-phone-access";
 import { whatsappService } from "../services/whatsapp";
 import { decideVisitRequest } from "../services/visit-approval";
 import { logger } from "../lib/logger";
+import { notifyQiroxMessage } from "../lib/waNotify";
 
 const router = Router();
 const visitRequestLimiter = rateLimit({
@@ -97,7 +98,7 @@ router.post("/", visitRequestLimiter, async (req: Request, res: Response) => {
   const admins = await listConfiguredPhoneAdmins();
   const approvalMessage = [
     "*طلب زيارة جديد — ثناره*",
-    `رقم الطلب: ${String(visit._id).slice(-6)}`,
+    `رقم الطلب: ${String(visit._id).slice(-6).toUpperCase()}`,
     `الاسم: ${visit.fullName}`,
     `الجوال: ${visit.phone}`,
     `النوع: ${visit.visitorType}`,
@@ -106,13 +107,34 @@ router.post("/", visitRequestLimiter, async (req: Request, res: Response) => {
     "",
     "للموافقة، رُدّ على هذه الرسالة بالرقم 1.",
     "للرفض، رُدّ على هذه الرسالة بالرقم 2.",
+    "إذا كان لديك أكثر من طلب، أرسل الرقم وآخر 6 أحرف من رقم الطلب، مثل: 1 ABC123.",
   ].join("\n");
   let deliveredCount = 0;
 
   for (const admin of admins) {
     const jid = `${admin.phone.replace(/\D/g, "")}@s.whatsapp.net`;
+    let messageId: string | null = null;
     try {
-      const messageId = await whatsappService.sendMessage(jid, approvalMessage);
+      messageId = await whatsappService.sendMessage(jid, approvalMessage);
+    } catch (baileysError) {
+      try {
+        await notifyQiroxMessage(admin.phone, approvalMessage, admin.name);
+        messageId = `qirox-${visit._id}`;
+      } catch (qiroxError) {
+        logger.warn(
+          {
+            requestId: String(visit._id),
+            baileysErrorName: baileysError instanceof Error ? baileysError.name : "unknown",
+            qiroxErrorName: qiroxError instanceof Error ? qiroxError.name : "unknown",
+          },
+          "Visit request WhatsApp admin notification failed",
+        );
+      }
+    }
+
+    if (!messageId) continue;
+    deliveredCount += 1;
+    try {
       await VisitRequest.findByIdAndUpdate(visit._id, {
         $push: {
           approvalMessages: {
@@ -122,11 +144,10 @@ router.post("/", visitRequestLimiter, async (req: Request, res: Response) => {
           },
         },
       });
-      deliveredCount += 1;
     } catch (err) {
       logger.warn(
         { requestId: String(visit._id), errorName: err instanceof Error ? err.name : "unknown" },
-        "Visit request WhatsApp admin notification failed",
+        "Visit request approval message reference could not be saved",
       );
     }
   }

@@ -500,6 +500,12 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) { setErrorMsg(data.error || (isRtl ? 'حدث خطأ' : 'Error occurred')); return; }
+      if (data.codeSent !== true) {
+        setErrorMsg(isRtl
+          ? 'لم يُرسل رمز لهذا الرقم. استخدم رقم حساب مفعّل أو قدّم طلب زيارة من الرابط أسفل الصفحة.'
+          : 'No code was sent. Use an active account number or submit a visit request below.');
+        return;
+      }
       setWaStep('otp');
       setWaCooldown(60);
     } catch {
