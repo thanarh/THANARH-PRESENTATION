@@ -21,6 +21,7 @@ import {
 import {
   storePasskeyRefresh, getPasskeyRefresh,
 } from '../utils/pin';
+import { isInternationalPhone, normalizePhoneInput } from '../utils/phone';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -337,7 +338,7 @@ export default function Login() {
   const [pendingRole, setPendingRole]     = useState('');
 
   // ── WhatsApp OTP login state ───────────────────────────────────────────────
-  const [waPhone, setWaPhone]           = useState('');
+  const [waPhone, setWaPhone]           = useState('+966');
   const [waStep, setWaStep]             = useState<'phone' | 'otp'>('phone');
   const [waOtp, setWaOtp]               = useState('');
   const [waLoading, setWaLoading]       = useState(false);
@@ -483,11 +484,12 @@ export default function Login() {
 
   // ── WhatsApp OTP: send code ────────────────────────────────────────────────
   const handleWaSendOtp = async () => {
-    const clean = waPhone.trim().replace(/[\s().-]/g, '');
-    if (!/^\+[1-9]\d{7,14}$/.test(clean)) {
+    const clean = normalizePhoneInput(waPhone);
+    if (!isInternationalPhone(clean)) {
       setErrorMsg(isRtl ? 'أدخل رقم الجوال مع مفتاح الدولة، مثل +966...' : 'Enter your number with its country code, e.g. +966...');
       return;
     }
+    setWaPhone(clean);
     setErrorMsg('');
     setWaLoading(true);
     try {
@@ -719,6 +721,7 @@ export default function Login() {
                             className="h-12 ps-9 bg-background/50"
                             value={waPhone}
                             onChange={e => setWaPhone(e.target.value)}
+                            onBlur={() => setWaPhone(current => normalizePhoneInput(current))}
                             onKeyDown={e => e.key === 'Enter' && handleWaSendOtp()}
                             autoFocus
                           />

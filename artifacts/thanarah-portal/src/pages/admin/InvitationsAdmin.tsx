@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useQueryClient } from '@tanstack/react-query';
+import { isInternationalPhone, normalizePhoneInput } from '../../utils/phone';
 
 // ─── Create Invitation Modal ──────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ type CreateForm = {
 
 const EMPTY_FORM: CreateForm = {
   inviteeName: '',
-  phone: '',
+  phone: '+966',
   email: '',
   role: 'viewer',
   expiresAt: '',
@@ -61,18 +62,20 @@ function CreateInvitationModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.inviteeName || !form.phone || !form.expiresAt) {
+    const phone = normalizePhoneInput(form.phone);
+    if (!form.inviteeName || !phone || !form.expiresAt) {
       setError('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
-    if (!/^\+?[1-9][\d\s().-]{7,18}$/.test(form.phone.trim())) {
+    if (!isInternationalPhone(phone)) {
       setError('أدخل رقم الجوال بصيغته الدولية، مثل +966501234567');
       return;
     }
+    setForm(f => ({ ...f, phone }));
     createInvitation({
       data: {
         inviteeName: form.inviteeName,
-        phone: form.phone.trim(),
+        phone,
         email: form.email.trim() || undefined,
         role: form.role,
         expiresAt: new Date(form.expiresAt).toISOString(),
@@ -150,9 +153,11 @@ function CreateInvitationModal({ onClose }: { onClose: () => void }) {
               <Input
                 type="tel"
                 dir="ltr"
-                placeholder="+966501234567"
+                autoComplete="tel"
+                placeholder="+966 5X XXX XXXX"
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                onBlur={() => setForm(f => ({ ...f, phone: normalizePhoneInput(f.phone) }))}
                 required
               />
             </div>
