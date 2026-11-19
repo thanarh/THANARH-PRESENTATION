@@ -414,14 +414,63 @@ export interface BlockIpInput {
   expiresAt?: string | null;
 }
 
+/**
+ * @nullable
+ */
+export type VisitRequestInvitationDeliveryStatus = typeof VisitRequestInvitationDeliveryStatus[keyof typeof VisitRequestInvitationDeliveryStatus] | null;
+
+
+export const VisitRequestInvitationDeliveryStatus = {
+  pending: 'pending',
+  sent: 'sent',
+  failed: 'failed',
+} as const;
+
+/**
+ * @nullable
+ */
+export type VisitRequestApplicantNotificationStatus = typeof VisitRequestApplicantNotificationStatus[keyof typeof VisitRequestApplicantNotificationStatus] | null;
+
+
+export const VisitRequestApplicantNotificationStatus = {
+  pending: 'pending',
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+/**
+ * @nullable
+ */
+export type VisitRequestNotificationDeliveryStatus = typeof VisitRequestNotificationDeliveryStatus[keyof typeof VisitRequestNotificationDeliveryStatus] | null;
+
+
+export const VisitRequestNotificationDeliveryStatus = {
+  pending: 'pending',
+  sent: 'sent',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
 export interface VisitRequest {
   id: string;
   fullName: string;
   phone: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
   reason: string;
   visitorType: string;
   status: string;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  reviewedByName?: string | null;
+  /** @nullable */
+  invitationDeliveryStatus?: VisitRequestInvitationDeliveryStatus;
+  /** @nullable */
+  applicantNotificationStatus?: VisitRequestApplicantNotificationStatus;
+  /** @nullable */
+  notificationDeliveryStatus?: VisitRequestNotificationDeliveryStatus;
   requestedAt: string;
   /** @nullable */
   scheduledAt?: string | null;
@@ -430,9 +479,25 @@ export interface VisitRequest {
 export interface VisitRequestInput {
   fullName: string;
   phone: string;
-  email: string;
+  email?: string;
   reason: string;
   visitorType: string;
+}
+
+export type VisitRequestSubmissionResultNotificationDeliveryStatus = typeof VisitRequestSubmissionResultNotificationDeliveryStatus[keyof typeof VisitRequestSubmissionResultNotificationDeliveryStatus];
+
+
+export const VisitRequestSubmissionResultNotificationDeliveryStatus = {
+  pending: 'pending',
+  sent: 'sent',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
+export interface VisitRequestSubmissionResult {
+  success: boolean;
+  message: string;
+  notificationDeliveryStatus: VisitRequestSubmissionResultNotificationDeliveryStatus;
 }
 
 export interface RejectInput {

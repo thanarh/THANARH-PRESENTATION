@@ -13,6 +13,7 @@ test("normalizes Saudi national and international formats to E.164", () => {
 test("normalizes other international numbers without changing their country code", () => {
   assert.equal(normalizePhoneE164("+1 (202) 555-0123"), "+12025550123");
   assert.equal(normalizePhoneE164("12025550123"), "+12025550123");
+  assert.equal(normalizePhoneE164("+20 10 1234 5678"), "+201012345678");
 });
 
 test("rejects incomplete or malformed phone numbers", () => {

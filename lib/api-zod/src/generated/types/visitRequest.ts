@@ -5,15 +5,29 @@
  * Thanarah Presentation Portal API
  * OpenAPI spec version: 1.0.0
  */
+import type { VisitRequestApplicantNotificationStatus } from './visitRequestApplicantNotificationStatus';
+import type { VisitRequestInvitationDeliveryStatus } from './visitRequestInvitationDeliveryStatus';
+import type { VisitRequestNotificationDeliveryStatus } from './visitRequestNotificationDeliveryStatus';
 
 export interface VisitRequest {
   id: string;
   fullName: string;
   phone: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
   reason: string;
   visitorType: string;
   status: string;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  reviewedByName?: string | null;
+  /** @nullable */
+  invitationDeliveryStatus?: VisitRequestInvitationDeliveryStatus;
+  /** @nullable */
+  applicantNotificationStatus?: VisitRequestApplicantNotificationStatus;
+  /** @nullable */
+  notificationDeliveryStatus?: VisitRequestNotificationDeliveryStatus;
   requestedAt: string;
   /** @nullable */
   scheduledAt?: string | null;

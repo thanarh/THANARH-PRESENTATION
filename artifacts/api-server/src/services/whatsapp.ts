@@ -17,6 +17,7 @@ import fs from "fs/promises";
 import { logger } from "../lib/logger";
 import { generateWhatsAppReply, type ChatMessage } from "./moonshot";
 import { isAdminPhone, handleAdminCommand } from "./waAdminCommands";
+import { handleVisitApprovalReply } from "./visit-approval";
 import WhatsAppAccount, {
   phoneFromJid,
   type IWhatsAppAccount,
@@ -179,8 +180,8 @@ class WhatsAppService extends EventEmitter {
 
         const configuredAccount = await this.getConnectedAccount().catch(() => null);
         const adminProfile = await this.getRoutingProfile(jid).catch(() => null);
-        const legacyAdmin = !configuredAccount && await isAdminPhone(jid);
-        const isAdmin = Boolean(adminProfile || legacyAdmin);
+        const globallyConfiguredAdmin = await isAdminPhone(jid);
+        const isAdmin = Boolean(adminProfile || globallyConfiguredAdmin);
 
         logger.info(
           { isAdmin, messageLength: body.length },
@@ -191,7 +192,17 @@ class WhatsAppService extends EventEmitter {
         if (isAdmin) {
           waMsg.pending = false;
           try {
-            const reply = await handleAdminCommand(body);
+            const phone = `+${phoneFromJid(jid)}`;
+            const quotedMessageId =
+              msg.message.extendedTextMessage?.contextInfo?.stanzaId ?? null;
+            const visitDecision = await handleVisitApprovalReply({
+              phone,
+              body,
+              quotedMessageId,
+            });
+            const reply = visitDecision.handled && visitDecision.reply
+              ? visitDecision.reply
+              : await handleAdminCommand(body);
             await this.sock?.sendMessage(jid, { text: reply });
 
             const outMsg: WAMessage = {
@@ -281,12 +292,13 @@ class WhatsAppService extends EventEmitter {
     if (msg) msg.pending = false;
   }
 
-  async sendMessage(jid: string, text: string) {
+  async sendMessage(jid: string, text: string): Promise<string> {
     if (!this.sock || this._status !== "connected") throw new Error("Not connected");
-    await this.sock.sendMessage(jid, { text });
+    const sent = await this.sock.sendMessage(jid, { text });
     this.cancelPendingReply(jid);
+    const messageId = sent?.key.id ?? `manual-${Date.now()}`;
     const outMsg: WAMessage = {
-      id: `manual-${Date.now()}`,
+      id: messageId,
       from: jid,
       fromName: "الفريق",
       body: text,
@@ -297,6 +309,7 @@ class WhatsAppService extends EventEmitter {
     };
     this.messages.unshift(outMsg);
     this.emit("message", outMsg);
+    return messageId;
   }
 
   async sendImage(jid: string, imageUrl: string, caption = "") {

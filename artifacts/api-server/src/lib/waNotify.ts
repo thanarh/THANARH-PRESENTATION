@@ -29,6 +29,45 @@ export function isQiroxOtpConfigured(): boolean {
   return Boolean(process.env.QIROX_PROJECT_API_TOKEN && process.env.QIROX_PROJECT_ID);
 }
 
+export async function notifyQiroxMessage(
+  phone: string,
+  message: string,
+  recipientName = "Thanarah portal user",
+): Promise<void> {
+  const token = process.env.QIROX_PROJECT_API_TOKEN;
+  const projectId = process.env.QIROX_PROJECT_ID;
+  if (!token || !projectId) {
+    throw new Error("QIROX WhatsApp credentials are not configured");
+  }
+
+  const digits = phone.replace(/\D/g, "");
+  if (!/^[1-9]\d{7,14}$/.test(digits)) {
+    throw new Error("Phone number must include its international country code");
+  }
+
+  const response = await fetch(
+    `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/whatsapp`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `thanarah-message-${randomUUID()}`,
+      },
+      body: JSON.stringify({
+        recipient: { phone: `+${digits}`, name: recipientName },
+        platformName: "Thanarah Medical-Tech",
+        clientName: recipientName,
+        message,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`QIROX WhatsApp API returned HTTP ${response.status}`);
+  }
+}
+
 export async function notifyWaOtp(
   phone: string,
   code: string,

@@ -977,10 +977,15 @@ export const ListVisitRequestsResponseItem = zod.object({
   "id": zod.string(),
   "fullName": zod.string(),
   "phone": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().nullish(),
   "reason": zod.string(),
   "visitorType": zod.string(),
   "status": zod.string(),
+  "rejectionReason": zod.string().nullish(),
+  "reviewedByName": zod.string().nullish(),
+  "invitationDeliveryStatus": zod.union([zod.literal('pending'),zod.literal('sent'),zod.literal('failed'),zod.literal(null)]).nullish(),
+  "applicantNotificationStatus": zod.union([zod.literal('pending'),zod.literal('sent'),zod.literal('failed'),zod.literal('skipped'),zod.literal(null)]).nullish(),
+  "notificationDeliveryStatus": zod.union([zod.literal('pending'),zod.literal('sent'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish(),
   "requestedAt": zod.string(),
   "scheduledAt": zod.string().nullish()
 })
@@ -993,14 +998,15 @@ export const ListVisitRequestsResponse = zod.array(ListVisitRequestsResponseItem
 export const CreateVisitRequestBody = zod.object({
   "fullName": zod.string(),
   "phone": zod.string(),
-  "email": zod.string(),
+  "email": zod.string().optional(),
   "reason": zod.string(),
   "visitorType": zod.string()
 })
 
 export const CreateVisitRequestResponse = zod.object({
   "success": zod.boolean(),
-  "message": zod.string().optional()
+  "message": zod.string(),
+  "notificationDeliveryStatus": zod.enum(['pending', 'sent', 'partial', 'failed'])
 })
 
 

@@ -1,11 +1,26 @@
 import { Router, type Response, type Request } from "express";
+import rateLimit from "express-rate-limit";
+import { z } from "zod";
+import Invitation from "../models/invitation";
 import { authenticate, type AuthRequest, ADMIN_ROLES } from "../lib/auth";
 import VisitRequest from "../models/visitRequest";
-import { logAudit } from "../models/auditLog";
+import User from "../models/user";
 import { sendVisitRequestConfirmation, sendVisitRequestAdminNotification } from "../lib/email";
 import { connectDb } from "../lib/db";
+import { normalizePhoneE164, phoneLookupValues } from "../lib/phone";
+import { listConfiguredPhoneAdmins } from "../lib/admin-phone-access";
+import { whatsappService } from "../services/whatsapp";
+import { decideVisitRequest } from "../services/visit-approval";
+import { logger } from "../lib/logger";
 
 const router = Router();
+const visitRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "وصلت إلى الحد المسموح من الطلبات. حاول مرة أخرى لاحقاً." },
+});
 
 // GET /api/visits — admin only
 router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
@@ -20,38 +35,134 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/visits — public
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", visitRequestLimiter, async (req: Request, res: Response) => {
   await connectDb();
-  const { fullName, phone, email, reason, visitorType } = req.body;
-
-  if (!fullName || !phone || !email || !reason || !visitorType) {
-    res.status(400).json({ error: "All fields are required" });
+  const schema = z.object({
+    fullName: z.string().trim().min(2).max(120),
+    phone: z.string().trim().min(7).max(32),
+    email: z.union([z.string().trim().email().max(254), z.literal("")]).optional(),
+    reason: z.string().trim().min(10).max(2000),
+    visitorType: z.string().trim().min(1).max(60),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "تحقق من الاسم ورقم الجوال وسبب الزيارة، والبريد إن أُدخل." });
     return;
   }
 
-  const visit = await VisitRequest.create({ fullName, phone, email, reason, visitorType });
+  const phone = normalizePhoneE164(parsed.data.phone);
+  if (!phone) {
+    res.status(400).json({ error: "أدخل رقم الجوال مع مفتاح الدولة، مثل +966 أو +20." });
+    return;
+  }
 
-  // Send confirmation to visitor
-  await sendVisitRequestConfirmation({ to: email, name: fullName });
+  const normalizedEmail = parsed.data.email?.trim().toLowerCase() || undefined;
+  const phoneMatches = phoneLookupValues(phone);
+  const [existingUser, existingInvitation, existingRequest] = await Promise.all([
+    User.findOne({ phone: { $in: phoneMatches } }).select("_id status"),
+    Invitation.findOne({
+      phone: { $in: phoneMatches },
+      status: { $in: ["draft", "scheduled", "sent", "opened", "failed_delivery"] },
+      expiresAt: { $gt: new Date() },
+    }).select("_id"),
+    VisitRequest.findOne({ phone: { $in: phoneMatches }, status: "pending" }).select("_id"),
+  ]);
+  if (existingUser || existingInvitation) {
+    res.status(409).json({ error: "يوجد حساب أو دعوة مرتبطة بهذا الرقم. استخدم رابط الدعوة أو سجّل الدخول." });
+    return;
+  }
+  if (existingRequest) {
+    res.status(409).json({ error: "لديك طلب زيارة قيد المراجعة بالفعل." });
+    return;
+  }
 
-  // Notify admin owners
+  const visit = await VisitRequest.create({
+    fullName: parsed.data.fullName,
+    phone,
+    email: normalizedEmail,
+    reason: parsed.data.reason,
+    visitorType: parsed.data.visitorType,
+    notificationDeliveryStatus: "pending",
+  });
+
+  if (normalizedEmail) {
+    void sendVisitRequestConfirmation({ to: normalizedEmail, name: parsed.data.fullName }).catch((err) => {
+      logger.warn(
+        { requestId: String(visit._id), errorName: err instanceof Error ? err.name : "unknown" },
+        "Visit request email confirmation failed",
+      );
+    });
+  }
+
+  const admins = await listConfiguredPhoneAdmins();
+  const approvalMessage = [
+    "*طلب زيارة جديد — ثناره*",
+    `رقم الطلب: ${String(visit._id).slice(-6)}`,
+    `الاسم: ${visit.fullName}`,
+    `الجوال: ${visit.phone}`,
+    `النوع: ${visit.visitorType}`,
+    `سبب الزيارة: ${visit.reason}`,
+    "الحالة: قيد المراجعة",
+    "",
+    "للموافقة، رُدّ على هذه الرسالة بالرقم 1.",
+    "للرفض، رُدّ على هذه الرسالة بالرقم 2.",
+  ].join("\n");
+  let deliveredCount = 0;
+
+  for (const admin of admins) {
+    const jid = `${admin.phone.replace(/\D/g, "")}@s.whatsapp.net`;
+    try {
+      const messageId = await whatsappService.sendMessage(jid, approvalMessage);
+      await VisitRequest.findByIdAndUpdate(visit._id, {
+        $push: {
+          approvalMessages: {
+            adminPhone: admin.phone,
+            messageId,
+            sentAt: new Date(),
+          },
+        },
+      });
+      deliveredCount += 1;
+    } catch (err) {
+      logger.warn(
+        { requestId: String(visit._id), errorName: err instanceof Error ? err.name : "unknown" },
+        "Visit request WhatsApp admin notification failed",
+      );
+    }
+  }
+
+  const notificationDeliveryStatus = deliveredCount === 0
+    ? "failed"
+    : deliveredCount === admins.length
+      ? "sent"
+      : "partial";
+  await VisitRequest.findByIdAndUpdate(visit._id, { notificationDeliveryStatus });
+
+  // Keep the existing email fallback for owner addresses when configured.
   const ownerEmails = [
     process.env.THANARAH_OWNER_EMAIL_1,
     process.env.THANARAH_OWNER_EMAIL_2,
   ].filter(Boolean) as string[];
 
   for (const adminEmail of ownerEmails) {
-    await sendVisitRequestAdminNotification({
+    void sendVisitRequestAdminNotification({
       to: adminEmail,
-      visitorName: fullName,
-      visitorEmail: email,
+      visitorName: visit.fullName,
+      visitorEmail: normalizedEmail || "غير متاح",
       visitorPhone: phone,
-      reason,
-      visitorType,
-    });
+      reason: visit.reason,
+      visitorType: visit.visitorType,
+    }).catch((err) => logger.warn(
+      { requestId: String(visit._id), errorName: err instanceof Error ? err.name : "unknown" },
+      "Visit request admin email notification failed",
+    ));
   }
 
-  res.status(201).json({ success: true, message: "Visit request submitted" });
+  res.status(201).json({
+    success: true,
+    message: "تم استلام طلبك، وسيتم مراجعته من المسؤولين.",
+    notificationDeliveryStatus,
+  });
 });
 
 // POST /api/visits/:id/approve
@@ -62,20 +173,32 @@ router.post("/:id/approve", authenticate, async (req: AuthRequest, res: Response
     return;
   }
 
-  const visit = await VisitRequest.findByIdAndUpdate(
-    req.params.id,
-    { status: "approved", reviewedBy: req.userId, reviewedAt: new Date() },
-    { new: true },
-  );
-
-  if (!visit) {
+  const reviewer = await User.findById(req.userId).select("fullName phone").lean();
+  const result = await decideVisitRequest({
+    requestId: String(req.params.id),
+    decision: "approved",
+    actor: {
+      userId: req.userId,
+      name: reviewer?.fullName || "مسؤول ثناره",
+      phone: reviewer?.phone,
+      ipAddress: String(req.ip || ""),
+    },
+    requestOrigin: req.get("origin"),
+  });
+  if (result.outcome === "not_found") {
     res.status(404).json({ error: "Not found" });
     return;
   }
-
-  await logAudit({ actor: req.userId!, action: "visit_request.approved", targetId: String(req.params["id"]), result: "success", riskScore: "low", ipAddress: String(req.ip || ""), timestamp: new Date() });
-
-  res.json({ success: true, message: "Visit request approved" });
+  if (result.outcome === "already_decided") {
+    res.status(409).json({ error: "تمت مراجعة هذا الطلب بالفعل." });
+    return;
+  }
+  res.json({
+    success: true,
+    message: result.invitationDeliveryStatus === "sent"
+      ? "تمت الموافقة وإرسال رابط الدعوة ورمز التحقق."
+      : "تمت الموافقة، لكن فشل إرسال الدعوة. أعد المحاولة من هذه الصفحة.",
+  });
 });
 
 // POST /api/visits/:id/reject
@@ -86,19 +209,38 @@ router.post("/:id/reject", authenticate, async (req: AuthRequest, res: Response)
     return;
   }
 
-  const { reason } = req.body;
-  const visit = await VisitRequest.findByIdAndUpdate(
-    req.params.id,
-    { status: "rejected", rejectionReason: reason, reviewedBy: req.userId, reviewedAt: new Date() },
-    { new: true },
-  );
-
-  if (!visit) {
+  const schema = z.object({ reason: z.string().trim().max(500).optional() });
+  const parsed = schema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: "سبب الرفض غير صحيح" });
+    return;
+  }
+  const reviewer = await User.findById(req.userId).select("fullName phone").lean();
+  const result = await decideVisitRequest({
+    requestId: String(req.params.id),
+    decision: "rejected",
+    actor: {
+      userId: req.userId,
+      name: reviewer?.fullName || "مسؤول ثناره",
+      phone: reviewer?.phone,
+      ipAddress: String(req.ip || ""),
+    },
+    rejectionReason: parsed.data.reason,
+  });
+  if (result.outcome === "not_found") {
     res.status(404).json({ error: "Not found" });
     return;
   }
-
-  res.json({ success: true, message: "Visit request rejected" });
+  if (result.outcome === "already_decided") {
+    res.status(409).json({ error: "تمت مراجعة هذا الطلب بالفعل." });
+    return;
+  }
+  res.json({
+    success: true,
+    message: result.applicantNotificationStatus === "sent"
+      ? "تم رفض الطلب وإبلاغ مقدم الطلب."
+      : "تم رفض الطلب، لكن تعذّر إرسال إشعار لمقدم الطلب.",
+  });
 });
 
 function formatVisit(v: any) {
@@ -106,10 +248,15 @@ function formatVisit(v: any) {
     id: v._id.toString(),
     fullName: v.fullName,
     phone: v.phone,
-    email: v.email,
+    email: v.email ?? null,
     reason: v.reason,
     visitorType: v.visitorType,
     status: v.status,
+    rejectionReason: v.rejectionReason ?? null,
+    reviewedByName: v.reviewedByName ?? null,
+    invitationDeliveryStatus: v.invitationDeliveryStatus ?? null,
+    applicantNotificationStatus: v.applicantNotificationStatus ?? null,
+    notificationDeliveryStatus: v.notificationDeliveryStatus ?? null,
     requestedAt: v.requestedAt?.toISOString(),
     scheduledAt: v.scheduledAt?.toISOString() ?? null,
   };

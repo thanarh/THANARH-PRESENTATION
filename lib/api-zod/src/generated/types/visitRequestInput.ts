@@ -9,7 +9,7 @@
 export interface VisitRequestInput {
   fullName: string;
   phone: string;
-  email: string;
+  email?: string;
   reason: string;
   visitorType: string;
 }

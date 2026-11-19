@@ -892,7 +892,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                $ref: "#/components/schemas/VisitRequestSubmissionResult"
 
   /visits/{id}/approve:
     post:
@@ -1828,13 +1828,26 @@ components:
         phone:
           type: string
         email:
-          type: string
+          type: ["string", "null"]
         reason:
           type: string
         visitorType:
           type: string
         status:
           type: string
+        rejectionReason:
+          type: ["string", "null"]
+        reviewedByName:
+          type: ["string", "null"]
+        invitationDeliveryStatus:
+          type: ["string", "null"]
+          enum: [pending, sent, failed, null]
+        applicantNotificationStatus:
+          type: ["string", "null"]
+          enum: [pending, sent, failed, skipped, null]
+        notificationDeliveryStatus:
+          type: ["string", "null"]
+          enum: [pending, sent, partial, failed, null]
         requestedAt:
           type: string
         scheduledAt:
@@ -1843,7 +1856,6 @@ components:
         - id
         - fullName
         - phone
-        - email
         - reason
         - visitorType
         - status
@@ -1858,7 +1870,6 @@ components:
           type: string
         email:
           type: string
-
         reason:
           type: string
         visitorType:
@@ -1866,9 +1877,23 @@ components:
       required:
         - fullName
         - phone
-        - email
         - reason
         - visitorType
+
+    VisitRequestSubmissionResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        notificationDeliveryStatus:
+          type: string
+          enum: [pending, sent, partial, failed]
+      required:
+        - success
+        - message
+        - notificationDeliveryStatus
 
     RejectInput:
       type: object

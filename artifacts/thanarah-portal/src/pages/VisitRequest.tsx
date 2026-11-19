@@ -14,56 +14,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../components/ui/form';
 import { Loader2, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { isInternationalPhone, normalizePhoneInput } from '../utils/phone';
 
 const visitSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(7),
-  email: z.string().email(),
+  email: z.union([z.string().email(), z.literal('')]).optional(),
   reason: z.string().min(10),
   visitorType: z.string().min(1),
 });
-
-// ─── Saudi phone input ────────────────────────────────────────────────────────
-function SaudiPhoneInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div
-      className="flex items-center h-11 rounded-md border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden"
-      dir="ltr"
-    >
-      {/* Flag + prefix */}
-      <div className="flex items-center gap-1.5 px-3 border-r border-input bg-muted/40 h-full shrink-0">
-        <span className="text-base leading-none">🇸🇦</span>
-        <span className="text-sm font-medium text-foreground">+966</span>
-      </div>
-      {/* Number field — always LTR */}
-      <input
-        type="tel"
-        dir="ltr"
-        value={value}
-        onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, '').slice(0, 9);
-          onChange(digits);
-        }}
-        placeholder={placeholder ?? '5X XXX XXXX'}
-        className="flex-1 h-full px-3 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
-      />
-    </div>
-  );
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function VisitRequest() {
   const [, setLocation] = useLocation();
   const { t, isRtl } = useLanguage();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState('');
 
   const form = useForm<z.infer<typeof visitSchema>>({
     resolver: zodResolver(visitSchema),
@@ -71,12 +38,39 @@ export default function VisitRequest() {
   });
 
   const { mutate: createRequest, isPending } = useCreateVisitRequest({
-    mutation: { onSuccess: () => setIsSuccess(true) },
+    mutation: {
+      onSuccess: (result) => {
+        setNotificationStatus(result.notificationDeliveryStatus);
+        setIsSuccess(true);
+      },
+      onError: (error: any) => {
+        setSubmitError(error?.data?.error || (isRtl ? 'تعذّر إرسال الطلب. حاول مرة أخرى.' : 'Could not submit the request. Try again.'));
+      },
+    },
   });
 
   const onSubmit = (values: z.infer<typeof visitSchema>) => {
-    // prepend +966
-    createRequest({ data: { ...values, phone: `+966${values.phone}` } });
+    setSubmitError('');
+    const phone = normalizePhoneInput(values.phone);
+    if (!isInternationalPhone(phone)) {
+      form.setError('phone', {
+        type: 'manual',
+        message: isRtl
+          ? 'أدخل رقم الجوال بصيغته الدولية مع مفتاح الدولة، مثل +20 أو +966.'
+          : 'Enter the international number with country code, such as +20 or +966.',
+      });
+      return;
+    }
+    const email = values.email?.trim();
+    createRequest({
+      data: {
+        fullName: values.fullName.trim(),
+        phone,
+        reason: values.reason.trim(),
+        visitorType: values.visitorType,
+        ...(email ? { email } : {}),
+      },
+    });
   };
 
   return (
@@ -128,6 +122,16 @@ export default function VisitRequest() {
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">{t('requestSubmitted')}</h2>
                 <p className="text-muted-foreground">{t('requestSubmittedDesc')}</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {isRtl ? 'حالة الطلب: قيد المراجعة' : 'Request status: Pending review'}
+                </p>
+                {notificationStatus && notificationStatus !== 'sent' && (
+                  <p role="status" className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                    {isRtl
+                      ? 'تم حفظ طلبك، لكن تعذّر إرسال تنبيه واتساب للمسؤولين. سيظهر الطلب في لوحة الإدارة.'
+                      : 'Your request was saved, but WhatsApp could not notify the admins. It is visible in the admin panel.'}
+                  </p>
+                )}
                 <Button
                   onClick={() => setLocation('/login')}
                   variant="outline"
@@ -139,6 +143,11 @@ export default function VisitRequest() {
             ) : (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  {submitError && (
+                    <div role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                      {submitError}
+                    </div>
+                  )}
 
                   {/* Full name */}
                   <FormField
@@ -162,11 +171,13 @@ export default function VisitRequest() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <Label className="text-foreground font-medium">{t('emailAddress')}</Label>
+                        <Label className="text-foreground font-medium">
+                          {t('emailAddress')} <span className="text-xs text-muted-foreground">{isRtl ? '(اختياري)' : '(optional)'}</span>
+                        </Label>
                           <FormControl>
                             <Input
                               type="email"
-                              placeholder="name@company.com"
+                              placeholder={isRtl ? 'name@company.com — اختياري' : 'name@company.com — optional'}
                               className="h-11"
                               dir="ltr"
                               {...field}
@@ -183,11 +194,20 @@ export default function VisitRequest() {
                         <FormItem>
                           <Label className="text-foreground font-medium">{t('phoneNumber')}</Label>
                           <FormControl>
-                            <SaudiPhoneInput
-                              value={field.value}
-                              onChange={field.onChange}
-                            />
+                          <Input
+                            type="tel"
+                            inputMode="tel"
+                            dir="ltr"
+                            placeholder="+966 5… / +20 10…"
+                            className="h-11"
+                            value={field.value}
+                            onChange={event => field.onChange(event.target.value)}
+                            onBlur={event => field.onChange(normalizePhoneInput(event.target.value))}
+                          />
                           </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          {isRtl ? 'اكتب مفتاح الدولة؛ للرقم المصري استخدم +20 واحذف الصفر الأول.' : 'Include the country code; for Egypt, use +20 and omit the first zero.'}
+                        </p>
                           <FormMessage />
                         </FormItem>
                       )}

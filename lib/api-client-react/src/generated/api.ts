@@ -65,7 +65,8 @@ import type {
   UserUpdate,
   VerifyEmailInput,
   VisitRequest,
-  VisitRequestInput
+  VisitRequestInput,
+  VisitRequestSubmissionResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3436,9 +3437,9 @@ export const getCreateVisitRequestUrl = () => {
 /**
  * @summary Submit a visit request (public)
  */
-export const createVisitRequest = async (visitRequestInput: VisitRequestInput, options?: RequestInit): Promise<SuccessResponse> => {
+export const createVisitRequest = async (visitRequestInput: VisitRequestInput, options?: RequestInit): Promise<VisitRequestSubmissionResult> => {
 
-  return customFetch<SuccessResponse>(getCreateVisitRequestUrl(),
+  return customFetch<VisitRequestSubmissionResult>(getCreateVisitRequestUrl(),
   {
     ...options,
     method: 'POST',

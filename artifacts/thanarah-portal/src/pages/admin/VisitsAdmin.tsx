@@ -1,24 +1,44 @@
 import React from 'react';
 import { AdminShell } from '../../components/AdminShell';
 import { useListVisitRequests, useApproveVisitRequest, useRejectVisitRequest } from '@workspace/api-client-react';
-import { Loader2, Check, X } from 'lucide-react';
+import { Loader2, Check, X, RotateCw } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { useState } from 'react';
 
 export default function VisitsAdmin() {
+  const [feedback, setFeedback] = useState('');
   const { data: requests, isLoading, refetch } = useListVisitRequests();
   const { mutate: approve, isPending: isApproving } = useApproveVisitRequest({
-    mutation: { onSuccess: () => refetch() }
+    mutation: {
+      onSuccess: (result) => {
+        setFeedback(result.message || 'Visit request updated.');
+        refetch();
+      },
+      onError: (error: any) => setFeedback(error?.data?.error || 'Could not approve this request.'),
+    }
   });
   const { mutate: reject, isPending: isRejecting } = useRejectVisitRequest({
-    mutation: { onSuccess: () => refetch() }
+    mutation: {
+      onSuccess: (result) => {
+        setFeedback(result.message || 'Visit request updated.');
+        refetch();
+      },
+      onError: (error: any) => setFeedback(error?.data?.error || 'Could not reject this request.'),
+    }
   });
 
   return (
     <AdminShell>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">Visit Requests</h1>
-        <p className="text-muted-foreground">Review applications for portal access.</p>
+        <p className="text-muted-foreground">Review applications for portal access. Approval sends a time-limited invitation and WhatsApp verification code.</p>
       </div>
+
+      {feedback && (
+        <div role="status" className="mb-4 rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground">
+          {feedback}
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
@@ -53,14 +73,20 @@ export default function VisitsAdmin() {
                       {request.fullName}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs text-muted-foreground">{request.email}</div>
+                      <div className="text-xs text-muted-foreground">{request.email || '—'}</div>
                       <div className="text-xs text-muted-foreground">{request.phone}</div>
                     </td>
                     <td className="px-6 py-4 capitalize text-muted-foreground">
                       {request.visitorType}
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">
-                      {request.reason}
+                    <td className="px-6 py-4 text-muted-foreground max-w-sm whitespace-normal break-words">
+                      <p>{request.reason}</p>
+                      {request.rejectionReason && (
+                        <p className="mt-1 text-xs text-red-600">Rejection reason: {request.rejectionReason}</p>
+                      )}
+                      {request.reviewedByName && (
+                        <p className="mt-1 text-xs">Reviewed by {request.reviewedByName}</p>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -68,11 +94,35 @@ export default function VisitsAdmin() {
                         request.status === 'rejected' ? 'bg-red-500/10 text-red-500' :
                         'bg-orange-500/10 text-orange-500'
                       }`}>
-                        {request.status}
+                        {request.status === 'pending' ? 'Pending review' : request.status}
                       </span>
+                      {request.notificationDeliveryStatus && (
+                        <p className={`mt-1 text-xs ${
+                          request.notificationDeliveryStatus === 'sent' ? 'text-green-600' : 'text-amber-600'
+                        }`}>
+                          WhatsApp notice: {request.notificationDeliveryStatus}
+                        </p>
+                      )}
+                      {request.notificationDeliveryStatus === 'failed' && (
+                        <a href="/admin/whatsapp" className="mt-1 inline-block text-xs text-primary underline">
+                          Check WhatsApp connection
+                        </a>
+                      )}
+                      {request.status === 'approved' && request.invitationDeliveryStatus && (
+                        <p className={`mt-1 text-xs ${
+                          request.invitationDeliveryStatus === 'sent' ? 'text-green-600' : 'text-amber-600'
+                        }`}>
+                          Invitation: {request.invitationDeliveryStatus}
+                        </p>
+                      )}
+                      {request.status === 'rejected' && request.applicantNotificationStatus && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Applicant notice: {request.applicantNotificationStatus}
+                        </p>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {request.status === 'pending' && (
+                      {(request.status === 'pending' || (request.status === 'approved' && request.invitationDeliveryStatus === 'failed')) && (
                         <div className="flex justify-end gap-2">
                           <Button 
                             variant="outline" 
@@ -80,18 +130,24 @@ export default function VisitsAdmin() {
                             className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
                             onClick={() => approve({ id: request.id })}
                             disabled={isApproving || isRejecting}
+                            aria-label={request.status === 'approved' ? 'Retry invitation delivery' : 'Approve visit request'}
+                            title={request.status === 'approved' ? 'Retry invitation delivery' : 'Approve visit request'}
                           >
-                            <Check className="w-4 h-4" />
+                            {request.status === 'approved' ? <RotateCw className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                            onClick={() => reject({ id: request.id, data: { reason: 'Not eligible' } })}
-                            disabled={isApproving || isRejecting}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
+                          {request.status === 'pending' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              onClick={() => reject({ id: request.id, data: { reason: 'تم الرفض من لوحة الإدارة' } })}
+                              disabled={isApproving || isRejecting}
+                              aria-label="Reject visit request"
+                              title="Reject visit request"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </td>
