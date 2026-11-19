@@ -119,11 +119,10 @@ export async function notifyWaInvitationLink(
   userPhone: string,
   inviteeName: string,
   inviteUrl: string,
+  code: string,
   lang: "ar" | "en" = "ar"
 ): Promise<void> {
-  const token =
-    process.env.QIROX_PROJECT_GENERAL_API_TOKEN ||
-    process.env.QIROX_PROJECT_API_TOKEN;
+  const token = process.env.QIROX_PROJECT_API_TOKEN;
   const projectId = process.env.QIROX_PROJECT_ID;
   if (!token || !projectId) throw new Error("QIROX WhatsApp credentials are not configured");
 
@@ -134,11 +133,11 @@ export async function notifyWaInvitationLink(
 
   const message =
     lang === "ar"
-      ? `مرحباً ${inviteeName}، تمت دعوتك إلى ثناره.\n\nافتح الرابط لتفعيل حسابك، ثم أدخل رمز التحقق الذي يصلك على واتساب:\n${inviteUrl}\n\nالرابط شخصي وينتهي خلال 7 أيام.`
-      : `Hello ${inviteeName}, you are invited to Thanarah.\n\nOpen this link to activate your account, then enter the verification code sent to your WhatsApp:\n${inviteUrl}\n\nThis personal link expires in 7 days.`;
+      ? `مرحباً ${inviteeName}، تمت دعوتك إلى ثناره.\n\nافتح رابط الدعوة لتفعيل حسابك:\n${inviteUrl}\n\nالرمز الظاهر في هذه الرسالة رمز تحقق حقيقي لرقم جوالك، صالح لمدة 5 دقائق. إذا انتهت صلاحيته، اطلب رمزاً جديداً من صفحة التفعيل. هذا ليس كود دعوة.`
+      : `Hello ${inviteeName}, you are invited to Thanarah.\n\nOpen this invitation link to activate your account:\n${inviteUrl}\n\nThe code in this message is a real phone verification code, valid for 5 minutes. If it expires, request a new code from the activation page. This is not an invitation code.`;
 
   const response = await fetch(
-    `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/api`,
+    `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/whatsapp`,
     {
       method: "POST",
       headers: {
@@ -147,8 +146,10 @@ export async function notifyWaInvitationLink(
         "Idempotency-Key": `thanarah-invite-${randomUUID()}`,
       },
       body: JSON.stringify({
-        channel: "whatsapp",
         recipient: { phone: `+${digits}`, name: inviteeName },
+        platformName: "Thanarah Medical-Tech",
+        clientName: inviteeName,
+        code,
         message,
       }),
     },
