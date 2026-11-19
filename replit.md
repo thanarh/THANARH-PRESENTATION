@@ -47,6 +47,7 @@ All configured in Replit Secrets / Env Vars:
 | `MONGODB_DATABASE_NAME` | `thanarah_presentation` |
 | `QIROX_PROJECT_ID` | Project ID used to send login codes |
 | `QIROX_PROJECT_API_TOKEN` | QIROX WhatsApp token (Replit Secret) |
+| `WA_ADMIN_PHONES` | Comma-separated, owner-approved phone numbers allowed to receive admin access after WhatsApp OTP verification |
 
 ## First-time owner setup
 

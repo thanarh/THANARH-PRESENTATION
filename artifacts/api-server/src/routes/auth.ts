@@ -53,6 +53,39 @@ function getDeviceType(ua: string): string {
   return "desktop";
 }
 
+function normalizeAdminPhone(value: string): string {
+  let phone = value.trim().replace(/[^\d+]/g, "");
+  if (phone.startsWith("00")) phone = `+${phone.slice(2)}`;
+  if (/^05\d{8}$/.test(phone)) phone = `+966${phone.slice(1)}`;
+  else if (/^5\d{8}$/.test(phone)) phone = `+966${phone}`;
+  return normalizePhone(phone);
+}
+
+function isConfiguredAdminPhone(phone: string): boolean {
+  const configured = (process.env.WA_ADMIN_PHONES ?? "")
+    .split(",")
+    .map(normalizeAdminPhone)
+    .filter(Boolean);
+  return configured.includes(phone);
+}
+
+function phoneLookupPatterns(phone: string): RegExp[] {
+  const candidates = [phone];
+  if (phone.startsWith("9665") && phone.length === 12) {
+    candidates.push(`0${phone.slice(3)}`);
+  }
+  return candidates.map((candidate) =>
+    new RegExp(`^\\+?${candidate.split("").join("\\D*")}$`),
+  );
+}
+
+function findUserByPhone(phone: string, activeOnly = false) {
+  return User.findOne({
+    phone: { $in: phoneLookupPatterns(phone) },
+    ...(activeOnly ? { status: "active" } : {}),
+  });
+}
+
 
 // POST /api/auth/setup — one-time owner setup
 router.post("/setup", async (req: Request, res: Response) => {
@@ -498,9 +531,9 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
     return;
   }
 
-  // Find user by phone number
-  const user = await User.findOne({ phone: { $regex: new RegExp(`${phone}$`) }, status: "active" });
-  if (!user) {
+  const isAdminPhone = isConfiguredAdminPhone(phone);
+  const user = await findUserByPhone(phone, true);
+  if (!user && !isAdminPhone) {
     // Return generic response to prevent phone enumeration
     res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
     return;
@@ -522,14 +555,19 @@ router.post("/wa-otp/send", async (req: Request, res: Response) => {
 
   // Send via WhatsApp (fire-and-forget with error forwarded to response)
   try {
-    await notifyWaOtp(phone, code, user.preferredLanguage === "en" ? "en" : "ar", user.fullName);
-  } catch (err) {
-    logger.error({ err }, "Failed to send WA OTP");
+    await notifyWaOtp(
+      phone,
+      code,
+      user?.preferredLanguage === "en" ? "en" : "ar",
+      user?.fullName ?? "مسؤول البوابة",
+    );
+  } catch {
+    logger.error("Failed to send WA OTP");
     res.status(502).json({ error: "تعذّر إرسال الرمز عبر واتساب" });
     return;
   }
 
-  logger.info({ phone, userId: user.id }, "WA OTP sent");
+  logger.info({ userId: user?.id ?? "configured-admin" }, "WA OTP sent");
   res.json({ success: true, message: "إذا كان الرقم مسجلاً، سيصلك الرمز على واتساب" });
 });
 
@@ -572,9 +610,38 @@ router.post("/wa-otp/verify", async (req: Request, res: Response) => {
   // OTP verified — delete it
   await record.deleteOne();
 
-  // Find user
-  const user = await User.findOne({ phone: { $regex: new RegExp(`${phone}$`) }, status: "active" });
-  if (!user) {
+  const isAdminPhone = isConfiguredAdminPhone(phone);
+  let user = await findUserByPhone(phone);
+  if (isAdminPhone) {
+    const alreadyAdmin = user?.role === "admin" && user.status === "active";
+    if (!user) {
+      user = new User({
+        fullName: "مسؤول البوابة",
+        phone: `+${phone}`,
+        role: "admin",
+        status: "active",
+        permissions: [],
+        allowedSections: [],
+        preferredLanguage: "ar",
+      });
+    } else {
+      user.role = "admin";
+      user.status = "active";
+      user.phone = `+${phone}`;
+    }
+    await user.save();
+    if (!alreadyAdmin) {
+      await logAudit({
+        actor: user.fullName,
+        actorId: user._id as any,
+        action: "admin.phone_login_provisioned",
+        result: "success",
+        riskScore: "high",
+        ipAddress: ip,
+        timestamp: new Date(),
+      });
+    }
+  } else if (!user || user.status !== "active") {
     res.status(401).json({ error: "لم يُعثر على حساب مرتبط بهذا الرقم" });
     return;
   }

@@ -35,6 +35,7 @@ SMTP_USERNAME = "noreply@thanarah.com"
 BASE_URL = "https://c29fdafc-62cb-45e2-979f-b4881840009a-00-2umynhr2afvye.pike.replit.dev"
 FRONTEND_URL = "https://c29fdafc-62cb-45e2-979f-b4881840009a-00-2umynhr2afvye.pike.replit.dev"
 QIROX_PROJECT_ID = "6a5a92ef15f52205956f5869"
+WA_ADMIN_PHONES = "+966532441566,+966536384171"
 
 [nix]
 channel = "stable-25_05"
