@@ -12,9 +12,10 @@ import {
 import Invitation, { type InvitationStatus } from "../models/invitation";
 import User from "../models/user";
 import Session from "../models/session";
-import WaOtp, { generateWaOtp, verifyWaOtp, normalizePhone } from "../models/waOtp";
+import WaOtp, { verifyWaOtp, normalizePhone } from "../models/waOtp";
 import { logAudit } from "../models/auditLog";
 import { sendInvitationEmail, sendAdminInvitationNotification } from "../lib/email";
+import { clearInvitationOtp, createInvitationOtp, getInvitationOtpState } from "../lib/invitation-otp";
 import {
   isQiroxOtpConfigured,
   notifyWaInvitationLink,
@@ -62,13 +63,17 @@ async function deliverInvitation(invitation: any, rawToken: string, inviterName:
   let whatsappDelivered = false;
   let emailDelivered = false;
   const errorMessages: string[] = [];
+  const code = await createInvitationOtp(invitation.phone, invitation._id);
   try {
-    await notifyWaInvitationLink(invitation.phone, invitation.inviteeName, inviteUrl);
+    await notifyWaInvitationLink(invitation.phone, invitation.inviteeName, inviteUrl, code);
     whatsappDelivered = true;
-    await Invitation.findByIdAndUpdate(invitation._id, { tokenHash: hashToken(rawToken) });
   } catch (err) {
+    await clearInvitationOtp(invitation.phone, invitation._id);
     logger.warn({ err, invitationId: invitation._id }, "Invitation WhatsApp delivery failed");
     errorMessages.push("تعذر إرسال واتساب");
+  }
+  if (whatsappDelivered) {
+    await Invitation.findByIdAndUpdate(invitation._id, { tokenHash: hashToken(rawToken) });
   }
   if (invitation.email) {
     try {
@@ -185,6 +190,9 @@ router.post("/validate", async (req: Request, res: Response) => {
   invitation.status = "opened";
   await invitation.save();
   const inviter = await User.findById(invitation.createdBy).select("fullName").lean();
+  const otpState = invitation.phone
+    ? await getInvitationOtpState(invitation.phone, invitation._id)
+    : { available: false, resendIn: 0 };
   res.json({
     inviteeName: invitation.inviteeName,
     email: invitation.email ?? null,
@@ -193,6 +201,8 @@ router.post("/validate", async (req: Request, res: Response) => {
     expiresAt: invitation.expiresAt.toISOString(),
     allowedSections: invitation.allowedSections,
     inviterName: inviter?.fullName || "فريق ثناره",
+    otpAvailable: otpState.available,
+    otpResendIn: otpState.resendIn,
   });
 });
 
@@ -209,22 +219,19 @@ router.post("/otp/send", async (req: Request, res: Response) => {
     return;
   }
   const phone = normalizePhone(invitation.phone);
-  const recent = await WaOtp.findOne({
-    phone,
-    purpose: "invitation",
-    createdAt: { $gt: new Date(Date.now() - 60_000) },
-  });
-  if (recent) {
-    res.status(429).json({ error: "انتظر دقيقة قبل طلب رمز جديد" });
+  const otpState = await getInvitationOtpState(phone, invitation._id);
+  if (otpState.resendIn > 0) {
+    res.status(429).json({
+      error: `انتظر ${otpState.resendIn} ثانية قبل طلب رمز جديد`,
+      retryAfterSeconds: otpState.resendIn,
+    });
     return;
   }
-  await WaOtp.deleteMany({ phone, purpose: "invitation" });
-  const { code, hash } = generateWaOtp();
-  await WaOtp.create({ phone, otpHash: hash, purpose: "invitation", invitationId: invitation._id });
+  const code = await createInvitationOtp(phone, invitation._id);
   try {
     await notifyWaOtp(phone, code, "ar", invitation.inviteeName, "invitation");
   } catch (err) {
-    await WaOtp.deleteMany({ phone, purpose: "invitation", invitationId: invitation._id });
+    await clearInvitationOtp(phone, invitation._id);
     logger.error({ err, invitationId: invitation.id }, "Failed to send invitation OTP");
     res.status(502).json({ error: "تعذّر إرسال رمز التحقق عبر واتساب" });
     return;

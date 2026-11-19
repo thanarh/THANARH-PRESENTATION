@@ -12,6 +12,7 @@ import Invitation from "../models/invitation";
 import User from "../models/user";
 import { logger } from "../lib/logger";
 import { notifyWaInvitationLink } from "../lib/waNotify";
+import { clearInvitationOtp, createInvitationOtp } from "../lib/invitation-otp";
 
 const PORTAL_URL =
   process.env.BASE_URL?.replace(/\/$/, "") ?? "https://presentation.thanarah.com";
@@ -143,8 +144,9 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
 
     const inviteUrl = `${PORTAL_URL}/invite#${rawToken}`;
     const sendEmail_ = Boolean(email) && args.send_email !== false;
+    const otpCode = await createInvitationOtp(phone, invitation._id);
     const [whatsappResult, emailResult] = await Promise.allSettled([
-      notifyWaInvitationLink(phone, String(args.name), inviteUrl),
+      notifyWaInvitationLink(phone, String(args.name), inviteUrl, otpCode),
       sendEmail_
         ? sendInvitationEmail({
             to: email!,
@@ -157,6 +159,7 @@ export async function executeTool(name: string, args: Record<string, any>): Prom
     ]);
     const whatsappDelivered = whatsappResult.status === "fulfilled";
     const emailDelivered = sendEmail_ && emailResult.status === "fulfilled";
+    if (!whatsappDelivered) await clearInvitationOtp(phone, invitation._id);
     const emailStatus = !email ? "skipped" : emailDelivered ? "sent" : sendEmail_ ? "failed" : "skipped";
     await Invitation.findByIdAndUpdate(invitation._id, {
       status: whatsappDelivered || emailDelivered ? "sent" : "failed_delivery",

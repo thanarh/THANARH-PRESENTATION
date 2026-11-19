@@ -19,6 +19,7 @@ import { connectDb } from "../lib/db";
 import { sendInvitationEmail, sendEmail } from "../lib/email";
 import { notifyWaInvitationLink } from "../lib/waNotify";
 import { logger } from "../lib/logger";
+import { clearInvitationOtp, createInvitationOtp } from "../lib/invitation-otp";
 
 // ─── Admin phone whitelist ────────────────────────────────────────────────────
 
@@ -430,14 +431,16 @@ async function cmdInvite(args: string[]): Promise<string> {
 
   const portalUrl = (process.env.FRONTEND_URL ?? process.env.BASE_URL ?? "https://presentation.thanarah.com").replace(/\/$/, "");
   const inviteUrl = `${portalUrl}/invite#${rawToken}`;
+  const otpCode = await createInvitationOtp(phone, invitation._id);
   const [waResult, emailResult] = await Promise.allSettled([
-    notifyWaInvitationLink(phone, inviteeName, inviteUrl),
+    notifyWaInvitationLink(phone, inviteeName, inviteUrl, otpCode),
     email
       ? sendInvitationEmail({ to: email, inviteeName, inviteUrl, expiresAt, inviterName: systemUser.fullName })
       : Promise.resolve(),
   ]);
   const whatsappDelivered = waResult.status === "fulfilled";
   const emailDelivered = Boolean(email) && emailResult.status === "fulfilled";
+  if (!whatsappDelivered) await clearInvitationOtp(phone, invitation._id);
   await Invitation.findByIdAndUpdate(invitation._id, {
     status: whatsappDelivered || emailDelivered ? "sent" : "failed_delivery",
     whatsappDeliveryStatus: whatsappDelivered ? "sent" : "failed",

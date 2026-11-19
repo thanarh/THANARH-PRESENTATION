@@ -493,6 +493,10 @@ export const ValidateInvitationBody = zod.object({
   "token": zod.string().min(validateInvitationBodyTokenMin).max(validateInvitationBodyTokenMax)
 })
 
+export const validateInvitationResponseOtpResendInMin = 0;
+
+
+
 export const ValidateInvitationResponse = zod.object({
   "inviteeName": zod.string(),
   "email": zod.string().nullish(),
@@ -500,7 +504,9 @@ export const ValidateInvitationResponse = zod.object({
   "role": zod.string(),
   "expiresAt": zod.string(),
   "allowedSections": zod.array(zod.string()),
-  "inviterName": zod.string()
+  "inviterName": zod.string(),
+  "otpAvailable": zod.boolean(),
+  "otpResendIn": zod.number().min(validateInvitationResponseOtpResendInMin)
 })
 
 

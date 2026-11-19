@@ -16,4 +16,7 @@ export interface InvitationValidation {
   expiresAt: string;
   allowedSections: string[];
   inviterName: string;
+  otpAvailable: boolean;
+  /** @minimum 0 */
+  otpResendIn: number;
 }

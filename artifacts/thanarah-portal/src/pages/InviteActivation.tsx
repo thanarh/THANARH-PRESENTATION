@@ -13,6 +13,8 @@ type InviteInfo = {
   role: string;
   expiresAt: string;
   inviterName: string;
+  otpAvailable: boolean;
+  otpResendIn: number;
 };
 
 function readInviteToken(): string {
@@ -48,7 +50,12 @@ export default function InviteActivation() {
       .then(async response => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'رابط الدعوة غير صالح');
-        if (!cancelled) setInvite(data as InviteInfo);
+        if (!cancelled) {
+          const info = data as InviteInfo;
+          setInvite(info);
+          setOtpSent(Boolean(info.otpAvailable));
+          setCooldown(info.otpResendIn || 0);
+        }
       })
       .catch(err => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'تعذّر التحقق من الدعوة');
@@ -75,7 +82,10 @@ export default function InviteActivation() {
         body: JSON.stringify({ token }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'تعذّر إرسال رمز التحقق');
+      if (!response.ok) {
+        if (data.retryAfterSeconds) setCooldown(data.retryAfterSeconds);
+        throw new Error(data.error || 'تعذّر إرسال رمز التحقق');
+      }
       setOtpSent(true);
       setCooldown(60);
     } catch (err) {
@@ -181,9 +191,9 @@ export default function InviteActivation() {
               )}
 
               {!otpSent ? (
-                <Button type="button" className="h-12 w-full gap-2 text-base" onClick={sendOtp} disabled={sending}>
+                <Button type="button" className="h-12 w-full gap-2 text-base" onClick={sendOtp} disabled={sending || cooldown > 0}>
                   {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Phone className="h-4 w-4" />}
-                  أرسل رمز التحقق على واتساب
+                  {cooldown > 0 ? `انتظر ${cooldown} ثانية لإعادة الإرسال` : 'أرسل رمز التحقق على واتساب'}
                 </Button>
               ) : (
                 <form onSubmit={acceptInvite} className="space-y-4">
@@ -195,7 +205,7 @@ export default function InviteActivation() {
                       onChange={event => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
                       inputMode="numeric"
                       autoComplete="one-time-code"
-                      placeholder="000000"
+                      placeholder="••••••"
                       className="h-12 text-center font-mono text-xl tracking-[0.35em]"
                       aria-label="رمز التحقق المرسل على واتساب"
                     />

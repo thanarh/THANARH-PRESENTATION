@@ -1289,12 +1289,19 @@ components:
             type: string
         inviterName:
           type: string
+        otpAvailable:
+          type: boolean
+        otpResendIn:
+          type: integer
+          minimum: 0
       required:
         - inviteeName
         - role
         - expiresAt
         - allowedSections
         - inviterName
+        - otpAvailable
+        - otpResendIn
 
     RevokeInput:
       type: object
