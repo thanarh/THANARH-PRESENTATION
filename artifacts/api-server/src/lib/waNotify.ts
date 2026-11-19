@@ -133,8 +133,8 @@ export async function notifyWaInvitationLink(
 
   const message =
     lang === "ar"
-      ? `مرحباً ${inviteeName}، تمت دعوتك إلى ثناره.\n\nافتح رابط الدعوة لتفعيل حسابك:\n${inviteUrl}\n\nالرمز الظاهر في هذه الرسالة رمز تحقق حقيقي لرقم جوالك، صالح لمدة 5 دقائق. إذا انتهت صلاحيته، اطلب رمزاً جديداً من صفحة التفعيل. هذا ليس كود دعوة.`
-      : `Hello ${inviteeName}, you are invited to Thanarah.\n\nOpen this invitation link to activate your account:\n${inviteUrl}\n\nThe code in this message is a real phone verification code, valid for 5 minutes. If it expires, request a new code from the activation page. This is not an invitation code.`;
+      ? `مرحباً ${inviteeName}، تمت دعوتك إلى ثناره.\n\nافتح رابط الدعوة لتفعيل حسابك:\n${inviteUrl}\n\nرمز التحقق: *${code}*\n\nهذا رمز تحقق حقيقي لرقم جوالك، صالح لمدة 5 دقائق. إذا انتهت صلاحيته، اطلب رمزاً جديداً من صفحة التفعيل.`
+      : `Hello ${inviteeName}, you are invited to Thanarah.\n\nOpen this invitation link to activate your account:\n${inviteUrl}\n\nVerification code: *${code}*\n\nThis is a real phone verification code, valid for 5 minutes. If it expires, request a new code from the activation page.`;
 
   const response = await fetch(
     `https://qiroxstudio.online/api/v1/projects/${encodeURIComponent(projectId)}/whatsapp`,
