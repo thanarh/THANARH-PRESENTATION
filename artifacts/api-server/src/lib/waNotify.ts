@@ -121,7 +121,9 @@ export async function notifyWaInvitationLink(
   inviteUrl: string,
   lang: "ar" | "en" = "ar"
 ): Promise<void> {
-  const token = process.env.QIROX_PROJECT_API_TOKEN;
+  const token =
+    process.env.QIROX_PROJECT_GENERAL_API_TOKEN ||
+    process.env.QIROX_PROJECT_API_TOKEN;
   const projectId = process.env.QIROX_PROJECT_ID;
   if (!token || !projectId) throw new Error("QIROX WhatsApp credentials are not configured");
 
