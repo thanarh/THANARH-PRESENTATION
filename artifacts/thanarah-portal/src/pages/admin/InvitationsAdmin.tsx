@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useQueryClient } from '@tanstack/react-query';
 import { isInternationalPhone, normalizePhoneInput } from '../../utils/phone';
+import { useToast } from '../../hooks/use-toast';
 
 // ─── Create Invitation Modal ──────────────────────────────────────────────────
 
@@ -238,6 +239,7 @@ export default function InvitationsAdmin() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: statsData } = useGetInvitationStats();
   const { data: result, isLoading } = useListInvitations();
@@ -252,9 +254,16 @@ export default function InvitationsAdmin() {
   });
   const { mutate: resendInvitation } = useResendInvitation({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data: any) => {
         queryClient.invalidateQueries({ queryKey: ['/api/invitations'] });
         setResendingId(null);
+        toast({
+          title: data.success ? 'تمت إعادة إرسال الدعوة' : 'تعذر إرسال الدعوة',
+          description: data.success
+            ? 'استخدم الرابط في أحدث رسالة؛ إعادة الإرسال تبطل الرابط السابق.'
+            : data.deliveryError || 'تحقق من حالة واتساب وحاول مجدداً.',
+          variant: data.success ? 'default' : 'destructive',
+        });
       },
       onError: () => setResendingId(null),
     },

@@ -20,6 +20,7 @@ import { sendInvitationEmail, sendEmail } from "../lib/email";
 import { notifyWaInvitationLink } from "../lib/waNotify";
 import { logger } from "../lib/logger";
 import { clearInvitationOtp, createInvitationOtp } from "../lib/invitation-otp";
+import { getPortalBaseUrl } from "../lib/portal-url";
 
 // ─── Admin phone whitelist ────────────────────────────────────────────────────
 
@@ -429,7 +430,7 @@ async function cmdInvite(args: string[]): Promise<string> {
     createdBy: systemUser._id,
   });
 
-  const portalUrl = (process.env.FRONTEND_URL ?? process.env.BASE_URL ?? "https://presentation.thanarah.com").replace(/\/$/, "");
+  const portalUrl = getPortalBaseUrl();
   const inviteUrl = `${portalUrl}/invite#${rawToken}`;
   const otpCode = await createInvitationOtp(phone, invitation._id);
   const [waResult, emailResult] = await Promise.allSettled([

@@ -23,6 +23,7 @@ import {
   notifyWaOtp,
 } from "../lib/waNotify";
 import { connectDb } from "../lib/db";
+import { getPortalBaseUrl } from "../lib/portal-url";
 import { logger } from "../lib/logger";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -57,8 +58,13 @@ async function findInvitationForToken(token: unknown) {
   return invitation;
 }
 
-async function deliverInvitation(invitation: any, rawToken: string, inviterName: string) {
-  const baseUrl = (process.env.BASE_URL || "https://presentation.thanarah.com").replace(/\/$/, "");
+async function deliverInvitation(
+  invitation: any,
+  rawToken: string,
+  inviterName: string,
+  requestOrigin?: string,
+) {
+  const baseUrl = getPortalBaseUrl(requestOrigin);
   const inviteUrl = `${baseUrl}/invite#${rawToken}`;
   let whatsappDelivered = false;
   let emailDelivered = false;
@@ -323,6 +329,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     invitation,
     rawToken,
     creator?.fullName || "فريق ثناره",
+    req.get("origin"),
   );
 
   if (creator?.phone) {
@@ -453,6 +460,7 @@ router.post("/:id/resend", authenticate, async (req: AuthRequest, res: Response)
     invitation,
     rawToken,
     creator?.fullName || "فريق ثناره",
+    req.get("origin"),
   );
   res.json({ success: delivery.whatsappDelivered || delivery.emailDelivered, ...delivery });
 });

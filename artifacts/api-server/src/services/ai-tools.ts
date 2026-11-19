@@ -13,9 +13,9 @@ import User from "../models/user";
 import { logger } from "../lib/logger";
 import { notifyWaInvitationLink } from "../lib/waNotify";
 import { clearInvitationOtp, createInvitationOtp } from "../lib/invitation-otp";
+import { getPortalBaseUrl } from "../lib/portal-url";
 
-const PORTAL_URL =
-  process.env.BASE_URL?.replace(/\/$/, "") ?? "https://presentation.thanarah.com";
+const PORTAL_URL = getPortalBaseUrl();
 
 // ── Page map ──────────────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, string> = {
